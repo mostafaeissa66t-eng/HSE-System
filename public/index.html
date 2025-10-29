@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>HSE Management System</title>
+        <link rel="stylesheet" href="style.css" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        />
+    </head>
+    <body>
+        <div id="loader-overlay">
+            <div class="spinner"></div>
+            <p>جاري التحميل...</p>
+        </div>
+        <div id="login-screen">
+            <div class="login-container">
+                <img src="../turnkey.png" alt="Logo" class="logo" />
+                <h3>نظام إدارة التصاريح</h3>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username"><i class="fas fa-user"></i></label
+                        ><input
+                            type="text"
+                            id="username"
+                            placeholder="اسم المستخدم"
+                            required
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="password"><i class="fas fa-lock"></i></label
+                        ><input
+                            type="password"
+                            id="password"
+                            placeholder="كلمة المرور"
+                            required
+                        />
+                    </div>
+                    <button type="submit" class="btn">تسجيل الدخول</button>
+                    <p id="login-error" class="error-message"></p>
+                </form>
+            </div>
+        </div>
+        <div id="app-wrapper" style="display: none">
+            <nav id="sidebar">
+                <div class="sidebar-header">
+                    <img src="../turnkey.png" alt="Logo" class="logo" />
+                    <h3 id="welcome-user">أهلاً، ...</h3>
+                    <p id="user-role">...</p>
+                </div>
+                <ul id="sidebar-menu" class="list-unstyled components"></ul>
+                <div class="sidebar-footer">
+                    <a href="#" id="logout-btn"
+                        ><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a
+                    >
+                </div>
+            </nav>
+            <main id="content">
+                <div class="mobile-header">
+                    <button type="button" id="sidebar-toggle" class="btn">
+                        <i class="fas fa-bars"></i></button
+                    ><span>HSE System</span>
+                </div>
+                <section id="Dashboard" class="page-section">
+                    <h2><i class="fas fa-tachometer-alt"></i> لوحة التحكم</h2>
+                    <p>مرحباً بك...</p>
+                    <p>الرجاء استخدام القائمة...</p>
+                    <div class="slogan">
+                        <p>"بنأسس صح... عشان يدوم الأمن."</p>
+                    </div>
+                </section>
+                <section
+                    id="NewPermit"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2><i class="fas fa-file-signature"></i> إصدار تصريح</h2>
+                    <form id="permit-form" class="app-form">
+                        <div class="form-row-disabled">
+                            <div class="form-group-static">
+                                <label>المشرف:</label
+                                ><input
+                                    type="text"
+                                    id="permit-issuer"
+                                    readonly
+                                />
+                            </div>
+                            <div class="form-group-static">
+                                <label>التاريخ:</label
+                                ><input
+                                    type="text"
+                                    id="permit-timestamp"
+                                    readonly
+                                />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="permit-project">المشروع:</label
+                                ><select id="permit-project" required>
+                                    <option value="">اختر...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="permit-date">تاريخ التصريح:</label
+                                ><input type="date" id="permit-date" required />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="permit-shift">الوردية:</label
+                                ><select id="permit-shift" required>
+                                    <option value="">اختر...</option>
+                                    <option value="صباحية">صباحية</option>
+                                    <option value="مسائية">مسائية</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="permit-type">النوع:</label
+                                ><select id="permit-type" required>
+                                    <option value="">اختر...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="permit-requester"
+                                    >الجهة الطالبة:</label
+                                ><select id="permit-requester" required>
+                                    <option value="">اختر...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="permit-engineer"
+                                    >مهندس الموقع:</label
+                                ><input type="text" id="permit-engineer" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="permit-subcontractor">مقاول باطن:</label
+                            ><input type="text" id="permit-subcontractor" />
+                        </div>
+                        <div class="form-group">
+                            <label for="permit-location">مكان العمل:</label
+                            ><input type="text" id="permit-location" required />
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="permit-starttime">وقت البدء:</label
+                                ><input
+                                    type="time"
+                                    id="permit-starttime"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="permit-workers">عدد العمال:</label
+                                ><input
+                                    type="number"
+                                    id="permit-workers"
+                                    min="1"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="permit-description">وصف العمل:</label
+                            ><textarea
+                                id="permit-description"
+                                rows="3"
+                                required
+                            ></textarea>
+                        </div>
+                        <button type="submit" class="btn">حفظ</button>
+                        <p id="permit-message" class="success-message"></p>
+                    </form>
+                </section>
+                <section
+                    id="ClosePermit"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-clipboard-check"></i> إغلاق التصاريح
+                    </h2>
+                    <p>التصاريح المفتوحة:</p>
+                    <div id="open-permits-list"></div>
+                    <p id="close-permit-message" class="success-message"></p>
+                </section>
+                <section
+                    id="NewObservation"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2><i class="fas fa-eye"></i> تسجيل ملاحظة</h2>
+                    <form id="observation-form" class="app-form">
+                        <div class="form-row-disabled">
+                            <div class="form-group-static">
+                                <label>المشرف:</label
+                                ><input type="text" id="obs-issuer" readonly />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="obs-project">المشروع:</label
+                                ><select id="obs-project" required>
+                                    <option value="">اختر...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="obs-date">التاريخ:</label
+                                ><input type="date" id="obs-date" required />
+                            </div>
+                            <div class="form-group">
+                                <label for="obs-time">الوقت:</label
+                                ><input type="time" id="obs-time" required />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="obs-location">الموقع:</label
+                            ><input type="text" id="obs-location" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="obs-type">النوع:</label
+                            ><select id="obs-type" required>
+                                <option value="">اختر...</option>
+                                <option value="Unsafe Act">Unsafe Act</option>
+                                <option value="Unsafe Condition">
+                                    Unsafe Condition
+                                </option>
+                                <option value="Positive Observation">
+                                    Positive Observation
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="obs-description">الوصف:</label
+                            ><textarea
+                                id="obs-description"
+                                rows="3"
+                                required
+                            ></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="obs-action">الإجراء التصحيحي:</label
+                            ><textarea id="obs-action" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn">حفظ</button>
+                        <p id="obs-message" class="success-message"></p>
+                    </form>
+                </section>
+                <section
+                    id="MonitorPermits"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2><i class="fas fa-tasks"></i> متابعة التصاريح</h2>
+                    <div class="filter-controls">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="monitor-project-filter"
+                                    >المشروع:</label
+                                ><select id="monitor-project-filter">
+                                    <option value="ALL_ACCESSIBLE">
+                                        كل المتاح لي
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="monitor-from-date">من تاريخ:</label
+                                ><input type="date" id="monitor-from-date" />
+                            </div>
+                            <div class="form-group">
+                                <label for="monitor-to-date">إلى تاريخ:</label
+                                ><input type="date" id="monitor-to-date" />
+                            </div>
+                        </div>
+                        <div class="form-row filter-options">
+                            <div class="form-group checkbox-group">
+                                <input
+                                    type="checkbox"
+                                    id="monitor-open-only"
+                                /><label for="monitor-open-only"
+                                    >عرض المفتوحة فقط</label
+                                >
+                            </div>
+                            <button
+                                type="button"
+                                id="monitor-search-btn"
+                                class="btn"
+                            >
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+                        <p
+                            id="monitor-message"
+                            class="error-message"
+                            style="text-align: center; display: none"
+                        ></p>
+                    </div>
+                    <div
+                        id="monitor-results-table"
+                        class="results-table-container"
+                    >
+                        <p>حدد معايير البحث...</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+        <script src="app.js"></script>
+    </body>
+</html>

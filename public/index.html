@@ -19,6 +19,7 @@
             <div class="spinner"></div>
             <p>جاري التحميل...</p>
         </div>
+
         <div id="login-screen">
             <div class="login-container">
                 <img src="../turnkey.png" alt="Logo" class="logo" />
@@ -47,6 +48,7 @@
                 </form>
             </div>
         </div>
+
         <div id="app-wrapper" style="display: none">
             <nav id="sidebar">
                 <div class="sidebar-header">
@@ -61,26 +63,31 @@
                     >
                 </div>
             </nav>
+
             <main id="content">
                 <div class="mobile-header">
                     <button type="button" id="sidebar-toggle" class="btn">
                         <i class="fas fa-bars"></i></button
                     ><span>HSE System</span>
                 </div>
+
                 <section id="Dashboard" class="page-section">
                     <h2><i class="fas fa-tachometer-alt"></i> لوحة التحكم</h2>
-                    <p>مرحباً بك...</p>
-                    <p>الرجاء استخدام القائمة...</p>
+                    <p>مرحباً بك في نظام إدارة التصاريح والملاحظات.</p>
+                    <p>الرجاء استخدام القائمة الجانبية للتنقل.</p>
                     <div class="slogan">
                         <p>"بنأسس صح... عشان يدوم الأمن."</p>
                     </div>
                 </section>
+
                 <section
                     id="NewPermit"
                     class="page-section"
                     style="display: none"
                 >
-                    <h2><i class="fas fa-file-signature"></i> إصدار تصريح</h2>
+                    <h2>
+                        <i class="fas fa-file-signature"></i> إصدار تصريح جديد
+                    </h2>
                     <form id="permit-form" class="app-form">
                         <div class="form-row-disabled">
                             <div class="form-group-static">
@@ -92,7 +99,7 @@
                                 />
                             </div>
                             <div class="form-group-static">
-                                <label>التاريخ:</label
+                                <label>تاريخ التقديم:</label
                                 ><input
                                     type="text"
                                     id="permit-timestamp"
@@ -181,6 +188,7 @@
                         <p id="permit-message" class="success-message"></p>
                     </form>
                 </section>
+
                 <section
                     id="ClosePermit"
                     class="page-section"
@@ -189,10 +197,11 @@
                     <h2>
                         <i class="fas fa-clipboard-check"></i> إغلاق التصاريح
                     </h2>
-                    <p>التصاريح المفتوحة:</p>
+                    <p>التصاريح المفتوحة المسجلة باسمك:</p>
                     <div id="open-permits-list"></div>
                     <p id="close-permit-message" class="success-message"></p>
                 </section>
+
                 <section
                     id="NewObservation"
                     class="page-section"
@@ -257,6 +266,7 @@
                         <p id="obs-message" class="success-message"></p>
                     </form>
                 </section>
+
                 <section
                     id="MonitorPermits"
                     class="page-section"
@@ -272,6 +282,13 @@
                                     <option value="ALL_ACCESSIBLE">
                                         كل المتاح لي
                                     </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="monitor-requester-filter"
+                                    >الجهة الطالبة:</label
+                                ><select id="monitor-requester-filter">
+                                    <option value="">الكل</option>
                                 </select>
                             </div>
                         </div>
@@ -317,6 +334,7 @@
                 </section>
             </main>
         </div>
+
         <script src="app.js"></script>
     </body>
 </html>

@@ -1,61 +1,97 @@
 // =================================== */
-// CLIENT-SIDE LOGIC (app.js - Final Vercel/Proxy Version)
+// CLIENT-SIDE LOGIC (app.js - Final Vercel/Replit Proxy Version - Correct Order)
 // =================================== */
 
-// Vercel هيحول أي طلب لـ /api للملف الوسيط بتاعنا أوتوماتيك
+// API endpoint on the same server (points to api/index.js via Vercel or server.js via Replit)
 const API_URL = "/api";
 
-// --- API Call Function ---
+// --- === UTILITY FUNCTIONS (Defined FIRST!) === ---
+function showLoader(message = "جاري التحميل...") {
+    const loader = document.getElementById("loader-overlay");
+    const loaderText = loader ? loader.querySelector("p") : null;
+    if (loaderText) loaderText.textContent = message;
+    if (loader) loader.style.display = "flex";
+}
+function hideLoader() {
+    const loader = document.getElementById("loader-overlay");
+    // Add a small delay
+    setTimeout(() => {
+        if (loader) loader.style.display = "none";
+    }, 100);
+}
+function showMessage(element, text, isSuccess) {
+    if (element) {
+        element.textContent = text;
+        element.className = isSuccess ? "success-message" : "error-message";
+        element.style.display = "block";
+        setTimeout(() => {
+            if (element) element.style.display = "none";
+        }, 5000);
+    } else {
+        console.warn("Attempted showMessage on null:", text);
+    }
+}
+
+// --- API Call Function (Uses Utilities defined above) ---
 async function callApi(action, payload) {
+    let loaderMessage = `جاري ${action}...`;
+    if (action === "checkLogin") loaderMessage = "جاري تسجيل الدخول...";
+    if (action === "getInitialData") loaderMessage = "جاري تحميل البيانات...";
+    if (action === "savePermit") loaderMessage = "جاري حفظ التصريح...";
+    if (action === "saveObservation") loaderMessage = "جاري حفظ الملاحظة...";
+    if (action === "getOpenPermits") loaderMessage = "جاري تحميل التصاريح...";
+    if (action === "closePermit") loaderMessage = "جاري إغلاق التصريح...";
+    if (action === "searchPermits") loaderMessage = "جاري البحث...";
+
+    showLoader(loaderMessage); // Now showLoader is defined
+
     try {
         const response = await fetch(API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: action, payload: payload }),
         });
-
-        const responseText = await response.text(); // Get raw text first
+        const responseText = await response.text();
+        hideLoader(); // Hide loader after getting response
 
         if (!response.ok) {
             console.error(
-                `API Error Response (${response.status}) for action ${action}:`,
+                `API Error Response (${response.status}) for ${action}:`,
                 responseText,
             );
             let errorMsg = `API Error: ${response.status} ${response.statusText}`;
             try {
                 const ed = JSON.parse(responseText);
-                msg = ed.message || msg;
+                if (ed.message) errorMsg = ed.message;
             } catch (e) {
                 /* ignore */
             }
             throw new Error(errorMsg);
         }
-
-        // Try to parse JSON response if fetch was OK
         try {
             const result = JSON.parse(responseText);
-            // Check if the Apps Script itself reported an error
             if (result && result.status === "error") {
                 console.error(
-                    `Google Script Error for action ${action}:`,
+                    `Google Script Error for ${action}:`,
                     result.message,
                 );
                 throw new Error(result.message || "خطأ من السيرفر.");
             }
-            return result; // Return successful data
+            return result;
         } catch (parseError) {
             console.error(
-                `Failed to parse JSON response from API for action ${action}:`,
+                `JSON Parse Error for ${action}:`,
                 parseError,
+                "Raw:",
+                responseText,
             );
-            console.error("Raw API Response:", responseText);
             throw new Error(
-                `Received invalid response from server (not JSON): ${responseText.substring(0, 100)}...`,
+                `Received invalid response: ${responseText.substring(0, 100)}...`,
             );
         }
     } catch (error) {
-        console.error(`callApi Error for action ${action}:`, error);
-        // Provide a more generic but informative error message to the user
+        hideLoader(); // Ensure hidden on error
+        console.error(`callApi Error for ${action}:`, error);
         throw new Error(`فشل الاتصال بالخادم (${action}): ${error.message}`);
     }
 }
@@ -67,7 +103,8 @@ document.addEventListener("DOMContentLoaded", function () {
     let initialData = null;
 
     // --- SELECTORS ---
-    const loader = document.getElementById("loader-overlay");
+    // (Ensure these IDs match your public/index.html)
+    const loader = document.getElementById("loader-overlay"); // Used by utilities, but good to have ref
     const loginScreen = document.getElementById("login-screen");
     const appWrapper = document.getElementById("app-wrapper");
     const loginForm = document.getElementById("login-form");
@@ -77,17 +114,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const content = document.getElementById("content");
     const sidebarMenu = document.getElementById("sidebar-menu");
     const logoutBtn = document.getElementById("logout-btn");
-
-    // Form & Message Selectors
     const permitForm = document.getElementById("permit-form");
     const obsForm = document.getElementById("observation-form");
     const permitMsg = document.getElementById("permit-message");
     const obsMsg = document.getElementById("obs-message");
     const closePermitMsg = document.getElementById("close-permit-message");
-
-    // Monitor Section Selectors
     const monitorProjectFilter = document.getElementById(
         "monitor-project-filter",
+    );
+    const monitorRequesterFilter = document.getElementById(
+        "monitor-requester-filter",
     );
     const monitorFromDate = document.getElementById("monitor-from-date");
     const monitorToDate = document.getElementById("monitor-to-date");
@@ -116,28 +152,6 @@ document.addEventListener("DOMContentLoaded", function () {
         NewNearMiss: "Near Miss",
     };
 
-    // --- Utility Functions ---
-    function showLoader(m = "...") {
-        const lt = loader ? loader.querySelector("p") : null;
-        if (lt) lt.textContent = m;
-        if (loader) loader.style.display = "flex";
-    }
-    function hideLoader() {
-        if (loader) loader.style.display = "none";
-    }
-    function showMessage(el, txt, ok) {
-        if (el) {
-            el.textContent = txt;
-            el.className = ok ? "success-message" : "error-message";
-            el.style.display = "block";
-            setTimeout(() => {
-                if (el) el.style.display = "none";
-            }, 5000);
-        } else {
-            console.warn("Msg on null:", txt);
-        }
-    }
-
     // --- Login Logic ---
     if (loginForm) {
         loginForm.addEventListener("submit", async function (e) {
@@ -146,7 +160,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const p = document.getElementById("password");
             if (!u || !p) return;
             if (loginError) loginError.style.display = "none";
-            showLoader("جاري تسجيل الدخول...");
+            // callApi shows loader
             try {
                 const r = await callApi("checkLogin", {
                     username: u.value,
@@ -155,53 +169,42 @@ document.addEventListener("DOMContentLoaded", function () {
                 onLoginSuccess(r);
             } catch (err) {
                 onLoginFailure(err);
-            }
+            } // callApi hides loader
         });
     } else {
         console.error("#login-form not found.");
     }
 
     function onLoginSuccess(response) {
-        hideLoader();
-        if (response && response.status === "success" && response.userInfo) {
-            currentUser = response.userInfo;
-            if (loginScreen) loginScreen.style.display = "none";
-            if (appWrapper) appWrapper.style.display = "flex";
-            const wu = document.getElementById("welcome-user");
-            const ur = document.getElementById("user-role");
-            if (wu) wu.textContent = `أهلاً، ${currentUser.username || "?"}`;
-            if (ur) ur.textContent = currentUser.role || "?";
-            buildSidebar(currentUser.sections);
-            loadInitialData();
-            const firstLink = sidebarMenu
-                ? sidebarMenu.querySelector("a")
-                : null;
-            let initialSection = "Dashboard";
-            if (firstLink && firstLink.dataset.section) {
-                initialSection = firstLink.dataset.section;
-            } else if (
-                currentUser.sections &&
-                !currentUser.sections.toUpperCase().includes("DASHBOARD")
-            ) {
-                const secs = String(currentUser.sections)
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter((s) => s);
-                if (secs.length > 0 && sectionNames[secs[0]])
-                    initialSection = secs[0];
-            }
-            showSection(initialSection);
-        } else {
-            onLoginFailure({
-                message:
-                    (response && response.message) ||
-                    "فشل تسجيل الدخول أو استلام بيانات المستخدم.",
-            });
+        /* ... (نفس الكود من الرد السابق بدون تغيير) ... */
+        currentUser = response.userInfo;
+        if (loginScreen) loginScreen.style.display = "none";
+        if (appWrapper) appWrapper.style.display = "flex";
+        const wu = document.getElementById("welcome-user");
+        const ur = document.getElementById("user-role");
+        if (wu) wu.textContent = `أهلاً، ${currentUser.username || "?"}`;
+        if (ur) ur.textContent = currentUser.role || "?";
+        buildSidebar(currentUser.sections);
+        loadInitialData();
+        const firstLink = sidebarMenu ? sidebarMenu.querySelector("a") : null;
+        let initialSection = "Dashboard";
+        if (firstLink && firstLink.dataset.section) {
+            initialSection = firstLink.dataset.section;
+        } else if (
+            currentUser.sections &&
+            !currentUser.sections.toUpperCase().includes("DASHBOARD")
+        ) {
+            const secs = String(currentUser.sections)
+                .split(",")
+                .map((s) => s.trim())
+                .filter((s) => s);
+            if (secs.length > 0 && sectionNames[secs[0]])
+                initialSection = secs[0];
         }
+        showSection(initialSection);
     }
-
     function onLoginFailure(error) {
-        hideLoader();
+        /* ... (نفس الكود من الرد السابق بدون تغيير) ... */
         const errorMessage =
             error && error.message
                 ? error.message
@@ -213,8 +216,6 @@ document.addEventListener("DOMContentLoaded", function () {
             alert(errorMessage);
         }
     }
-
-    // --- Logout Logic ---
     if (logoutBtn) {
         logoutBtn.addEventListener("click", function (e) {
             e.preventDefault();
@@ -224,8 +225,6 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
         console.error("#logout-btn not found.");
     }
-
-    // --- Sidebar Toggle & Navigation ---
     if (sidebarToggle && sidebar) {
         sidebarToggle.addEventListener("click", function () {
             sidebar.classList.toggle("active");
@@ -245,8 +244,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Function to build the sidebar menu
     function buildSidebar(sectionsString) {
+        /* ... (نفس الكود من الرد السابق بدون تغيير) ... */
         if (!sidebarMenu) {
             console.error("#sidebar-menu not found.");
             return;
@@ -257,7 +256,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
         let sections = [];
-        const cleanedString = sectionsString; // Assumes already cleaned by checkLogin
+        const cleanedString = sectionsString; // Assumes cleaned by backend
         if (cleanedString.toUpperCase() === "ALL") {
             sections = Object.keys(sectionNames);
         } else {
@@ -307,9 +306,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
-
-    // Function to show a specific page section
     function showSection(sectionId) {
+        /* ... (نفس الكود من الرد السابق بدون تغيير) ... */
         if (!sectionId) {
             console.error("showSection: no id.");
             return;
@@ -345,14 +343,13 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
     }
-
-    // --- Data Loading for Dropdowns ---
     async function loadInitialData() {
+        /* ... (نفس الكود من الرد السابق، يتأكد من currentUser وينادي callApi) ... */
         if (!currentUser) {
-            console.error("No user.");
+            console.error("Cannot load initial data: User not set.");
             return;
         }
-        showLoader("Loading config...");
+        // Use callBackend (which shows loader)
         try {
             const r = await callApi("getInitialData", {
                 userInfo: currentUser,
@@ -362,48 +359,64 @@ document.addEventListener("DOMContentLoaded", function () {
             onDataLoadFailure(e);
         }
     }
-    function onDataLoaded(r) {
-        hideLoader();
-        if (r && r.status === "success") {
-            initialData = r;
-            populateDropdowns(initialData);
-            const ms = document.getElementById("MonitorPermits");
-            if (ms && ms.style.display !== "none") populateMonitorProjects();
+    function onDataLoaded(response) {
+        /* ... (نفس الكود من الرد السابق، يخزن initialData وينادي populateDropdowns) ... */
+        // hideLoader called by callApi wrapper
+        if (response && response.status === "success") {
+            initialData = response; // Store globally
+            populateDropdowns(initialData); // Populate forms
+            // If Monitor section is visible, populate its projects too
+            const monitorSection = document.getElementById("MonitorPermits");
+            if (monitorSection && monitorSection.style.display !== "none") {
+                populateMonitorProjects();
+            }
         } else {
-            alert("Failed config: " + (r ? r.message : "?"));
+            alert(
+                "فشل في جلب بيانات الإعداد: " +
+                    ((response && response.message) || "خطأ غير معروف"),
+            );
         }
     }
-    function onDataLoadFailure(e) {
-        hideLoader();
-        alert("Failed config connect: " + e.message);
+    function onDataLoadFailure(error) {
+        /* ... (نفس الكود من الرد السابق، يعرض رسالة خطأ) ... */
+        // hideLoader called by callApi wrapper
+        alert("خطأ فادح في الاتصال لجلب بيانات الإعداد: " + error.message);
     }
-    function populateDropdowns(d) {
-        if (!d) return;
-        const fill = (id, k) => {
-            const s = document.getElementById(id);
-            if (s) {
-                s.innerHTML = '<option value="">اختر...</option>';
-                if (d[k])
-                    d[k].forEach(
+    function populateDropdowns(data) {
+        /* ... (نفس الكود من الرد السابق، مع إضافة فلتر الجهة الطالبة) ... */
+        if (!data) return;
+        const fill = (id, key, defaultOption = "اختر...") => {
+            const select = document.getElementById(id);
+            if (select) {
+                select.innerHTML = `<option value="">${defaultOption}</option>`; // Use default option text
+                if (data[key] && Array.isArray(data[key])) {
+                    data[key].forEach(
                         (o) =>
-                            (s.innerHTML += `<option value="${o}">${o}</option>`),
+                            (select.innerHTML += `<option value="${o}">${o}</option>`),
                     );
+                } else {
+                    console.warn(
+                        `Data key '${key}' missing or not array for #${id}`,
+                    );
+                }
+            } else {
+                console.warn(`Select element #${id} not found.`);
             }
         };
         fill("permit-project", "projects");
         fill("permit-type", "permitTypes");
         fill("permit-requester", "requesters");
         fill("obs-project", "projects");
+        fill("monitor-requester-filter", "requesters", "الكل"); // <-- Added for monitor filter
     }
-
-    // --- New Permit Form Logic ---
     function resetPermitForm() {
+        /* ... (نفس الكود من الرد السابق) ... */
         if (!permitForm || !currentUser) return;
         permitForm.reset();
-        const i = document.getElementById("permit-issuer");
+        const iss = document.getElementById("permit-issuer");
         const ts = document.getElementById("permit-timestamp");
         const dt = document.getElementById("permit-date");
-        if (i) i.value = currentUser.username;
+        if (iss) iss.value = currentUser.username;
         if (ts)
             ts.value = new Date().toLocaleString("ar-EG", {
                 dateStyle: "short",
@@ -413,9 +426,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     if (permitForm) {
         permitForm.addEventListener("submit", async function (e) {
+            /* ... (نفس الكود من الرد السابق، ينادي callApi) ... */
             e.preventDefault();
             if (!currentUser) return;
-            showLoader("Saving Permit...");
+            // No showLoader here
             const d = {
                 projectName: document.getElementById("permit-project")?.value,
                 permitDate: document.getElementById("permit-date")?.value,
@@ -441,8 +455,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 !d.workersCount ||
                 !d.description
             ) {
-                hideLoader();
-                showMessage(permitMsg, "Fill required.", false);
+                showMessage(permitMsg, "اكمل الحقول.", false);
                 return;
             }
             try {
@@ -455,33 +468,33 @@ document.addEventListener("DOMContentLoaded", function () {
                 onPermitSaveFailure(err);
             }
         });
+    } else {
+        console.error("#permit-form not found.");
     }
     function onPermitSaveSuccess(r) {
-        hideLoader();
-        showMessage(permitMsg, r ? r.message : "Saved.", true);
+        showMessage(permitMsg, r ? r.message : "تم.", true);
         resetPermitForm();
     }
     function onPermitSaveFailure(e) {
-        hideLoader();
         showMessage(permitMsg, e.message, false);
     }
-
-    // --- New Observation Form Logic ---
     function resetObservationForm() {
+        /* ... (نفس الكود من الرد السابق) ... */
         if (!obsForm || !currentUser) return;
         obsForm.reset();
-        const i = document.getElementById("obs-issuer");
+        const iss = document.getElementById("obs-issuer");
         const dt = document.getElementById("obs-date");
         const tm = document.getElementById("obs-time");
-        if (i) i.value = currentUser.username;
+        if (iss) iss.value = currentUser.username;
         if (dt) dt.valueAsDate = new Date();
         if (tm) tm.value = new Date().toTimeString().slice(0, 5);
     }
     if (obsForm) {
         obsForm.addEventListener("submit", async function (e) {
+            /* ... (نفس الكود من الرد السابق، ينادي callApi) ... */
             e.preventDefault();
             if (!currentUser) return;
-            showLoader("Saving Obs...");
+            // No showLoader here
             const d = {
                 projectName: document.getElementById("obs-project")?.value,
                 date: document.getElementById("obs-date")?.value,
@@ -499,8 +512,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 !d.observationType ||
                 !d.description
             ) {
-                hideLoader();
-                showMessage(obsMsg, "Fill required.", false);
+                showMessage(obsMsg, "اكمل الحقول.", false);
                 return;
             }
             try {
@@ -513,23 +525,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 onObsSaveFailure(err);
             }
         });
+    } else {
+        console.error("#observation-form not found.");
     }
     function onObsSaveSuccess(r) {
-        hideLoader();
-        showMessage(obsMsg, r ? r.message : "Saved.", true);
+        showMessage(obsMsg, r ? r.message : "تم.", true);
         resetObservationForm();
     }
     function onObsSaveFailure(e) {
-        hideLoader();
         showMessage(obsMsg, e.message, false);
     }
-
-    // --- Close Permit Logic ---
     async function loadOpenPermits() {
+        /* ... (نفس الكود من الرد السابق، ينادي callApi) ... */
         if (!currentUser) return;
-        showLoader("Loading Permits...");
         const lc = document.getElementById("open-permits-list");
-        if (lc) lc.innerHTML = "<p>Loading...</p>";
+        if (lc) lc.innerHTML = "<p>تحميل...</p>";
         try {
             const r = await callApi("getOpenPermits", {
                 userInfo: currentUser,
@@ -539,42 +549,46 @@ document.addEventListener("DOMContentLoaded", function () {
             onOpenPermitsLoadFailure(e);
         }
     }
-    function onOpenPermitsLoaded(r) {
-        hideLoader();
+    function onOpenPermitsLoaded(response) {
+        /* ... (نفس الكود من الرد السابق، مع إضافة الوصف) ... */
         const lc = document.getElementById("open-permits-list");
         if (!lc) return;
-        if (r && r.status === "success" && r.permits) {
-            if (r.permits.length === 0) {
-                lc.innerHTML = "<p>No open permits.</p>";
-                return;
-            }
-            lc.innerHTML = "";
-            r.permits.forEach((p) => {
+        // No status check needed here
+        if (response.permits && response.permits.length === 0) {
+            lc.innerHTML = "<p>لا توجد تصاريح مفتوحة.</p>";
+            return;
+        }
+        if (response.permits) {
+            lc.innerHTML = ""; // Clear loading
+            response.permits.forEach((p) => {
                 const card = document.createElement("div");
                 card.className = "permit-card";
-                card.innerHTML = `<div class="permit-info"><p><strong>Proj:</strong> ${p.project || "-"}</p><p><strong>Type:</strong> ${p.type || "-"}</p><p><strong>Date:</strong> ${p.date || "-"}</p><p><strong>ID:</strong> ${p.id || "-"}</p></div><button class="btn-close" data-id="${p.id}"><i class="fas fa-check-circle"></i> Close</button>`;
-                const b = card.querySelector(".btn-close");
-                if (b) {
-                    b.addEventListener("click", function () {
-                        if (confirm(`Close ${this.dataset.id}?`))
+                // Added description paragraph
+                card.innerHTML = `<div class="permit-info"><p><strong>المشروع:</strong> ${p.project || "-"}</p><p><strong>النوع:</strong> ${p.type || "-"}</p><p><strong>التاريخ:</strong> ${p.date || "-"}</p><p><strong>الوصف:</strong> ${p.description || "-"}</p><p><strong>ID:</strong> ${p.id || "-"}</p></div><button class="btn-close" data-id="${p.id}"><i class="fas fa-check-circle"></i> إغلاق</button>`;
+                const btn = card.querySelector(".btn-close");
+                if (btn) {
+                    btn.addEventListener("click", function () {
+                        if (confirm(`إغلاق ${this.dataset.id}؟`)) {
                             handleClosePermit(this.dataset.id);
+                        }
                     });
                 }
                 lc.appendChild(card);
             });
         } else {
-            lc.innerHTML = `<p class="error-message" style="display:block;">${(r && r.message) || "Failed load."}</p>`;
+            lc.innerHTML = `<p class="error-message" style="display:block;">${(response && response.message) || "فشل تحميل التصاريح."}</p>`;
         }
     }
     function onOpenPermitsLoadFailure(e) {
-        hideLoader();
+        /* ... (نفس الكود من الرد السابق) ... */
         const lc = document.getElementById("open-permits-list");
         if (lc)
             lc.innerHTML = `<p class="error-message" style="display:block;">${e.message}</p>`;
     }
     async function handleClosePermit(id) {
+        /* ... (نفس الكود من الرد السابق، ينادي callApi) ... */
         if (!id) return;
-        showLoader("Closing...");
+        // No showLoader here
         try {
             const r = await callApi("closePermit", { permitId: id });
             onPermitClosed(r);
@@ -583,17 +597,14 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
     function onPermitClosed(r) {
-        hideLoader();
-        showMessage(closePermitMsg, r ? r.message : "Closed.", true);
+        showMessage(closePermitMsg, r ? r.message : "تم.", true);
         loadOpenPermits();
     }
     function onPermitCloseFailure(e) {
-        hideLoader();
         showMessage(closePermitMsg, e.message, false);
     }
-
-    // --- Monitor Permits Logic ---
     function populateMonitorProjects() {
+        /* ... (نفس الكود من الرد السابق) ... */
         if (
             !monitorProjectFilter ||
             !currentUser ||
@@ -613,30 +624,45 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
     function buildResultsTable(permits) {
+        /* ... (نفس الكود من الرد السابق، مع إضافة الأعمدة الجديدة) ... */
         if (!monitorResultsTable) return;
         if (!permits || !Array.isArray(permits) || permits.length === 0) {
             monitorResultsTable.innerHTML = "<p>No results.</p>";
             return;
         }
-        let tbl = `<table class="results-table"><thead><tr><th>ID</th><th>Project</th><th>Date</th><th>Type</th><th>Issuer</th><th>Status</th></tr></thead><tbody>`;
+        let tbl = `<table class="results-table"><thead><tr><th>ID</th><th>Project</th><th>Date</th><th>Type</th><th>Issuer</th><th>Requester</th><th>Description</th><th>Status</th></tr></thead><tbody>`;
         permits.forEach((p) => {
-            tbl += `<tr><td>${p.id || "-"}</td><td>${p.projectName || "-"}</td><td>${p.permitDate || "-"}</td><td>${p.permitType || "-"}</td><td>${p.issuer || "-"}</td><td class="${p.status && p.status.toUpperCase() === "OPEN" ? "status-open" : "status-closed"}">${p.status || "-"}</td></tr>`;
+            tbl += `<tr><td>${p.id || "-"}</td><td>${p.projectName || "-"}</td><td>${p.permitDate || "-"}</td><td>${p.permitType || "-"}</td><td>${p.issuer || "-"}</td><td>${p.requester || "-"}</td><td title="${p.description || ""}">${p.description || "-"}</td><td class="${p.status && p.status.toUpperCase() === "OPEN" ? "status-open" : "status-closed"}">${p.status || "-"}</td></tr>`;
         });
         tbl += `</tbody></table>`;
         monitorResultsTable.innerHTML = tbl;
     }
     async function performSearch() {
-        if (!currentUser || !monitorProjectFilter /*...etc*/) return;
-        const f = {
+        /* ... (نفس الكود من الرد السابق، يقرأ الفلتر الجديد وينادي callApi) ... */
+        if (
+            !currentUser ||
+            !monitorProjectFilter ||
+            !monitorRequesterFilter ||
+            !monitorFromDate ||
+            !monitorToDate ||
+            !monitorOpenOnly ||
+            !monitorMessage ||
+            !monitorResultsTable
+        ) {
+            alert("Search elements missing.");
+            return;
+        }
+        const filters = {
             selectedProject: monitorProjectFilter.value,
+            selectedRequester: monitorRequesterFilter.value || null,
             fromDate: monitorFromDate.value || null,
             toDate: monitorToDate.value || null,
             showOpenOnly: monitorOpenOnly.checked,
         };
         if (
-            f.fromDate &&
-            f.toDate &&
-            new Date(f.fromDate) > new Date(f.toDate)
+            filters.fromDate &&
+            filters.toDate &&
+            new Date(filters.fromDate) > new Date(filters.toDate)
         ) {
             showMessage(monitorMessage, "'From' before 'To'.", false);
             return;
@@ -644,9 +670,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (monitorMessage) monitorMessage.style.display = "none";
         if (monitorResultsTable)
             monitorResultsTable.innerHTML = "<p>Searching...</p>";
+        // Use callBackend (shows loader)
         try {
             const r = await callApi("searchPermits", {
-                filters: f,
+                filters: filters,
                 userInfo: currentUser,
             });
             onSearchSuccess(r);
@@ -654,18 +681,16 @@ document.addEventListener("DOMContentLoaded", function () {
             onSearchFailure(e);
         }
     }
-    function onSearchSuccess(r) {
-        hideLoader();
-        buildResultsTable(r.permits);
+    function onSearchSuccess(response) {
+        buildResultsTable(response.permits);
     }
-    function onSearchFailure(e) {
-        hideLoader();
-        showMessage(monitorMessage, e.message, false);
+    function onSearchFailure(error) {
+        showMessage(monitorMessage, error.message, false);
         if (monitorResultsTable) monitorResultsTable.innerHTML = "";
     }
     if (monitorSearchBtn) {
         monitorSearchBtn.addEventListener("click", performSearch);
     } else {
-        console.error("#monitor-search-btn?");
+        console.error("#monitor-search-btn not found.");
     }
 }); // --- END DOMContentLoaded ---

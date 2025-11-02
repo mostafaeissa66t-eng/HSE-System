@@ -145,7 +145,203 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--light-gray); di
     .results-table td:nth-child(7), .results-table th:nth-child(7) { max-width: 100px; } /* Smaller max-width on mobile */
     .filter-controls .form-row > .form-group { flex-basis: auto; } /* Ensure filters stack correctly */
 }
+/* =================================== */
+/* KPI EVALUATION SECTION STYLES (New) */
+/* =================================== */
+.kpi-selection-area {
+    background-color: #fdfdfd;
+    padding: 15px;
+    border: 1px solid var(--medium-gray);
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+.kpi-selection-area .form-group {
+    flex-basis: calc(50% - 10px); /* 2 columns */
+}
+/* Style for the Job Title display */
+.job-title-display {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    text-align: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--medium-gray);
+    display: none; /* Hidden by default */
+}
+/* Style for the KPI list */
+#kpi-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Space between KPI cards */
+}
+/* Individual KPI card */
+.kpi-card {
+    background: var(--light-gray);
+    border: 1px solid var(--medium-gray);
+    border-radius: 5px;
+    padding: 15px;
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 15px;
+    align-items: center;
+}
+.kpi-card-info {
+    flex-grow: 1; /* Take most of the space */
+    min-width: 250px; /* Ensure info doesn't get too small */
+}
+.kpi-card-info h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+}
+.kpi-card-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--dark-gray);
+}
+.kpi-card-info p span {
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-left: 5px;
+}
+.kpi-card-input {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Space between score and notes */
+    min-width: 150px;
+}
+.kpi-card-input .score-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.kpi-card-input .score-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+.kpi-card-input .score-group input {
+    width: 60px; /* Small input box for score */
+    padding: 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1rem;
+}
+.kpi-card-input .notes-input {
+    width: 100%;
+    padding: 8px;
+    font-size: 0.9rem;
+    font-family: 'Cairo', sans-serif;
+    border: 1px solid var(--medium-gray);
+    border-radius: 5px;
+    box-sizing: border-box; /* Ensure padding doesn't break layout */
+}
+#kpi-save-btn {
+    width: auto;
+    align-self: flex-start;
+}
 
+/* ========================================= */
+/* --- (جديد) تنسيقات صفحة تقييم KPIs --- */
+/* ========================================= */
+
+/* حاوية الفلاتر */
+.kpi-selection-area {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+}
+
+/* عرض المسمى الوظيفي */
+.job-title-display {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #0056b3;
+  margin-top: 15px;
+}
+
+/* كارت بند التقييم الواحد */
+.kpi-item-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.kpi-item-header {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.kpi-item-score-label {
+  font-size: 0.9em;
+  color: #555;
+  background: #e9ecef;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.kpi-item-body {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* عمودين: للدرجة والملاحظات */
+  gap: 20px;
+}
+
+/* جعل خانات الإدخال مناسبة */
+.kpi-item-body .form-group {
+  margin: 0;
+}
+.kpi-item-body .form-group label {
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.kpi-score-input,
+.kpi-notes-input {
+  width: 100%; /* تأخذ عرض الـ form-group */
+  box-sizing: border-box; /* لضمان عدم خروج البادينج عن العرض */
+}
+
+/* رسائل النجاح والخطأ الخاصة بالـ KPI */
+#kpi-message-area, #kpi-save-message {
+  text-align: center;
+  font-size: 1.1em;
+  margin-top: 15px;
+  white-space: pre-wrap; /* (مهم) لعرض النسبة المئوية في سطرين */
+}
+
+/* لودر صغير عند تحميل البنود */
+.loader-small {
+  text-align: center;
+  padding: 30px;
+  font-size: 1.2em;
+  color: #555;
+}
+
+/* تنسيق للهواتف */
+@media (max-width: 768px) {
+  .kpi-item-body {
+    grid-template-columns: 1fr; /* عمود واحد في الموبايل */
+    gap: 15px;
+  }
+  .kpi-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
 /* DESKTOP STYLES (Ensure defaults) */
 @media (min-width: 769px) {
   #app-wrapper { flex-direction: row; }

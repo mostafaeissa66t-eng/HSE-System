@@ -623,6 +623,12 @@ document.addEventListener("DOMContentLoaded", function () {
                                                 },
                                     );
                         if (dt) dt.valueAsDate = new Date();
+                        // (جديد) إخفاء حقل المقاول عند الريسيت
+                        const subcontractorGroup = document.getElementById(
+                                    "permit-subcontractor-group",
+                        );
+                        if (subcontractorGroup)
+                                    subcontractorGroup.style.display = "none";
             }
             if (permitForm) {
                         permitForm.addEventListener(
@@ -705,9 +711,121 @@ document.addEventListener("DOMContentLoaded", function () {
             function onPermitSaveSuccess(r) {
                         showMessage(permitMsg, r ? r.message : "تم.", true);
                         resetPermitForm();
+                        // (جديد) إخفاء حقل المقاول بعد الحفظ
+                        const subcontractorGroup = document.getElementById(
+                                    "permit-subcontractor-group",
+                        );
+                        if (subcontractorGroup)
+                                    subcontractorGroup.style.display = "none";
             }
             function onPermitSaveFailure(e) {
                         showMessage(permitMsg, e.message, false);
+            }
+            // =================================== */
+            // --- (جديد) منطق إظهار المقاولين الديناميكي ---
+            // =================================== */
+
+            // 1. جلب العناصر من الـ HTML
+            const permitProjectSelect =
+                        document.getElementById("permit-project");
+            const permitRequesterSelect =
+                        document.getElementById("permit-requester");
+            const subcontractorGroup = document.getElementById(
+                        "permit-subcontractor-group",
+            );
+            const subcontractorSelect = document.getElementById(
+                        "permit-subcontractor",
+            );
+
+            /**
+             * دالة للتحقق من إظهار أو إخفاء حقل المقاول
+             */
+            async function checkContractorVisibility() {
+                        if (
+                                    !permitProjectSelect ||
+                                    !permitRequesterSelect ||
+                                    !subcontractorGroup
+                        )
+                                    return;
+
+                        const selectedProject = permitProjectSelect.value;
+                        const selectedRequester = permitRequesterSelect.value;
+
+                        // (مهم جداً) عدّل كلمة "المقاول" هنا لتطابق الكلمة بالظبط
+                        // اللي موجودة عندك في شيت ConfigData في عمود RequestersList
+                        const contractorRequesterName = "المقاول";
+
+                        if (
+                                    selectedProject &&
+                                    selectedRequester ===
+                                                contractorRequesterName
+                        ) {
+                                    // الحالة: اختار "المقاول" ومختار "مشروع"
+                                    subcontractorGroup.style.display = "block"; // أظهر الحقل
+                                    subcontractorSelect.innerHTML =
+                                                '<option value="">جاري التحميل...</option>';
+                                    subcontractorSelect.disabled = true;
+
+                                    try {
+                                                // استدعاء الدالة الجديدة من Code.gs
+                                                const response = await callApi(
+                                                            "getContractorsForProject",
+                                                            {
+                                                                        projectName: selectedProject,
+                                                                        // لا داعي لإرسال userInfo هنا لأن الدالة لا تحتاجه
+                                                            },
+                                                );
+
+                                                if (
+                                                            response.contractors &&
+                                                            response.contractors
+                                                                        .length >
+                                                                        0
+                                                ) {
+                                                            subcontractorSelect.innerHTML =
+                                                                        '<option value="">-- اختر المقاول --</option>';
+                                                            response.contractors.forEach(
+                                                                        (
+                                                                                    name,
+                                                                        ) => {
+                                                                                    subcontractorSelect.options.add(
+                                                                                                new Option(
+                                                                                                            name,
+                                                                                                            name,
+                                                                                                ),
+                                                                                    );
+                                                                        },
+                                                            );
+                                                            subcontractorSelect.disabled = false;
+                                                            subcontractorSelect.required = true; // (مهم) اجعل الحقل مطلوباً
+                                                } else {
+                                                            subcontractorSelect.innerHTML =
+                                                                        '<option value="">لا يوجد مقاولين لهذا المشروع</option>';
+                                                            subcontractorSelect.disabled = true;
+                                                            subcontractorSelect.required = false;
+                                                }
+                                    } catch (error) {
+                                                subcontractorSelect.innerHTML = `<option value="">خطأ: ${error.message}</option>`;
+                                                subcontractorSelect.disabled = true;
+                                    }
+                        } else {
+                                    // الحالة: لم يختر "المقاول"
+                                    subcontractorGroup.style.display = "none"; // أخفِ الحقل
+                                    subcontractorSelect.innerHTML = ""; // فضّي القائمة
+                                    subcontractorSelect.required = false; // (مهم) اجعل الحقل غير مطلوب
+                        }
+            }
+
+            // 2. ربط المستمعين (Listeners)
+            if (permitProjectSelect && permitRequesterSelect) {
+                        permitProjectSelect.addEventListener(
+                                    "change",
+                                    checkContractorVisibility,
+                        );
+                        permitRequesterSelect.addEventListener(
+                                    "change",
+                                    checkContractorVisibility,
+                        );
             }
             function resetObservationForm() {
                         if (!obsForm || !currentUser) return;

@@ -349,3 +349,68 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--light-gray); di
   #content { width: 100%; margin-right: 0 !important; flex-grow: 1; padding-top: 20px; } /* Reset padding-top */
   .mobile-header { display: none !important; }
 }
+
+/* ========================================= */
+/* --- (جديد) تنسيقات صفحة المخزن (PPE) --- */
+/* ========================================= */
+
+/* المجموعات الديناميكية (اللي بتختفي وتظهر) */
+.ppe-dynamic-group {
+  border: 1px solid #eee;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background-color: #fdfdfd;
+}
+
+/* زرار البحث جنب الرقم القومي */
+.input-with-button {
+  display: flex;
+  gap: 10px;
+}
+.input-with-button input {
+  flex-grow: 1;
+}
+.btn-small {
+  padding: 0 12px;
+  font-size: 14px;
+  height: 40px; /* ليتوافق مع ارتفاع حقل الإدخال */
+  line-height: 40px;
+  flex-shrink: 0;
+}
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+}
+
+/* حاوية سلة المهمات */
+#ppe-cart-container {
+  border: 1px dashed #ccc;
+  min-height: 50px;
+  padding: 10px;
+  border-radius: 5px;
+  background: #f9f9f9;
+}
+
+/* الصنف الواحد جوه السلة */
+.ppe-cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  font-size: 1.1em;
+}
+.ppe-cart-item span {
+  font-weight: 500;
+}
+.ppe-cart-item .btn-danger {
+  padding: 5px 10px;
+  font-size: 12px;
+  height: auto;
+  line-height: 1.5;
+}

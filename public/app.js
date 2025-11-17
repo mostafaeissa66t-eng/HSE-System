@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
         NewObservation: "ملاحظة جديدة",
         MonitorPermits: "متابعة التصاريح", // Monitor section name
         KpiEvaluation: "تقييم الموظفين", // KPI section name
-        PpeTransactions: "حركات المخزن", // (*** جديد ***)
+        PpeTransactions: "حركات مخزن المهمات (PPE)", 
         NewNearMiss: "Near Miss", // Example
     };
 

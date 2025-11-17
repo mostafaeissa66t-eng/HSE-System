@@ -15,7 +15,7 @@
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
         />
     </head>
-    <body>
+     <body>
         <div id="loader-overlay">
             <div class="spinner"></div>
             <p>جاري التحميل...</p>
@@ -405,6 +405,263 @@
                     </form>
                 </section>
                 <!-- --- نهاية القسم الجديد --- -->
+                <section
+                    id="PpeTransactions"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-boxes"></i> حركات مخزن المهمات (PPE)
+                    </h2>
+
+                    <form id="ppe-form" class="app-form">
+                        <div class="form-group">
+                            <label for="ppe-transaction-type" class="required"
+                                >نوع الحركة:</label
+                            >
+                            <select id="ppe-transaction-type" required>
+                                <option value="">-- اختر نوع الحركة --</option>
+                                <option value="صرف">1. صرف مهمات</option>
+                                <option value="مرتجع">2. مرتجع مهمات</option>
+                                <option value="تحويل">3. تحويل مخزون</option>
+                                <option value="توريد">
+                                    4. توريد مخزون (إضافة رصيد)
+                                </option>
+                            </select>
+                        </div>
+
+                        <div
+                            id="ppe-supplier-group"
+                            class="ppe-dynamic-group"
+                            style="display: none"
+                        >
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label
+                                        for="ppe-supplier-name"
+                                        class="required"
+                                        >اسم المورد:</label
+                                    >
+                                    <input type="text" id="ppe-supplier-name" />
+                                </div>
+                                <div class="form-group">
+                                    <label
+                                        for="ppe-supplier-date"
+                                        class="required"
+                                        >تاريخ التوريد:</label
+                                    >
+                                    <input type="date" id="ppe-supplier-date" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label
+                                    for="ppe-supplier-destination"
+                                    class="required"
+                                    >التوريد إلى مخزن:</label
+                                >
+                                <select id="ppe-supplier-destination"></select>
+                            </div>
+                        </div>
+
+                        <div
+                            id="ppe-transfer-group"
+                            class="ppe-dynamic-group"
+                            style="display: none"
+                        >
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label
+                                        for="ppe-transfer-source"
+                                        class="required"
+                                        >من مخزن:</label
+                                    >
+                                    <select id="ppe-transfer-source"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label
+                                        for="ppe-transfer-destination"
+                                        class="required"
+                                        >إلى مخزن:</label
+                                    >
+                                    <select
+                                        id="ppe-transfer-destination"
+                                    ></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            id="ppe-recipient-group"
+                            class="ppe-dynamic-group"
+                            style="display: none"
+                        >
+                            <div class="form-group">
+                                <label
+                                    for="ppe-recipient-location"
+                                    id="ppe-recipient-location-label"
+                                    class="required"
+                                    >الموقع:</label
+                                >
+                                <select id="ppe-recipient-location"></select>
+                            </div>
+                            <hr />
+                            <div class="form-group">
+                                <label for="ppe-recipient-type" class="required"
+                                    >نوع المستلم:</label
+                                >
+                                <select id="ppe-recipient-type">
+                                    <option value="">-- اختر النوع --</option>
+                                    <option value="موظف">
+                                        موظف (من الشركة)
+                                    </option>
+                                    <option value="مقاول">
+                                        مقاول (تابع لشركة)
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div
+                                id="ppe-recipient-employee-group"
+                                style="display: none"
+                            >
+                                <div class="form-group">
+                                    <label
+                                        for="ppe-recipient-employee"
+                                        class="required"
+                                        >اسم الموظف:</label
+                                    >
+                                    <select
+                                        id="ppe-recipient-employee"
+                                    ></select>
+                                </div>
+                            </div>
+
+                            <div
+                                id="ppe-recipient-contractor-group"
+                                style="display: none"
+                            >
+                                <div class="form-group">
+                                    <label
+                                        for="ppe-recipient-contractor-company"
+                                        class="required"
+                                        >شركة المقاول:</label
+                                    >
+                                    <select
+                                        id="ppe-recipient-contractor-company"
+                                    ></select>
+                                </div>
+                                <div class="form-group">
+                                    <label
+                                        for="ppe-recipient-nid"
+                                        class="required"
+                                        >الرقم القومي:</label
+                                    >
+                                    <div class="input-with-button">
+                                        <input
+                                            type="text"
+                                            id="ppe-recipient-nid"
+                                            placeholder="اكتب الرقم القومي واضغط بحث..."
+                                        />
+                                        <button
+                                            type="button"
+                                            id="ppe-nid-search-btn"
+                                            class="btn-small"
+                                        >
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label
+                                        for="ppe-recipient-name"
+                                        class="required"
+                                        >اسم المستلم:</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="ppe-recipient-name"
+                                        placeholder="سيتم ملؤه تلقائياً أو أدخل اسماً جديداً..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            id="ppe-items-group"
+                            class="ppe-dynamic-group"
+                            style="display: none"
+                        >
+                            <hr style="margin-top: 25px" />
+                            <h4>إضافة مهمات</h4>
+                            <div class="form-row">
+                                <div class="form-group" style="flex-grow: 3">
+                                    <label for="ppe-item-select"
+                                        >اختر المهمة:</label
+                                    >
+                                    <select id="ppe-item-select"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ppe-item-qty">الكمية:</label>
+                                    <input
+                                        type="number"
+                                        id="ppe-item-qty"
+                                        min="1"
+                                        value="1"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button
+                                        type="button"
+                                        id="ppe-add-item-btn"
+                                        class="btn btn-secondary"
+                                    >
+                                        <i class="fas fa-plus"></i> إضافة
+                                    </button>
+                                </div>
+                            </div>
+                            <p
+                                id="ppe-item-balance"
+                                style="
+                                    text-align: center;
+                                    font-weight: bold;
+                                    color: #0056b3;
+                                "
+                            ></p>
+
+                            <h4>قائمة المهمات المطلوبة:</h4>
+                            <div id="ppe-cart-container">
+                                <p>لم يتم إضافة أي مهمات...</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ppe-notes">ملاحظات (اختياري):</label>
+                            <textarea id="ppe-notes" rows="3"></textarea>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="ppe-save-btn"
+                            class="btn"
+                            style="width: 100%; margin-top: 20px"
+                            disabled
+                        >
+                            <i class="fas fa-save"></i> حفظ الحركة
+                        </button>
+
+                        <p
+                            id="ppe-main-message"
+                            class="error-message"
+                            style="display: none"
+                        ></p>
+                        <p
+                            id="ppe-save-message"
+                            class="success-message"
+                            style="display: none; white-space: pre-wrap"
+                        ></p>
+                    </form>
+                </section>
             </main>
         </div>
 

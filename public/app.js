@@ -1,5 +1,5 @@
 // =================================== */
-// CLIENT-SIDE LOGIC (app.js - Final V6 - Added PPE Module)
+// CLIENT-SIDE LOGIC (app.js - Final V7 - All Modules Included)
 // =================================== */
 
 // API endpoint on the same server (points to api/index.js or server.js via proxy)
@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const kpiSaveBtn = document.getElementById("kpi-save-btn");
     const kpiSaveMessage = document.getElementById("kpi-save-message");
 
-    // (*** جديد ***) PPE Section Selectors
+    // (جديد) PPE Section Selectors
     const ppeTransactionType = document.getElementById("ppe-transaction-type");
     const ppeForm = document.getElementById("ppe-form");
     const ppeSupplierGroup = document.getElementById("ppe-supplier-group");
@@ -103,15 +103,28 @@ document.addEventListener("DOMContentLoaded", function () {
     const ppeMainMessage = document.getElementById("ppe-main-message");
     const ppeSaveMessage = document.getElementById("ppe-save-message");
 
+    // (جديد) Stock Report Selectors
+    const stockReportProjectSelect = document.getElementById(
+        "stock-report-project",
+    );
+    const stockReportSearchBtn = document.getElementById(
+        "stock-report-search-btn",
+    );
+    const stockReportResultsTable = document.getElementById(
+        "stock-report-results-table",
+    );
+    const stockReportMessage = document.getElementById("stock-report-message");
+
     // --- Mappings for Sections ---
     const sectionIcons = {
         Dashboard: "fas fa-tachometer-alt",
         NewPermit: "fas fa-file-signature",
-        ClosePermit: "fas fa-clipboard-check", // Corrected icon
+        ClosePermit: "fas fa-clipboard-check",
         NewObservation: "fas fa-eye",
-        MonitorPermits: "fas fa-tasks", // Monitor section icon
-        KpiEvaluation: "fas fa-chart-line", // KPI section icon
-        PpeTransactions: "fas fa-boxes", // (*** جديد ***)
+        MonitorPermits: "fas fa-tasks",
+        KpiEvaluation: "fas fa-chart-line",
+        PpeTransactions: "fas fa-boxes", // (جديد)
+        ProjectStockReport: "fas fa-chart-pie", // (جديد)
         NewNearMiss: "fas fa-exclamation-triangle", // Example
     };
     const sectionNames = {
@@ -119,21 +132,20 @@ document.addEventListener("DOMContentLoaded", function () {
         NewPermit: "تصريح جديد",
         ClosePermit: "إغلاق التصاريح",
         NewObservation: "ملاحظة جديدة",
-        MonitorPermits: "متابعة التصاريح", // Monitor section name
-        KpiEvaluation: "تقييم الموظفين", // KPI section name
-        PpeTransactions: "حركات المخزن", // (*** جديد ***)
+        MonitorPermits: "متابعة التصاريح",
+        KpiEvaluation: "تقييم الموظفين",
+        PpeTransactions: "حركات المخزن", // (جديد)
+        ProjectStockReport: "أرصدة المخازن", // (جديد)
         NewNearMiss: "Near Miss", // Example
     };
 
     // --- === UTILITY FUNCTIONS (Defined FIRST!) === ---
     function showLoader(message = "جاري التحميل...") {
-        // Ensure loader element is available (it was defined in SELECTORS)
         const loaderText = loader ? loader.querySelector("p") : null;
         if (loaderText) loaderText.textContent = message;
         if (loader) loader.style.display = "flex";
     }
     function hideLoader() {
-        // Add a small delay to prevent flickering
         setTimeout(() => {
             if (loader) loader.style.display = "none";
         }, 100);
@@ -144,7 +156,6 @@ document.addEventListener("DOMContentLoaded", function () {
             element.className = isSuccess ? "success-message" : "error-message";
             element.style.display = "block";
 
-            // (*** معدل ***)
             let timeout = 5000;
             if (
                 isSuccess &&
@@ -156,7 +167,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             setTimeout(() => {
                 if (element) element.style.display = "none";
-            }, timeout); // Hide after 5s or 10s
+            }, timeout);
         } else {
             console.warn(
                 "Attempted to show message on a non-existent element:",
@@ -183,7 +194,8 @@ document.addEventListener("DOMContentLoaded", function () {
         if (action === "getKPIsForEmployee")
             loaderMessage = "جاري تحميل المؤشرات...";
         if (action === "saveEvaluations") loaderMessage = "جاري حفظ التقييم...";
-        // (*** جديد ***)
+
+        // (جديد) رسائل المخزن
         if (action === "getInventoryInitData")
             loaderMessage = "جاري تحميل بيانات المخزن...";
         if (action === "getRecipientByNID")
@@ -191,8 +203,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (action === "checkStockBalance")
             loaderMessage = "جاري فحص الرصيد...";
         if (action === "saveTransaction") loaderMessage = "جاري حفظ الحركة...";
+        if (action === "getProjectStockReport")
+            loaderMessage = "جاري تحميل التقرير...";
 
-        showLoader(loaderMessage); // This will work now
+        showLoader(loaderMessage);
 
         try {
             const response = await fetch(API_URL, {
@@ -201,7 +215,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 body: JSON.stringify({ action: action, payload: payload }),
             });
             const responseText = await response.text();
-            hideLoader(); // Hide loader after getting response
+            hideLoader();
 
             if (!response.ok) {
                 console.error(
@@ -259,7 +273,6 @@ document.addEventListener("DOMContentLoaded", function () {
             const p = document.getElementById("password");
             if (!u || !p) return;
             if (loginError) loginError.style.display = "none";
-            // callApi shows loader
             try {
                 const r = await callApi("checkLogin", {
                     username: u.value,
@@ -268,7 +281,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 onLoginSuccess(r);
             } catch (err) {
                 onLoginFailure(err);
-            } // callApi hides loader
+            }
         });
     } else {
         console.error("#login-form not found.");
@@ -403,7 +416,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // (*** معدل ***)
+    // (*** هذه هي الدالة المُعدلة ***)
     function showSection(sectionId) {
         if (!sectionId) {
             console.error("showSection: no id.");
@@ -426,11 +439,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (monitorMessage) monitorMessage.style.display = "none";
             }
             if (sectionId === "KpiEvaluation") {
-                initKpiPage(); // <-- من التعديل القديم
+                initKpiPage();
             }
-            // (*** هذا هو السطر الجديد ***)
             if (sectionId === "PpeTransactions") {
-                initPpePage(); // <-- استدعاء دالة المخزن الجديدة
+                initPpePage(); // (*** هذا هو السطر الجديد ***)
+            }
+            if (sectionId === "ProjectStockReport") {
+                initStockReportPage(); // (*** هذا هو السطر الجديد ***)
             }
         } else {
             console.error(`Section "#${sectionId}" not found.`);
@@ -514,7 +529,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         if (dt) dt.valueAsDate = new Date();
 
-        // (*** معدل ***) إضافة إخفاء حقل المقاول
         const subcontractorGroup = document.getElementById(
             "permit-subcontractor-group",
         );
@@ -531,7 +545,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 permitType: document.getElementById("permit-type")?.value,
                 requester: document.getElementById("permit-requester")?.value,
                 siteEngineer: document.getElementById("permit-engineer")?.value,
-                // (*** معدل ***) جلب اسم المقاول من القائمة المنسدلة
                 subcontractor: document.getElementById("permit-subcontractor")
                     ?.value,
                 location: document.getElementById("permit-location")?.value,
@@ -567,7 +580,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function onPermitSaveSuccess(r) {
         showMessage(permitMsg, r ? r.message : "تم.", true);
         resetPermitForm();
-        // (*** معدل ***)
         const subcontractorGroup = document.getElementById(
             "permit-subcontractor-group",
         );
@@ -578,7 +590,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // =================================== */
-    // --- (جديد) منطق إظهار المقاولين الديناميكي ---
+    // --- منطق إظهار المقاولين الديناميكي ---
     // =================================== */
     const permitProjectSelect = document.getElementById("permit-project");
     const permitRequesterSelect = document.getElementById("permit-requester");
@@ -598,7 +610,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const selectedProject = permitProjectSelect.value;
         const selectedRequester = permitRequesterSelect.value;
 
-        // (مهم جداً) عدّل كلمة "المقاول" هنا لتطابق الكلمة بالظبط
         const contractorRequesterName = "المقاول";
 
         if (selectedProject && selectedRequester === contractorRequesterName) {
@@ -1073,9 +1084,6 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     /**
      * دالة بدء تشغيل صفحة المخزن (يتم استدعاؤها من showSection)
      */
-    /**
-     * دالة بدء تشغيل صفحة المخزن (يتم استدعاؤها من showSection)
-     */
     async function initPpePage() {
         console.log("بدء تشغيل صفحة المخزن...");
         ppeForm.reset(); // ريسيت للفورم
@@ -1084,40 +1092,41 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         updatePpeCartUI(); // تحديث عرض السلة
 
         // جلب البيانات الأولية (مرة واحدة لو مش موجودة)
-        if (ppeLocations.length === 0) {
-            try {
-                const data = await callApi("getInventoryInitData", {
-                    userInfo: currentUser,
-                });
-                if (data.status === "success") {
-                    ppeLocations = data.locations;
-                    ppeEmployees = data.employees;
-                    ppeContractors = data.contractors;
-                    ppeItems = data.ppeItems;
+        // (*** تعديل ***) هنخليها تتحمل كل مرة عشان الرصيد يتحدث
+        // if (ppeLocations.length === 0) {
+        try {
+            const data = await callApi("getInventoryInitData", {
+                userInfo: currentUser,
+            });
+            if (data.status === "success") {
+                ppeLocations = data.locations;
+                ppeEmployees = data.employees;
+                ppeContractors = data.contractors;
+                ppeItems = data.ppeItems;
 
-                    // تعبئة القوائم المنسدلة
-                    populateSelect(ppeSupplierDest, ppeLocations);
-                    populateSelect(ppeTransferSource, ppeLocations);
-                    populateSelect(ppeTransferDest, ppeLocations);
-                    populateSelect(ppeRecipientLocation, ppeLocations);
-                    populateSelect(
-                        ppeRecipientContractorCompany,
-                        ppeContractors,
-                    );
+                // تعبئة القوائم المنسدلة
+                populateSelect(ppeSupplierDest, ppeLocations);
+                populateSelect(ppeTransferSource, ppeLocations);
+                populateSelect(ppeTransferDest, ppeLocations);
+                populateSelect(ppeRecipientLocation, ppeLocations);
+                populateSelect(ppeRecipientContractorCompany, ppeContractors);
 
-                    populateSelect(ppeItemSelect, ppeItems, "id", "name");
+                // (*** تعديل ***) مش هنملى قايمة المهمات هنا
+                // populateSelect(ppeItemSelect, ppeItems, 'id', 'name');
 
-                    // (*** تم حذف السطر اللي بيملى قايمة الموظفين من هنا ***)
-                }
-            } catch (e) {
-                showMessage(
-                    ppeMainMessage,
-                    `خطأ فادح في تحميل البيانات: ${e.message}`,
-                    false,
-                );
+                // (*** تعديل ***) مش هنملى قايمة الموظفين هنا
+                // populateSelect(ppeRecipientEmployee, ppeEmployees, 'id', 'name');
             }
+        } catch (e) {
+            showMessage(
+                ppeMainMessage,
+                `خطأ فادح في تحميل البيانات: ${e.message}`,
+                false,
+            );
         }
+        // }
     }
+
     /**
      * (مهم) الدالة اللي بتخفي وتظهر الحقول بناءً على نوع الحركة
      */
@@ -1158,14 +1167,32 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
             case "توريد":
                 ppeSupplierGroup.style.display = "block";
                 // ضبط تاريخ التوريد لليوم
-                ppeSupplierDate.valueAsDate = new Date();
+                if (ppeSupplierDate) ppeSupplierDate.valueAsDate = new Date();
                 break;
         }
+
+        // (*** السطر الجديد: أضفه هنا ***)
+        // بعد ما تخفي وتظهر الحقول، حدث قايمة المهمات
+        refreshPpeItemsDropdown();
     }
 
     /**
      * دالة مساعدة لإظهار/إخفاء حقول الموظف/المقاول
      */
+    function checkRecipientTypeUI() {
+        const type = ppeRecipientType.value;
+        ppeRecipientEmployeeGroup.style.display =
+            type === "موظف" ? "block" : "none";
+        ppeRecipientContractorGroup.style.display =
+            type === "مقاول" ? "block" : "none";
+
+        // (*** السطر الجديد ***)
+        // لو اختار "موظف"، حدث القايمة بتاعته بناءً على المشروع
+        if (type === "موظف") {
+            updateEmployeeDropdown();
+        }
+    }
+
     /**
      * (جديد) دالة فلترة قايمة الموظفين بناءً على المشروع المختار
      */
@@ -1195,20 +1222,66 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         // 5. املأ القايمة بالموظفين المفلترين
         populateSelect(ppeRecipientEmployee, filteredEmployees, "id", "name");
     }
-    /**
-     * دالة مساعدة لإظهار/إخفاء حقول الموظف/المقاول
-     */
-    function checkRecipientTypeUI() {
-        const type = ppeRecipientType.value;
-        ppeRecipientEmployeeGroup.style.display =
-            type === "موظف" ? "block" : "none";
-        ppeRecipientContractorGroup.style.display =
-            type === "مقاول" ? "block" : "none";
 
-        // (*** السطر الجديد ***)
-        // لو اختار "موظف"، حدث القايمة بتاعته بناءً على المشروع
-        if (type === "موظف") {
-            updateEmployeeDropdown();
+    /**
+     * (جديد) الدالة الذكية لفلترة قايمة المهمات حسب نوع الحركة والمخزن
+     */
+    async function refreshPpeItemsDropdown() {
+        const type = ppeTransactionType.value;
+        let sourceLocation = null;
+
+        if (type === "صرف") {
+            sourceLocation = ppeRecipientLocation.value;
+        } else if (type === "تحويل") {
+            sourceLocation = ppeTransferSource.value;
+        }
+
+        // --- (ده المنطق اللي إنت طلبته بالظبط) ---
+
+        // (الحالة 1: مرتجع أو توريد) - اعرض كل حاجة
+        if (type === "مرتجع" || type === "توريد") {
+            console.log("الوضع: مرتجع/توريد. عرض كل المهمات...");
+            populateSelect(ppeItemSelect, ppeItems, "id", "name");
+            ppeItemSelect.disabled = false;
+            return;
+        }
+
+        // (الحالة 2: صرف أو تحويل) - لازم نفلتر
+        if (!sourceLocation) {
+            ppeItemSelect.innerHTML =
+                '<option value="">-- اختر المخزن أولاً --</option>';
+            ppeItemSelect.disabled = true;
+            return;
+        }
+
+        // (الحالة 3: صرف/تحويل + اختار مخزن) - نادي الـ API
+        ppeItemSelect.innerHTML =
+            '<option value="">جاري تحميل المهمات المتاحة...</option>';
+        ppeItemSelect.disabled = true;
+
+        try {
+            const response = await callApi("getAvailableItemsForLocation", {
+                locationName: sourceLocation,
+            });
+            const availableIds = response.availableItemIds; // ['HEL-01', 'SHO-02']
+
+            if (availableIds.length === 0) {
+                ppeItemSelect.innerHTML =
+                    '<option value="">-- المخزن ده فاضي --</option>';
+                return;
+            }
+
+            // فلترة القايمة الرئيسية بناءً على الأكواد المتاحة
+            const availableItems = ppeItems.filter((item) =>
+                availableIds.includes(item.id),
+            );
+
+            populateSelect(ppeItemSelect, availableItems, "id", "name");
+            ppeItemSelect.disabled = false;
+        } catch (e) {
+            showMessage(ppeMainMessage, e.message, false);
+            ppeItemSelect.innerHTML =
+                '<option value="">-- خطأ في التحميل --</option>';
         }
     }
 
@@ -1218,7 +1291,6 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     async function searchByNID() {
         const nid = ppeRecipientNid.value;
         if (!nid || nid.length < 5) {
-            // (تعديل) ممكن الرقم القومي يكون مش 14
             showMessage(
                 ppeMainMessage,
                 "الرجاء إدخال رقم قومي/ID صحيح.",
@@ -1253,67 +1325,140 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     }
 
     /**
-     * (جديد) دالة إضافة مهمة "لسلة التسوق"
+     * (معدل) دالة إضافة مهمة "لسلة التسوق"
+     * (تتأكد من الرصيد أولاً قبل الإضافة)
      */
-    function addItemToCart() {
+    async function addItemToCart() {
         const itemId = ppeItemSelect.value;
         const qty = parseInt(ppeItemQty.value);
+        const type = ppeTransactionType.value;
 
-        if (!itemId || !qty || qty <= 0) {
-            showMessage(
-                ppeMainMessage,
-                "الرجاء اختيار مهمة وكمية صحيحة.",
-                false,
-            );
-            return;
+        showMessage(ppeMainMessage, "", true); // إخفاء أي خطأ قديم
+        const originalButtonHtml = ppeAddItemBtn.innerHTML; // حفظ شكل الزرار
+        ppeAddItemBtn.disabled = true;
+        ppeAddItemBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // إظهار لودر
+
+        try {
+            if (!itemId || !qty || qty <= 0) {
+                throw new Error("الرجاء اختيار مهمة وكمية صحيحة.");
+            }
+
+            // (*** هذا هو المنطق الجديد للتحقق من الرصيد ***)
+            // (التحقق من الرصيد مطلوب فقط في "الصرف" و "التحويل")
+            if (type === "صرف" || type === "تحويل") {
+                let sourceLocation = null;
+                if (type === "صرف") sourceLocation = ppeRecipientLocation.value;
+                if (type === "تحويل") sourceLocation = ppeTransferSource.value;
+
+                if (!sourceLocation) {
+                    throw new Error(
+                        "الرجاء اختيار المخزن المصدر (الصرف من / من مخزن) أولاً.",
+                    );
+                }
+
+                // فحص الرصيد الحالي + ما تم إضافته للسلة
+                const existingItem = ppeCart.find((item) => item.id === itemId);
+                const qtyInCart = existingItem ? existingItem.qty : 0;
+                const totalQtyNeeded = qty + qtyInCart; // الكمية المطلوبة = (اللي في السلة + اللي هتضيفه)
+
+                // استدعاء الـ API للتحقق
+                const response = await callApi("checkStockBalance", {
+                    location: sourceLocation,
+                    itemId: itemId,
+                });
+                const availableBalance = parseFloat(response.balance) || 0;
+
+                // المقارنة
+                if (totalQtyNeeded > availableBalance) {
+                    throw new Error(
+                        `الرصيد غير كاف! المتاح: ${availableBalance}. الكمية المطلوبة (بالسلة): ${totalQtyNeeded}.`,
+                    );
+                }
+            }
+            // (*** نهاية منطق التحقق من الرصيد ***)
+
+            const itemName =
+                ppeItemSelect.options[ppeItemSelect.selectedIndex].text;
+
+            // إضافة الصنف للسلة (المنطق القديم)
+            const existingItem = ppeCart.find((item) => item.id === itemId);
+            if (existingItem) {
+                existingItem.qty += qty;
+            } else {
+                ppeCart.push({ id: itemId, name: itemName, qty: qty });
+            }
+
+            // تحديث عرض السلة (وهذا سيحدث الرصيد المعروض أيضاً)
+            updatePpeCartUI();
+
+            // ريسيت لحقول الإضافة
+            ppeItemSelect.value = "";
+            ppeItemQty.value = 1;
+        } catch (e) {
+            showMessage(ppeMainMessage, e.message, false);
+        } finally {
+            // إرجاع الزرار لحالته الطبيعية
+            ppeAddItemBtn.disabled = false;
+            ppeAddItemBtn.innerHTML = originalButtonHtml;
         }
-
-        const itemName =
-            ppeItemSelect.options[ppeItemSelect.selectedIndex].text;
-
-        // منع تكرار الصنف في السلة
-        const existingItem = ppeCart.find((item) => item.id === itemId);
-        if (existingItem) {
-            existingItem.qty += qty;
-        } else {
-            ppeCart.push({ id: itemId, name: itemName, qty: qty });
-        }
-
-        updatePpeCartUI(); // تحديث عرض السلة
-
-        // ريسيت لحقول الإضافة
-        ppeItemSelect.value = "";
-        ppeItemQty.value = 1;
-        showMessage(ppeMainMessage, "", true); // إخفاء أي خطأ
     }
 
     /**
-     * (جديد) دالة تحديث عرض "سلة التسوق"
+     * (معدل) دالة تحديث عرض "سلة التسوق" + عرض الرصيد
      */
-    function updatePpeCartUI() {
+    async function updatePpeCartUI() {
         if (ppeCart.length === 0) {
             ppeCartContainer.innerHTML = "<p>لم يتم إضافة أي مهمات...</p>";
-            return;
+        } else {
+            ppeCartContainer.innerHTML = ""; // تفريغ
+            ppeCart.forEach((item, index) => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "ppe-cart-item";
+                itemDiv.innerHTML = `
+                    <span>${item.name} (<strong>الكمية: ${item.qty}</strong>)</span>
+                    <button type="button" class="btn-small btn-danger" data-index="${index}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                itemDiv
+                    .querySelector("button")
+                    .addEventListener("click", () => {
+                        ppeCart.splice(index, 1);
+                        updatePpeCartUI();
+                    });
+                ppeCartContainer.appendChild(itemDiv);
+            });
         }
 
-        ppeCartContainer.innerHTML = ""; // تفريغ
-        ppeCart.forEach((item, index) => {
-            const itemDiv = document.createElement("div");
-            itemDiv.className = "ppe-cart-item";
-            itemDiv.innerHTML = `
-                <span>${item.name} (<strong>الكمية: ${item.qty}</strong>)</span>
-                <button type="button" class="btn-small btn-danger" data-index="${index}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            `;
-            // ربط زر الحذف
-            itemDiv.querySelector("button").addEventListener("click", () => {
-                ppeCart.splice(index, 1); // إزالة العنصر من المصفوفة
-                updatePpeCartUI(); // إعادة رسم السلة
-            });
+        // (جديد) تحديث الرصيد المعروض
+        const itemId = ppeItemSelect.value;
+        const type = ppeTransactionType.value;
+        let location = "";
 
-            ppeCartContainer.appendChild(itemDiv);
-        });
+        if (type === "صرف") location = ppeRecipientLocation.value;
+        if (type === "تحويل") location = ppeTransferSource.value;
+
+        if (itemId && (type === "صرف" || type === "تحويل")) {
+            ppeItemBalance.textContent = "جاري فحص الرصيد...";
+            try {
+                // (مهم) فحص الرصيد المتبقي فعلياً
+                const existingItem = ppeCart.find((item) => item.id === itemId);
+                const qtyInCart = existingItem ? existingItem.qty : 0;
+
+                const res = await callApi("checkStockBalance", {
+                    location: location,
+                    itemId: itemId,
+                });
+                const availableBalance = parseFloat(res.balance) || 0;
+                const remainingBalance = availableBalance - qtyInCart;
+
+                ppeItemBalance.textContent = `الرصيد المتاح في [${location}]: ${remainingBalance} (من أصل ${availableBalance})`;
+            } catch (e) {
+                ppeItemBalance.textContent = `خطأ في جلب الرصيد.`;
+            }
+        } else {
+            ppeItemBalance.textContent = ""; // إخفاء الرصيد لو مرتجع أو توريد
+        }
     }
 
     /**
@@ -1440,7 +1585,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
             }
         } else if (data.transactionType === "مرتجع") {
             if (!data.locations.destination)
-                throw new Error("يجب اختيار المخزن الذي سيتم الاستلام فيه.");
+                throw new Error("يSجب اختيار المخزن الذي سيتم الاستلام فيه.");
             if (!data.recipient.type)
                 throw new Error("يجب اختيار نوع المستلم."); // نفس التحقق
         } else if (data.transactionType === "تحويل") {
@@ -1488,6 +1633,16 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     if (ppeRecipientLocation) {
         ppeRecipientLocation.addEventListener("change", updateEmployeeDropdown);
     }
+    // (*** تعديل ***) ربط الدالة الجديدة
+    if (ppeRecipientLocation) {
+        ppeRecipientLocation.addEventListener(
+            "change",
+            refreshPpeItemsDropdown,
+        );
+    }
+    if (ppeTransferSource) {
+        ppeTransferSource.addEventListener("change", refreshPpeItemsDropdown);
+    }
     if (ppeRecipientType) {
         ppeRecipientType.addEventListener("change", checkRecipientTypeUI);
     }
@@ -1497,9 +1652,142 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     if (ppeAddItemBtn) {
         ppeAddItemBtn.addEventListener("click", addItemToCart);
     }
+    if (ppeItemSelect) {
+        // (*** جديد ***) ربط قايمة المهمات
+        ppeItemSelect.addEventListener("change", updatePpeCartUI); // عشان الرصيد يتحدث
+    }
     if (ppeForm) {
         ppeForm.addEventListener("submit", handlePpeSave);
     }
 
     // --- نهاية وحدة المخازن ---
+
+    // =================================================================
+    // --- (*** جديد ***) وحدة تقرير أرصدة المخازن ---
+    // =================================================================
+
+    /**
+     * دالة بدء تشغيل صفحة تقرير المخزن
+     */
+    async function initStockReportPage() {
+        console.log("بدء تشغيل صفحة تقرير الأرصدة...");
+        stockReportResultsTable.innerHTML = "";
+        showMessage(
+            stockReportMessage,
+            "الرجاء اختيار الموقع والضغط على بحث",
+            true,
+        ); // Reset message
+
+        // جلب البيانات الأولية (لو مش موجودة)
+        // (هذه الدالة هتستخدم نفس البيانات اللي جابتها صفحة المخزن)
+        if (ppeLocations.length === 0) {
+            try {
+                // (مهم) هنستدعي نفس الدالة بتاعة المخزن عشان نملى المتغيرات
+                const data = await callApi("getInventoryInitData", {
+                    userInfo: currentUser,
+                });
+                if (data.status === "success") {
+                    ppeLocations = data.locations;
+                    ppeEmployees = data.employees;
+                    ppeContractors = data.contractors;
+                    ppeItems = data.ppeItems;
+                }
+            } catch (e) {
+                showMessage(
+                    stockReportMessage,
+                    `خطأ فادح في تحميل البيانات: ${e.message}`,
+                    false,
+                );
+                return;
+            }
+        }
+
+        // (*** فلترة القائمة بناءً على صلاحيات المستخدم ***)
+        const userProjects = (currentUser.projects || "").toString().trim();
+        let accessibleLocations = [];
+
+        if (userProjects === "ALL") {
+            accessibleLocations = ppeLocations; // متاح له كل حاجة
+        } else {
+            const userProjectList = userProjects.split(",");
+            // فلترة قائمة المخازن بناءً على صلاحيات المستخدم
+            accessibleLocations = ppeLocations.filter((loc) =>
+                userProjectList.includes(loc),
+            );
+        }
+
+        // تعبئة قائمة المشاريع (المفلترة)
+        populateSelect(stockReportProjectSelect, accessibleLocations);
+    }
+
+    /**
+     * عند الضغط على زر "بحث"
+     */
+    async function handleStockReportSearch() {
+        const locationName = stockReportProjectSelect.value;
+        if (!locationName) {
+            showMessage(
+                stockReportMessage,
+                "الرجاء اختيار الموقع أولاً.",
+                false,
+            );
+            return;
+        }
+
+        showMessage(stockReportMessage, "", true); // إخفاء الرسالة
+        stockReportResultsTable.innerHTML = "<p>جاري تحميل التقرير...</p>";
+
+        try {
+            // (مهم) هنبعت بيانات المستخدم عشان السيرفر يتأكد من الصلاحيات
+            const response = await callApi("getProjectStockReport", {
+                locationName: locationName,
+                userInfo: currentUser,
+            });
+
+            if (response.report && response.report.length > 0) {
+                buildStockReportTable(response.report, locationName);
+            } else {
+                stockReportResultsTable.innerHTML = `<p>المخزن [${locationName}] فارغ حالياً.</p>`;
+            }
+        } catch (e) {
+            showMessage(stockReportMessage, e.message, false);
+            stockReportResultsTable.innerHTML = "";
+        }
+    }
+
+    /**
+     * دالة بناء جدول النتائج
+     */
+    function buildStockReportTable(reportData, locationName) {
+        let table = `<h3 style="text-align:center;">رصيد: ${locationName}</h3>
+                     <table class="results-table">
+                         <thead>
+                             <tr>
+                                 <th>التصنيف (Category)</th>
+                                 <th>كود المهمة (Item ID)</th>
+                                 <th>اسم المهمة</th>
+                                 <th>الكمية المتاحة</th>
+                             </tr>
+                         </thead>
+                         <tbody>`;
+
+        reportData.forEach((item) => {
+            table += `<tr>
+                          <td>${item.category || "غير مصنف"}</td>
+                          <td>${item.itemId}</td>
+                          <td>${item.itemName}</td>
+                          <td style="font-weight:bold; text-align:center;">${item.balance}</td>
+                      </tr>`;
+        });
+
+        table += `</tbody></table>`;
+        stockReportResultsTable.innerHTML = table;
+    }
+
+    // --- ربط الأحداث ---
+    if (stockReportSearchBtn) {
+        stockReportSearchBtn.addEventListener("click", handleStockReportSearch);
+    }
+
+    // --- نهاية وحدة تقرير المخازن ---
 }); // --- END DOMContentLoaded ---

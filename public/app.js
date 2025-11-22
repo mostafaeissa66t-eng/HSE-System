@@ -899,7 +899,12 @@ document.addEventListener("DOMContentLoaded", function () {
                             `${emp.name} (${emp.id})`,
                             emp.id,
                         );
+
+                        // (*** التعديل هنا ***)
                         option.dataset.jobtitle = emp.jobTitle;
+                        option.dataset.project = emp.project; // تخزين اسم المشروع
+                        // (*** نهاية التعديل ***)
+
                         kpiEmployeeSelect.options.add(option);
                     });
                 }
@@ -926,10 +931,17 @@ document.addEventListener("DOMContentLoaded", function () {
         showMessage(kpiSaveMessage, "", true);
         if (employeeId && periodValue) {
             const period = `${periodValue}-01`;
+
+            // (*** التعديل هنا ***)
             const selectedOption =
                 kpiEmployeeSelect.options[kpiEmployeeSelect.selectedIndex];
             const jobTitle = selectedOption.dataset.jobtitle;
-            kpiEmployeeJobTitle.textContent = `المسمى الوظيفي: ${jobTitle}`;
+            const project = selectedOption.dataset.project || "غير محدد"; // جلب اسم المشروع
+
+            // عرض الوظيفة والمشروع معاً
+            kpiEmployeeJobTitle.textContent = `المسمى الوظيفي: ${jobTitle} | المشروع: ${project}`;
+            // (*** نهاية التعديل ***)
+
             kpiEmployeeJobTitle.style.display = "block";
             loadKpisForEmployee(employeeId, period);
         }

@@ -191,6 +191,49 @@
                                 required
                             ></textarea>
                         </div>
+                        <div
+                            id="permit-delay-group"
+                            style="
+                                display: none;
+                                background-color: #fff3cd;
+                                padding: 10px;
+                                border-radius: 5px;
+                                border: 1px solid #ffeeba;
+                                margin-bottom: 15px;
+                            "
+                        >
+                            <p
+                                style="
+                                    color: #856404;
+                                    font-size: 0.9em;
+                                    margin-top: 0;
+                                "
+                            >
+                                <i class="fas fa-exclamation-circle"></i>
+                                <strong>تنبيه:</strong> لقد تجاوزت الساعة 8:00
+                                صباحاً. يرجى ذكر سبب التأخير.
+                            </p>
+                            <div class="form-group">
+                                <label
+                                    for="permit-delay-reason"
+                                    class="required"
+                                    >سبب التأخير:</label
+                                >
+                                <select id="permit-delay-reason">
+                                    <option value="">-- اختر السبب --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="permit-delay-desc" class="required"
+                                    >اذكر ما حدث بالتفصيل:</label
+                                >
+                                <textarea
+                                    id="permit-delay-desc"
+                                    rows="2"
+                                    placeholder="اشرح سبب التأخير هنا..."
+                                ></textarea>
+                            </div>
+                        </div>
                         <button type="submit" class="btn">حفظ</button>
                         <p id="permit-message" class="success-message"></p>
                     </form>

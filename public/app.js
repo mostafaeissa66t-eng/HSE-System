@@ -1227,7 +1227,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   }
 
   /**
-   * دالة مساعدة لإظهار/إخفاء حقول الموظف/المقاول
+   * (معدل) دالة مساعدة لإظهار/إخفاء حقول الموظف/المقاول
    */
   function checkRecipientTypeUI() {
     const type = ppeRecipientType.value;
@@ -1236,10 +1236,12 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     ppeRecipientContractorGroup.style.display =
       type === "مقاول" ? "block" : "none";
 
-    // (*** السطر الجديد ***)
-    // لو اختار "موظف"، حدث القايمة بتاعته بناءً على المشروع
     if (type === "موظف") {
       updateEmployeeDropdown();
+    }
+    // (*** الإضافة الجديدة ***)
+    else if (type === "مقاول") {
+      updatePpeContractorDropdown();
     }
   }
 
@@ -1273,6 +1275,45 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     populateSelect(ppeRecipientEmployee, filteredEmployees, "id", "name");
   }
 
+  /**
+   * (جديد) تحديث قائمة المقاولين بناءً على المشروع المختار
+   */
+  async function updatePpeContractorDropdown() {
+    const selectedProject = ppeRecipientLocation.value;
+
+    // لو مفيش مشروع أو النوع مش مقاول، مفيش داعي نحمل
+    if (!selectedProject || ppeRecipientType.value !== "مقاول") {
+      return;
+    }
+
+    ppeRecipientContractorCompany.innerHTML =
+      '<option value="">جاري التحميل...</option>';
+    ppeRecipientContractorCompany.disabled = true;
+
+    try {
+      // استدعاء نفس الدالة الموجودة في السيرفر
+      const response = await callApi("getContractorsForProject", {
+        projectName: selectedProject,
+      });
+
+      ppeRecipientContractorCompany.innerHTML =
+        '<option value="">-- اختر شركة المقاول --</option>';
+
+      if (response.contractors && response.contractors.length > 0) {
+        response.contractors.forEach((name) => {
+          ppeRecipientContractorCompany.add(new Option(name, name));
+        });
+        ppeRecipientContractorCompany.disabled = false;
+      } else {
+        ppeRecipientContractorCompany.innerHTML =
+          '<option value="">-- لا يوجد مقاولين --</option>';
+      }
+    } catch (e) {
+      console.error(e);
+      ppeRecipientContractorCompany.innerHTML =
+        '<option value="">خطأ في التحميل</option>';
+    }
+  }
   /**
    * (جديد) الدالة الذكية لفلترة قايمة المهمات حسب نوع الحركة والمخزن
    */
@@ -1665,8 +1706,13 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     ppeRecipientLocation.addEventListener("change", updateEmployeeDropdown);
   }
   // (*** تعديل ***) ربط الدالة الجديدة
+  // (معدل) عند تغيير موقع الصرف/الاستلام
   if (ppeRecipientLocation) {
-    ppeRecipientLocation.addEventListener("change", refreshPpeItemsDropdown);
+    ppeRecipientLocation.addEventListener("change", () => {
+      updateEmployeeDropdown(); // فلترة الموظفين
+      updatePpeContractorDropdown(); // (جديد) فلترة المقاولين
+      refreshPpeItemsDropdown(); // فلترة المهمات (الرصيد)
+    });
   }
   if (ppeTransferSource) {
     ppeTransferSource.addEventListener("change", refreshPpeItemsDropdown);

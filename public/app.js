@@ -121,6 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
     KpiEvaluation: "fas fa-chart-line",
     PpeTransactions: "fas fa-boxes", // (جديد)
     ProjectStockReport: "fas fa-chart-pie", // (جديد)
+    NewTraining: "fas fa-chalkboard-teacher",
     NewNearMiss: "fas fa-exclamation-triangle", // Example
   };
   const sectionNames = {
@@ -132,6 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
     KpiEvaluation: "تقييم الموظفين",
     PpeTransactions: "حركات المخزن", // (جديد)
     ProjectStockReport: "أرصدة المخازن", // (جديد)
+    NewTraining: "تسجيل تدريب", // (*** جديد ***) اسم القسم
     NewNearMiss: "Near Miss", // Example
   };
 
@@ -168,6 +170,24 @@ document.addEventListener("DOMContentLoaded", function () {
         "Attempted to show message on a non-existent element:",
         text,
       );
+    }
+  }
+
+  // --- (جديد) دالة عامة لتعبئة القوائم المنسدلة ---
+  function fillSelect(element, dataArray) {
+    if (!element) return;
+    element.innerHTML = '<option value="">-- اختر --</option>';
+    if (dataArray && Array.isArray(dataArray)) {
+      dataArray.forEach((item) => {
+        // لو العنصر نص عادي
+        if (typeof item === "string" || typeof item === "number") {
+          element.add(new Option(item, item));
+        }
+        // لو العنصر كائن (له id و name) زي الموظفين
+        else if (item.id && item.name) {
+          element.add(new Option(item.name, item.id));
+        }
+      });
     }
   }
 
@@ -425,8 +445,12 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "KpiEvaluation") {
         initKpiPage();
       }
+
       if (sectionId === "PpeTransactions") {
         initPpePage(); // (*** هذا هو السطر الجديد ***)
+      }
+      if (sectionId === "NewTraining") {
+        initTrainingPage();
       }
       if (sectionId === "ProjectStockReport") {
         initStockReportPage(); // (*** هذا هو السطر الجديد ***)
@@ -1860,4 +1884,301 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   }
 
   // --- نهاية وحدة تقرير المخازن ---
-}); // --- END DOMContentLoaded ---
+  // =================================================================
+  // --- (جديد) وحدة التدريب (Training Module) ---
+  // =================================================================
+
+  // Selectors
+  const trnDate = document.getElementById("trn-date");
+  const trnTime = document.getElementById("trn-time");
+  const trnTrainer = document.getElementById("trn-trainer");
+  const trnProject = document.getElementById("trn-project");
+  const trnTopic = document.getElementById("trn-topic");
+  const trnAttendeeType = document.getElementById("trn-attendee-type");
+  const trnEmpGroup = document.getElementById("trn-emp-group");
+  const trnContGroup = document.getElementById("trn-cont-group");
+  const trnEmpSelect = document.getElementById("trn-emp-select");
+  const trnShowAllEmp = document.getElementById("trn-show-all-emp");
+  const trnContCompany = document.getElementById("trn-cont-company");
+  const trnContNid = document.getElementById("trn-cont-nid");
+  const trnContSearchBtn = document.getElementById("trn-cont-search-btn");
+  const trnContName = document.getElementById("trn-cont-name");
+  const trnAddBtn = document.getElementById("trn-add-btn");
+  const trnAddMsg = document.getElementById("trn-add-msg");
+  const trnListContainer = document.getElementById("trn-list-container");
+  const trnCount = document.getElementById("trn-count");
+  const trnForm = document.getElementById("training-form");
+  const trnSaveBtn = document.getElementById("trn-save-btn");
+  const trnSaveMsg = document.getElementById("trn-save-msg");
+  const trnNotes = document.getElementById("trn-notes");
+
+  // Data
+  let trnAttendeesCart = [];
+  let trainingDataLoaded = false;
+
+  async function initTrainingPage() {
+    console.log("بدء تشغيل صفحة التدريب...");
+
+    // 1. إعدادات أولية (التاريخ والوقت والمدرب)
+    const now = new Date();
+    if (trnDate) trnDate.value = now.toLocaleDateString("en-CA");
+    if (trnTime)
+      trnTime.value = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    if (trnTrainer && currentUser) trnTrainer.value = currentUser.username;
+
+    trnAttendeesCart = [];
+    updateTrnCartUI();
+
+    // 2. تحميل البيانات
+    if (!trainingDataLoaded) {
+      try {
+        const r = await callApi("getTrainingInitData", {
+          userInfo: currentUser,
+        });
+
+        if (r.status === "success") {
+          // تخزين البيانات
+          ppeEmployees = r.employees;
+          ppeContractors = r.contractors;
+
+          // تعبئة المشاريع
+          const userProj = (currentUser.projects || "").toString();
+          let accProj = r.projects;
+          if (userProj !== "ALL") {
+            accProj = r.projects.filter((p) => userProj.includes(p));
+          }
+          fillSelect(trnProject, accProj);
+
+          // تعبئة المواضيع
+          fillSelect(trnTopic, r.topics);
+
+          // تعبئة المقاولين
+          fillSelect(trnContCompany, r.contractors);
+
+          trainingDataLoaded = true;
+        } else {
+          // (تعديل) إظهار رسالة الخطأ بوضوح
+          alert("خطأ من السيرفر: " + r.message);
+        }
+      } catch (e) {
+        // (تعديل) إظهار رسالة الخطأ بوضوح
+        alert("فشل تحميل البيانات: " + e.message);
+      }
+    }
+
+    // تشغيل الفلترة
+    if (trnProject) handleTrnProjectChange();
+  }
+
+  // فلترة الموظفين والمقاولين حسب المشروع
+  function handleTrnProjectChange() {
+    const proj = trnProject.value;
+
+    // 1. فلترة الموظفين
+    filterTrnEmployees();
+
+    // 2. فلترة شركات المقاولين (استدعاء السيرفر)
+    if (proj) {
+      trnContCompany.innerHTML = "<option>جاري التحميل...</option>";
+      callApi("getContractorsForProject", { projectName: proj })
+        .then((r) => {
+          if (r.contractors) fillSelect(trnContCompany, r.contractors);
+        })
+        .catch(() => {
+          trnContCompany.innerHTML = '<option value="">خطأ</option>';
+        });
+    }
+  }
+
+  // منطق فلترة الموظفين (بالزرار)
+  function filterTrnEmployees() {
+    const proj = trnProject.value;
+    const showAll = trnShowAllEmp.checked;
+
+    trnEmpSelect.innerHTML = '<option value="">-- اختر --</option>';
+
+    if (!proj && !showAll) return;
+
+    let list = [];
+    if (showAll) {
+      list = ppeEmployees; // الكل
+    } else {
+      list = ppeEmployees.filter((e) => e.project === proj); // المشروع فقط
+    }
+
+    list.forEach((e) => {
+      const opt = new Option(`${e.name} (${showAll ? e.project : ""})`, e.id);
+      opt.dataset.name = e.name;
+      opt.dataset.company = e.company || "الشركة";
+      trnEmpSelect.add(opt);
+    });
+  }
+
+  // إضافة للحضور
+  function addTrnAttendee() {
+    if (trnAddMsg) trnAddMsg.style.display = "none";
+    const type = trnAttendeeType.value;
+    let att = { type: type };
+
+    if (type === "موظف") {
+      const empId = trnEmpSelect.value;
+      if (!empId) {
+        showMessage(trnAddMsg, "اختر الموظف", false);
+        return;
+      }
+      const opt = trnEmpSelect.selectedOptions[0];
+      att.id = empId;
+      att.name = opt.dataset.name;
+      att.company = opt.dataset.company;
+    } else {
+      const nid = trnContNid.value;
+      const name = trnContName.value;
+      const comp = trnContCompany.value;
+      if (!nid || !name || !comp) {
+        showMessage(trnAddMsg, "بيانات المقاول ناقصة", false);
+        return;
+      }
+      att.id = nid;
+      att.name = name;
+      att.company = comp;
+      att.isNew = !trnContName.disabled; // هل هو جديد؟
+    }
+
+    // منع التكرار
+    if (trnAttendeesCart.find((x) => x.id === att.id)) {
+      showMessage(trnAddMsg, "هذا الشخص مضاف بالفعل", false);
+      return;
+    }
+
+    trnAttendeesCart.push(att);
+    updateTrnCartUI();
+
+    // ريسيت للخانات
+    if (type === "مقاول") {
+      trnContNid.value = "";
+      trnContName.value = "";
+      trnContName.disabled = false;
+    }
+  }
+
+  function updateTrnCartUI() {
+    if (trnCount) trnCount.textContent = trnAttendeesCart.length;
+    if (trnAttendeesCart.length === 0) {
+      trnListContainer.innerHTML =
+        '<p style="text-align: center; color: #777;">القائمة فارغة...</p>';
+    } else {
+      trnListContainer.innerHTML = "";
+      trnAttendeesCart.forEach((att, idx) => {
+        const div = document.createElement("div");
+        div.className = "ppe-cart-item";
+        div.innerHTML = `
+                  <span><small>[${att.type}]</small> <strong>${att.name}</strong> (${att.company})</span>
+                  <button type="button" class="btn-small btn-danger" onclick="removeTrnItem(${idx})">X</button>
+              `;
+        trnListContainer.appendChild(div);
+      });
+    }
+  }
+  window.removeTrnItem = (idx) => {
+    trnAttendeesCart.splice(idx, 1);
+    updateTrnCartUI();
+  };
+
+  // بحث مقاول
+  async function searchTrnCont() {
+    const nid = trnContNid.value;
+    if (!nid) return;
+    trnContName.value = "بحث...";
+    trnContName.disabled = true;
+    try {
+      const r = await callApi("getRecipientByNID", { nationalId: nid });
+      if (r.status === "found") {
+        trnContName.value = r.name;
+        // محاولة تحديد الشركة لو موجودة في القائمة
+        trnContCompany.value = r.contractor;
+        trnContName.disabled = true;
+      } else {
+        trnContName.value = "";
+        trnContName.placeholder = "اسم جديد...";
+        trnContName.disabled = false;
+        trnContName.focus();
+      }
+    } catch (e) {
+      trnContName.value = "";
+      trnContName.disabled = false;
+    }
+  }
+
+  // حفظ الجلسة
+  if (trnForm) {
+    trnForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (trnAttendeesCart.length === 0) {
+        showMessage(trnAddMsg, "أضف حضور أولاً", false);
+        return;
+      }
+
+      const data = {
+        project: trnProject.value,
+        topic: trnTopic.value,
+        attendees: trnAttendeesCart,
+        notes: trnNotes.value,
+      };
+
+      if (!data.project || !data.topic) {
+        showMessage(trnAddMsg, "اختر المشروع والموضوع", false);
+        return;
+      }
+
+      trnSaveBtn.disabled = true;
+      trnSaveBtn.textContent = "جاري الحفظ...";
+      try {
+        const r = await callApi("saveTrainingSession", {
+          sessionData: data,
+          userInfo: currentUser,
+        });
+        showMessage(trnSaveMsg, r.message, true);
+        if (trnSaveMsg) trnSaveMsg.style.whiteSpace = "pre-wrap";
+        // تفريغ
+        trnAttendeesCart = [];
+        updateTrnCartUI();
+        trnForm.reset();
+        // إعادة تعيين القيم الثابتة
+        if (trnTrainer) trnTrainer.value = currentUser.username;
+        const now = new Date();
+        if (trnDate) trnDate.value = now.toLocaleDateString("en-CA");
+        if (trnTime)
+          trnTime.value = now.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+      } catch (err) {
+        showMessage(trnSaveMsg, err.message, false);
+      } finally {
+        trnSaveBtn.disabled = false;
+        trnSaveBtn.textContent = "حفظ جلسة التدريب";
+      }
+    });
+  }
+
+  // Events
+  if (trnProject) trnProject.addEventListener("change", handleTrnProjectChange);
+  if (trnShowAllEmp)
+    trnShowAllEmp.addEventListener("change", filterTrnEmployees);
+  if (trnAttendeeType)
+    trnAttendeeType.addEventListener("change", () => {
+      const isEmp = trnAttendeeType.value === "موظف";
+      if (trnEmpGroup) trnEmpGroup.style.display = isEmp ? "block" : "none";
+      if (trnContGroup) trnContGroup.style.display = isEmp ? "none" : "block";
+    });
+  if (trnAddBtn) trnAddBtn.addEventListener("click", addTrnAttendee);
+  if (trnContSearchBtn)
+    trnContSearchBtn.addEventListener("click", searchTrnCont);
+});
+
+// --- END DOMContentLoaded ---

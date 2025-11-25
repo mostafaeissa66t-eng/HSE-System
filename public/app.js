@@ -10,6 +10,28 @@ document.addEventListener("DOMContentLoaded", function () {
   // --- GLOBAL STATE ---
   let currentUser = null; // Stores {username, email, role, projects, sections}
   let initialData = null; // Stores {projects:[], permitTypes:[], requesters:[]}
+  // ============================================================
+  // (*** جديد ***) التحقق من وجود جلسة محفوظة
+  // ============================================================
+  const savedSession = localStorage.getItem("hse_user_session");
+  if (savedSession) {
+    try {
+      // استرجاع البيانات
+      const parsedUser = JSON.parse(savedSession);
+
+      // محاكاة عملية نجاح الدخول عشان نشغل الموقع علطول
+      // (بنستخدم setTimeout عشان نضمن إن الدوال التانية اتحملت)
+      setTimeout(() => {
+        if (typeof onLoginSuccess === "function") {
+          console.log("تم استعادة الجلسة للمستخدم:", parsedUser.username);
+          onLoginSuccess({ userInfo: parsedUser });
+        }
+      }, 100);
+    } catch (e) {
+      console.error("خطأ في استعادة الجلسة", e);
+      localStorage.removeItem("hse_user_session"); // مسح البيانات التالفة
+    }
+  }
 
   // --- SELECTORS ---
   // (Ensure these IDs match your public/index.html)
@@ -297,6 +319,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function onLoginSuccess(response) {
+    localStorage.setItem("hse_user_session", JSON.stringify(response.userInfo));
     currentUser = response.userInfo;
     if (loginScreen) loginScreen.style.display = "none";
     if (appWrapper) appWrapper.style.display = "flex";
@@ -337,6 +360,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", function (e) {
       e.preventDefault();
+      localStorage.removeItem("hse_user_session");
       showLoader("تسجيل الخروج...");
       location.reload();
     });

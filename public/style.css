@@ -414,3 +414,61 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--light-gray); di
   height: auto;
   line-height: 1.5;
 }
+/* ========================================= */
+/* --- تنسيق درجات الـ KPI (اللون الأحمر) --- */
+/* ========================================= */
+
+.kpi-score-input {
+    color: #dc3545;       /* اللون الأحمر الرئيسي */
+    font-weight: bold;    /* خط عريض */
+    font-size: 1.2em;     /* تكبير الخط قليلاً */
+    text-align: center;   /* توسيط الرقم داخل الخانة */
+    border: 1px solid #e0e0e0; /* إطار رمادي هادئ */
+    border-radius: 4px;   /* حواف دائرية */
+    transition: all 0.3s ease; /* تأثير ناعم عند التغيير */
+}
+
+/* عند الضغط للكتابة داخل الخانة */
+.kpi-score-input:focus {
+    border-color: #dc3545; /* الإطار يتحول للأحمر */
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25); /* وهج أحمر خفيف */
+    outline: none;
+}
+
+/* (اختياري) تنسيق الدرجة القصوى (Max Score) لتكون واضحة */
+.kpi-card-info p {
+    color: #555;
+    font-size: 0.9em;
+}
+.kpi-card-info p span {
+    color: #dc3545; /* تلوين رقم "الدرجة القصوى" بالأحمر أيضاً */
+    font-weight: bold;
+}
+
+/* ========================================= */
+/* --- تنسيق شريط التمرير (Scrollbar) --- */
+/* ========================================= */
+
+/* 1. عرض الشريط */
+::-webkit-scrollbar {
+    width: 10px; /* عرض الشريط العمودي */
+    height: 10px; /* ارتفاع الشريط الأفقي */
+}
+
+/* 2. خلفية الشريط (Track) */
+::-webkit-scrollbar-track {
+    background: #f1f1f1; /* لون رمادي فاتح جداً للخلفية */
+    border-radius: 5px;
+}
+
+/* 3. الجزء المتحرك (Thumb) - باللون الأحمر الرئيسي */
+::-webkit-scrollbar-thumb {
+    background: #C8102E; /* اللون الأحمر المميز */
+    border-radius: 5px; /* تدوير الحواف */
+    border: 2px solid #f1f1f1; /* حدود بيضاء صغيرة لفصل اللون */
+}
+
+/* 4. عند مرور الماوس على الشريط */
+::-webkit-scrollbar-thumb:hover {
+    background: #C8102E; /* لون أحمر أغمق قليلاً عند التحويم */
+}

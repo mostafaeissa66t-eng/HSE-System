@@ -48,7 +48,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Form & Message Selectors
   const permitForm = document.getElementById("permit-form");
-  const obsForm = document.getElementById("observation-form");
   const permitMsg = document.getElementById("permit-message");
   const obsMsg = document.getElementById("obs-message");
   const closePermitMsg = document.getElementById("close-permit-message");
@@ -139,6 +138,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewPermit: "fas fa-file-signature",
     ClosePermit: "fas fa-clipboard-check",
     NewObservation: "fas fa-eye",
+    MyObservations: "fas fa-list-check",
     MonitorPermits: "fas fa-tasks",
     KpiEvaluation: "fas fa-chart-line",
     PpeTransactions: "fas fa-boxes", // (جديد)
@@ -150,7 +150,8 @@ document.addEventListener("DOMContentLoaded", function () {
     Dashboard: "لوحة التحكم",
     NewPermit: "تصريح جديد",
     ClosePermit: "إغلاق التصاريح",
-    NewObservation: "ملاحظة جديدة",
+    NewObservation: "تسجيل ملاحظة",
+    MyObservations: "متابعة ملاحظاتي",
     MonitorPermits: "متابعة التصاريح",
     KpiEvaluation: "تقييم الموظفين",
     PpeTransactions: "حركات المخزن", // (جديد)
@@ -458,7 +459,11 @@ document.addEventListener("DOMContentLoaded", function () {
     if (target) {
       target.style.display = "block";
       if (sectionId === "NewPermit") resetPermitForm();
-      if (sectionId === "NewObservation") resetObservationForm();
+      if (sectionId === "NewObservation") {
+        // resetObservationForm(); // <-- امسح القديمة دي لو موجودة
+        initObservationPage(); // <-- واستخدم الجديدة دي
+      }
+      if (sectionId === "MyObservations") loadMyOpenObservations();
       if (sectionId === "ClosePermit") loadOpenPermits();
       if (sectionId === "MonitorPermits") {
         populateMonitorProjects();
@@ -759,58 +764,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   // --- نهاية منطق المقاولين ---
 
-  function resetObservationForm() {
-    if (!obsForm || !currentUser) return;
-    obsForm.reset();
-    const i = document.getElementById("obs-issuer");
-    const dt = document.getElementById("obs-date");
-    const tm = document.getElementById("obs-time");
-    if (i) i.value = currentUser.username;
-    if (dt) dt.valueAsDate = new Date();
-    if (tm) tm.value = new Date().toTimeString().slice(0, 5);
-  }
-  if (obsForm) {
-    obsForm.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      if (!currentUser) return;
-      const d = {
-        projectName: document.getElementById("obs-project")?.value,
-        date: document.getElementById("obs-date")?.value,
-        time: document.getElementById("obs-time")?.value,
-        location: document.getElementById("obs-location")?.value,
-        observationType: document.getElementById("obs-type")?.value,
-        description: document.getElementById("obs-description")?.value,
-        correctiveAction: document.getElementById("obs-action")?.value,
-      };
-      if (
-        !d.projectName ||
-        !d.date ||
-        !d.time ||
-        !d.location ||
-        !d.observationType ||
-        !d.description
-      ) {
-        showMessage(obsMsg, "اكمل الحقول.", false);
-        return;
-      }
-      try {
-        const r = await callApi("saveObservation", {
-          observationObject: d,
-          userInfo: currentUser,
-        });
-        onObsSaveSuccess(r);
-      } catch (err) {
-        onObsSaveFailure(err);
-      }
-    });
-  }
-  function onObsSaveSuccess(r) {
-    showMessage(obsMsg, r ? r.message : "تم.", true);
-    resetObservationForm();
-  }
-  function onObsSaveFailure(e) {
-    showMessage(obsMsg, e.message, false);
-  }
   async function loadOpenPermits() {
     if (!currentUser) return;
     const lc = document.getElementById("open-permits-list");
@@ -2203,6 +2156,334 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   if (trnAddBtn) trnAddBtn.addEventListener("click", addTrnAttendee);
   if (trnContSearchBtn)
     trnContSearchBtn.addEventListener("click", searchTrnCont);
-});
+  // =================================================================
+  // --- (جديد ومعدل) وحدة الملاحظات (Observations V2) ---
+  // =================================================================
 
+  // Selectors
+  const obsForm = document.getElementById("obs-form");
+  const obsViewDate = document.getElementById("obs-view-date");
+  const obsViewTime = document.getElementById("obs-view-time");
+  const obsProject = document.getElementById("obs-project");
+  const obsHazard = document.getElementById("obs-hazard");
+  const obsRespRadios = document.getElementsByName("obs-resp");
+  const obsContractorDiv = document.getElementById("obs-contractor-div");
+  const obsContractorSelect = document.getElementById("obs-contractor-select");
+  const obsActionText = document.getElementById("obs-action-text");
+  const obsActionDate = document.getElementById("obs-action-date");
+  const obsAddActionBtn = document.getElementById("obs-add-action-btn");
+  const obsActionsList = document.getElementById("obs-actions-list");
+  const obsSaveBtn = document.getElementById("obs-save-btn");
+  const obsSaveMsg = document.getElementById("obs-save-msg");
+
+  let obsActionsCart = []; // سلة الإجراءات
+
+  async function initObservationPage() {
+    console.log("بدء تشغيل صفحة الملاحظات...");
+
+    // 1. ضبط الوقت والتاريخ
+    const now = new Date();
+    if (obsViewDate) obsViewDate.value = now.toLocaleDateString("en-CA");
+    if (obsViewTime)
+      obsViewTime.value = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+    // 2. تعبئة المشاريع (بناءً على صلاحيات المستخدم)
+    if (obsProject && obsProject.options.length <= 1) {
+      // نحاول نستخدم البيانات المحملة مسبقاً من المخزن لتسريع الأداء
+      if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+        fillSelect(obsProject, ppeLocations);
+      } else {
+        // لو مش موجودة، نحملها
+        try {
+          const r = await callApi("getInventoryInitData", {
+            userInfo: currentUser,
+          });
+          if (r.status === "success") {
+            // فلترة حسب الصلاحية
+            const userProj = (currentUser.projects || "").toString();
+            let accProj = r.locations;
+            if (userProj !== "ALL") {
+              accProj = r.locations.filter((p) => userProj.includes(p));
+            }
+            fillSelect(obsProject, accProj);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    // 3. تعبئة المخاطر (Hazard Category)
+    if (obsHazard && obsHazard.options.length <= 1) {
+      obsHazard.innerHTML = "<option>جاري التحميل...</option>";
+      try {
+        const r = await callApi("getHazardsList", {});
+        if (r.status === "success") {
+          fillSelect(obsHazard, r.hazards);
+        } else {
+          obsHazard.innerHTML = '<option value="">فشل التحميل</option>';
+        }
+      } catch (e) {
+        console.error(e);
+        obsHazard.innerHTML = '<option value="">خطأ اتصال</option>';
+      }
+    }
+
+    // تصفير
+    obsActionsCart = [];
+    renderObsActions();
+    if (document.getElementById("resp-elsewedy"))
+      document.getElementById("resp-elsewedy").checked = true;
+    toggleObsContractor();
+  }
+
+  // إظهار/إخفاء المقاول حسب الراديو
+  function toggleObsContractor() {
+    let isCont = false;
+    // التأكد من العنصر المختار
+    const checkedRadio = document.querySelector(
+      'input[name="obs-resp"]:checked',
+    );
+    if (checkedRadio && checkedRadio.value === "مقاول") isCont = true;
+
+    if (obsContractorDiv)
+      obsContractorDiv.style.display = isCont ? "block" : "none";
+
+    // تحميل المقاولين فقط لو اخترنا مقاول واخترنا مشروع
+    if (isCont) {
+      const currentProj = obsProject.value;
+      if (currentProj) {
+        loadObsContractors(currentProj);
+      } else {
+        obsContractorSelect.innerHTML =
+          '<option value="">-- اختر المشروع أولاً --</option>';
+      }
+    }
+  }
+
+  // تحميل المقاولين
+  async function loadObsContractors(proj) {
+    obsContractorSelect.innerHTML = "<option>جاري التحميل...</option>";
+    obsContractorSelect.disabled = true;
+    try {
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+
+      if (r.contractors && r.contractors.length > 0) {
+        fillSelect(obsContractorSelect, r.contractors);
+        obsContractorSelect.disabled = false;
+      } else {
+        obsContractorSelect.innerHTML =
+          '<option value="">لا يوجد مقاولين</option>';
+      }
+    } catch (e) {
+      obsContractorSelect.innerHTML = '<option value="">خطأ</option>';
+      console.error(e);
+    }
+  }
+
+  // إضافة إجراء للسلة
+  function addObsAction() {
+    const txt = obsActionText.value;
+    const date = obsActionDate.value;
+    if (!txt || !date) {
+      alert("أدخل الإجراء والتاريخ");
+      return;
+    }
+
+    obsActionsCart.push({ text: txt, targetDate: date });
+    renderObsActions();
+    obsActionText.value = "";
+    obsActionDate.value = "";
+  }
+
+  function renderObsActions() {
+    if (obsActionsList) {
+      if (obsActionsCart.length === 0) {
+        obsActionsList.innerHTML =
+          '<p style="color:#777; font-size:0.9em;">لا توجد إجراءات مضافة.</p>';
+      } else {
+        obsActionsList.innerHTML = "";
+        obsActionsCart.forEach((act, i) => {
+          const div = document.createElement("div");
+          div.className = "ppe-cart-item"; // نفس ستايل الكارت
+          div.innerHTML = `<span>${act.text} <small>(${act.targetDate})</small></span> <button type="button" class="btn-small btn-danger" onclick="remObsAction(${i})">X</button>`;
+          obsActionsList.appendChild(div);
+        });
+      }
+    }
+  }
+  window.remObsAction = (i) => {
+    obsActionsCart.splice(i, 1);
+    renderObsActions();
+  };
+
+  // حفظ الملاحظة
+  if (obsForm) {
+    obsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      // تجميع البيانات
+      const data = {
+        project: obsProject.value,
+        locationDetail: document.getElementById("obs-location-detail").value,
+        type: document.getElementById("obs-type").value,
+        hazard: obsHazard.value,
+        description: document.getElementById("obs-desc").value,
+        responsibility: document.querySelector('input[name="obs-resp"]:checked')
+          .value,
+        actions: obsActionsCart,
+      };
+
+      // اسم الشركة
+      if (data.responsibility === "مقاول") {
+        data.companyName = obsContractorSelect.value;
+        if (!data.companyName) {
+          alert("اختر المقاول");
+          return;
+        }
+      } else {
+        data.companyName = "السويدي";
+      }
+
+      if (data.actions.length === 0) {
+        if (!confirm("لم تضف أي إجراءات تصحيحية. هل تريد الحفظ بدون إجراءات؟"))
+          return;
+      }
+
+      obsSaveBtn.disabled = true;
+      obsSaveBtn.innerHTML =
+        '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+      try {
+        const r = await callApi("saveObservationFull", {
+          obsData: data,
+          userInfo: currentUser,
+        });
+        showMessage(obsSaveMsg, r.message, true);
+        obsForm.reset();
+        initObservationPage(); // إعادة تهيئة
+      } catch (err) {
+        alert("خطأ: " + err.message);
+      } finally {
+        obsSaveBtn.disabled = false;
+        obsSaveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الملاحظة';
+      }
+    });
+  }
+
+  // Events
+  if (obsProject)
+    obsProject.addEventListener("change", () => {
+      toggleObsContractor();
+    });
+  if (obsRespRadios) {
+    obsRespRadios.forEach((r) =>
+      r.addEventListener("change", toggleObsContractor),
+    );
+  }
+  if (obsAddActionBtn) obsAddActionBtn.addEventListener("click", addObsAction);
+  // =================================================================
+  // --- (جديد) وحدة متابعة وإغلاق الملاحظات ---
+  // =================================================================
+
+  const myObsList = document.getElementById("my-obs-list");
+  const refreshObsBtn = document.getElementById("refresh-obs-btn");
+
+  async function loadMyOpenObservations() {
+    if (!myObsList) return;
+    myObsList.innerHTML =
+      '<div class="loader-small">جاري البحث عن ملاحظاتك المفتوحة...</div>';
+
+    try {
+      const r = await callApi("getUserOpenObservations", {
+        userInfo: currentUser,
+      });
+      if (r.status === "success") {
+        renderMyObsTable(r.observations);
+      } else {
+        myObsList.innerHTML = `<p class="error-message">${r.message}</p>`;
+      }
+    } catch (e) {
+      myObsList.innerHTML = `<p class="error-message">${e.message}</p>`;
+    }
+  }
+
+  function renderMyObsTable(obsArray) {
+    if (obsArray.length === 0) {
+      myObsList.innerHTML =
+        '<p style="text-align:center; padding:20px;">🎉 لا توجد ملاحظات مفتوحة، كله تمام!</p>';
+      return;
+    }
+
+    let html = `
+      <table class="results-table">
+          <thead>
+              <tr>
+                  <th>الكود</th>
+                  <th>المشروع</th>
+                  <th>الوصف</th>
+                  <th>إجراء</th>
+              </tr>
+          </thead>
+          <tbody>`;
+
+    obsArray.forEach((obs) => {
+      // تنسيق التاريخ للعرض فقط
+      let dateDisplay = obs.date;
+      try {
+        dateDisplay = new Date(obs.date).toLocaleDateString();
+      } catch (e) {}
+
+      html += `
+          <tr>
+              <td><strong>${obs.id}</strong><br><small>${dateDisplay}</small></td>
+              <td>${obs.project}<br><small style="color:#666;">${obs.type}</small></td>
+              <td title="${obs.desc}">${obs.desc.substring(0, 50)}${obs.desc.length > 50 ? "..." : ""}</td>
+              <td>
+                  <button class="btn-small btn-danger" onclick="handleCloseObs('${obs.id}')">
+                      إغلاق
+                  </button>
+              </td>
+          </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    myObsList.innerHTML = html;
+  }
+
+  // دالة الإغلاق (Global عشان تتقري من الـ HTML)
+  window.handleCloseObs = async function (obsId) {
+    const note = prompt("الرجاء إدخال ملاحظات الإغلاق (أو ما تم تنفيذه):");
+
+    if (note === null) return; // داس Cancel
+    if (note.trim() === "") {
+      alert("يجب كتابة ملاحظة للإغلاق.");
+      return;
+    }
+
+    // إظهار لودر بسيط
+    showLoader("جاري إغلاق الملاحظة...");
+
+    try {
+      const r = await callApi("closeObservation", {
+        obsId: obsId,
+        closingNote: note,
+      });
+      alert(r.message);
+      loadMyOpenObservations(); // تحديث القائمة
+    } catch (e) {
+      alert("خطأ: " + e.message);
+    } finally {
+      hideLoader();
+    }
+  };
+
+  if (refreshObsBtn)
+    refreshObsBtn.addEventListener("click", loadMyOpenObservations);
+});
 // --- END DOMContentLoaded ---

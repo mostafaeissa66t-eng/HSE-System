@@ -257,63 +257,188 @@
                     class="page-section"
                     style="display: none"
                 >
-                    <h2><i class="fas fa-eye"></i> تسجيل ملاحظة</h2>
-                    <form id="observation-form" class="app-form">
-                        <div class="form-row-disabled">
-                            <div class="form-group-static">
-                                <label>المشرف:</label
-                                ><input type="text" id="obs-issuer" readonly />
-                            </div>
-                        </div>
+                    <h2><i class="fas fa-eye"></i> تسجيل ملاحظة جديدة</h2>
+
+                    <form id="obs-form" class="app-form">
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="obs-project">المشروع:</label
-                                ><select id="obs-project" required>
-                                    <option value="">اختر...</option>
+                                <label>التاريخ:</label>
+                                <input
+                                    type="text"
+                                    id="obs-view-date"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>الوقت:</label>
+                                <input
+                                    type="text"
+                                    id="obs-view-time"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="obs-project" class="required"
+                                >المشروع:</label
+                            >
+                            <select id="obs-project" required></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="obs-location-detail" class="required"
+                                >مكان الملاحظة بالتفصيل:</label
+                            >
+                            <input
+                                type="text"
+                                id="obs-location-detail"
+                                placeholder="مثال: الدور الثاني - منطقة السقالات"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="obs-type" class="required"
+                                    >نوع الملاحظة:</label
+                                >
+                                <select id="obs-type" required>
+                                    <option value="">-- اختر --</option>
+                                    <option value="Unsafe Act">
+                                        تصاريف غير آمن (Unsafe Act)
+                                    </option>
+                                    <option value="Unsafe Condition">
+                                        ظروف غير آمنة (Unsafe Condition)
+                                    </option>
+                                    <option value="Environmental">
+                                        بيئي (Environmental)
+                                    </option>
+                                    <option value="Positive">
+                                        ملاحظة إيجابية (Positive)
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="obs-hazard" class="required"
+                                    >نوع الخطر:</label
+                                >
+                                <select id="obs-hazard" required>
+                                    <option value="">جاري التحميل...</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="obs-date">التاريخ:</label
-                                ><input type="date" id="obs-date" required />
-                            </div>
-                            <div class="form-group">
-                                <label for="obs-time">الوقت:</label
-                                ><input type="time" id="obs-time" required />
-                            </div>
-                        </div>
+
                         <div class="form-group">
-                            <label for="obs-location">الموقع:</label
-                            ><input type="text" id="obs-location" required />
-                        </div>
-                        <div class="form-group">
-                            <label for="obs-type">النوع:</label
-                            ><select id="obs-type" required>
-                                <option value="">اختر...</option>
-                                <option value="Unsafe Act">Unsafe Act</option>
-                                <option value="Unsafe Condition">
-                                    Unsafe Condition
-                                </option>
-                                <option value="Positive Observation">
-                                    Positive Observation
-                                </option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="obs-description">الوصف:</label
-                            ><textarea
-                                id="obs-description"
+                            <label for="obs-desc" class="required"
+                                >وصف الملاحظة:</label
+                            >
+                            <textarea
+                                id="obs-desc"
                                 rows="3"
                                 required
                             ></textarea>
                         </div>
-                        <div class="form-group">
-                            <label for="obs-action">الإجراء التصحيحي:</label
-                            ><textarea id="obs-action" rows="3"></textarea>
+
+                        <div
+                            class="form-group"
+                            style="
+                                background: #f9f9f9;
+                                padding: 10px;
+                                border-radius: 5px;
+                                border: 1px solid #ddd;
+                            "
+                        >
+                            <label class="required">المسؤولية على:</label>
+                            <div
+                                class="radio-group"
+                                style="
+                                    display: flex;
+                                    gap: 20px;
+                                    margin-top: 5px;
+                                "
+                            >
+                                <div>
+                                    <input
+                                        type="radio"
+                                        name="obs-resp"
+                                        id="resp-elsewedy"
+                                        value="السويدي"
+                                        checked
+                                    />
+                                    <label for="resp-elsewedy">السويدي</label>
+                                </div>
+                                <div>
+                                    <input
+                                        type="radio"
+                                        name="obs-resp"
+                                        id="resp-contractor"
+                                        value="مقاول"
+                                    />
+                                    <label for="resp-contractor">مقاول</label>
+                                </div>
+                            </div>
+
+                            <div
+                                id="obs-contractor-div"
+                                style="display: none; margin-top: 10px"
+                            >
+                                <label for="obs-contractor-select"
+                                    >اختر المقاول:</label
+                                >
+                                <select id="obs-contractor-select">
+                                    <option value="">-- اختر --</option>
+                                </select>
+                            </div>
                         </div>
-                        <button type="submit" class="btn">حفظ</button>
-                        <p id="obs-message" class="success-message"></p>
+
+                        <hr />
+
+                        <h4>الإجراءات التصحيحية</h4>
+                        <div class="form-row" style="align-items: flex-end">
+                            <div class="form-group" style="flex-grow: 2">
+                                <label>الإجراء:</label>
+                                <input
+                                    type="text"
+                                    id="obs-action-text"
+                                    placeholder="اكتب الإجراء..."
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>تاريخ التنفيذ:</label>
+                                <input type="date" id="obs-action-date" />
+                            </div>
+                            <div class="form-group">
+                                <button
+                                    type="button"
+                                    id="obs-add-action-btn"
+                                    class="btn btn-secondary"
+                                >
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            id="obs-actions-list"
+                            style="margin-bottom: 20px"
+                        ></div>
+
+                        <button
+                            type="submit"
+                            id="obs-save-btn"
+                            class="btn"
+                            style="width: 100%"
+                        >
+                            <i class="fas fa-save"></i> حفظ الملاحظة
+                        </button>
+                        <p
+                            id="obs-save-msg"
+                            class="success-message"
+                            style="display: none"
+                        ></p>
                     </form>
                 </section>
 
@@ -380,6 +505,28 @@
                         class="results-table-container"
                     >
                         <p>حدد معايير البحث...</p>
+                    </div>
+                </section>
+                <section
+                    id="MyObservations"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2><i class="fas fa-tasks"></i> ملاحظاتي المفتوحة</h2>
+
+                    <div class="app-form">
+                        <button
+                            type="button"
+                            id="refresh-obs-btn"
+                            class="btn btn-secondary"
+                            style="margin-bottom: 15px"
+                        >
+                            <i class="fas fa-sync"></i> تحديث القائمة
+                        </button>
+
+                        <div id="my-obs-list" class="results-table-container">
+                            <p style="text-align: center">جاري التحميل...</p>
+                        </div>
                     </div>
                 </section>
                 <!-- --- SECTION: KPI Evaluation (New) --- -->

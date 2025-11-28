@@ -1,4 +1,3 @@
-
 // =================================================================
 // index.js (Final V8 - No Placeholder Variable)
 // =================================================================
@@ -24,7 +23,7 @@ app.get("/", (req, res) => {
 // !!! --- === === === === === === === === === === === === --- !!!
 // !!! --- الصق رابط جوجل آب سكريبت هنا بمنتهى الدقة --- !!!
 const GOOGLE_SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbzkT0GmQfir9YEUlpBB-KkE5LBqizl5RWQBi45hDdrCN1rtIFjyyzIcO3dTh82GygdihQ/exec";
+    "https://script.google.com/macros/s/AKfycbz8DcZN3iDleEWuHtARv4ziaqufZC734tXSBQr1yr9kBSxV83zgTMfS_QFfDeyNphoh/exec";
 // !!! --- === === === === === === === === === === === === --- !!!
 
 // Log initial value

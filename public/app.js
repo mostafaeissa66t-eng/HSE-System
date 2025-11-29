@@ -139,6 +139,9 @@ document.addEventListener("DOMContentLoaded", function () {
     ClosePermit: "fas fa-clipboard-check",
     NewObservation: "fas fa-eye",
     MyObservations: "fas fa-list-check",
+    // تقارير الخطر (Hazards)
+    NewHazard: "fas fa-exclamation-circle",
+    MyHazards: "fas fa-list-alt",
     MonitorPermits: "fas fa-tasks",
     KpiEvaluation: "fas fa-chart-line",
     PpeTransactions: "fas fa-boxes", // (جديد)
@@ -152,6 +155,8 @@ document.addEventListener("DOMContentLoaded", function () {
     ClosePermit: "إغلاق التصاريح",
     NewObservation: "تسجيل ملاحظة",
     MyObservations: "متابعة ملاحظاتي",
+    NewHazard: "تسجيل خطر (Hazard)",
+    MyHazards: "تقارير الخطر المفتوحة",
     MonitorPermits: "متابعة التصاريح",
     KpiEvaluation: "تقييم الموظفين",
     PpeTransactions: "حركات المخزن", // (جديد)
@@ -484,6 +489,8 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "ProjectStockReport") {
         initStockReportPage(); // (*** هذا هو السطر الجديد ***)
       }
+      if (sectionId === "NewHazard") initHazardPage();
+      if (sectionId === "MyHazards") loadMyOpenHazards();
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -2485,5 +2492,261 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
   if (refreshObsBtn)
     refreshObsBtn.addEventListener("click", loadMyOpenObservations);
+
+  // =================================================================
+  // --- (جديد) وحدة Hazard Report ---
+  // =================================================================
+
+  // Selectors
+  const hazForm = document.getElementById("haz-form");
+  const hazViewDate = document.getElementById("haz-view-date");
+  const hazViewTime = document.getElementById("haz-view-time");
+  const hazIssuer = document.getElementById("haz-issuer");
+  const hazProject = document.getElementById("haz-project");
+  const hazReporterType = document.getElementById("haz-reporter-type");
+  const hazEmpGroup = document.getElementById("haz-emp-group");
+  const hazContGroup = document.getElementById("haz-cont-group");
+  const hazReporterEmp = document.getElementById("haz-reporter-emp");
+  const hazReporterCompany = document.getElementById("haz-reporter-company");
+  const hazReporterNid = document.getElementById("haz-reporter-nid");
+  const hazNidSearchBtn = document.getElementById("haz-nid-search-btn");
+  const hazReporterName = document.getElementById("haz-reporter-name");
+  const hazResult = document.getElementById("haz-result"); // القائمة المنسدلة للهازارد
+  const hazActionText = document.getElementById("haz-action-text");
+  const hazActionDate = document.getElementById("haz-action-date");
+  const hazAddActionBtn = document.getElementById("haz-add-action-btn");
+  const hazActionsList = document.getElementById("haz-actions-list");
+  const hazSaveBtn = document.getElementById("haz-save-btn");
+  const hazSaveMsg = document.getElementById("haz-save-msg");
+
+  // My Hazards Selectors
+  const myHazList = document.getElementById("my-haz-list");
+  const refreshHazBtn = document.getElementById("refresh-haz-btn");
+
+  let hazActionsCart = [];
+
+  async function initHazardPage() {
+    const now = new Date();
+    if (hazViewDate) hazViewDate.value = now.toLocaleDateString("en-CA");
+    if (hazViewTime)
+      hazViewTime.value = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    if (hazIssuer) hazIssuer.value = currentUser.username;
+
+    // تعبئة المشاريع (من الذاكرة لو موجودة)
+    if (hazProject && hazProject.options.length <= 1) {
+      if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+        const userProj = (currentUser.projects || "").toString();
+        const acc =
+          userProj === "ALL"
+            ? ppeLocations
+            : ppeLocations.filter((p) => userProj.includes(p));
+        fillSelect(hazProject, acc);
+      } else {
+        // تحميل احتياطي
+        callApi("getInventoryInitData", { userInfo: currentUser }).then((r) => {
+          fillSelect(hazProject, r.locations);
+          ppeEmployees = r.employees;
+          ppeContractors = r.contractors;
+        });
+      }
+    }
+
+    // تعبئة قائمة المخاطر (من Hazrads_List)
+    if (hazResult && hazResult.options.length <= 1) {
+      hazResult.innerHTML = "<option>جاري التحميل...</option>";
+      callApi("getHazardsList", {}).then((r) => {
+        if (r.status === "success") fillSelect(hazResult, r.hazards);
+        else hazResult.innerHTML = '<option value="">فشل</option>';
+      });
+    }
+
+    hazActionsCart = [];
+    renderHazActions();
+    checkHazReporterType();
+  }
+
+  function checkHazReporterType() {
+    const type = hazReporterType.value;
+    hazEmpGroup.style.display = type === "موظف" ? "block" : "none";
+    hazContGroup.style.display = type === "مقاول" ? "block" : "none";
+    if (type === "موظف") updateHazEmployees();
+    if (type === "مقاول") updateHazContractors();
+  }
+
+  function updateHazEmployees() {
+    const proj = hazProject.value;
+    hazReporterEmp.innerHTML = '<option value="">-- اختر --</option>';
+    if (!proj) return;
+    // استخدام ppeEmployees المحملة مسبقاً
+    if (typeof ppeEmployees !== "undefined") {
+      const fil = ppeEmployees.filter((e) => e.project === proj);
+      fil.forEach((e) => hazReporterEmp.add(new Option(e.name, e.id)));
+    }
+  }
+
+  async function updateHazContractors() {
+    const proj = hazProject.value;
+    if (!proj) return;
+    hazReporterCompany.innerHTML = "<option>جاري التحميل...</option>";
+    try {
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      fillSelect(hazReporterCompany, r.contractors);
+    } catch (e) {}
+  }
+
+  async function searchHazNid() {
+    const nid = hazReporterNid.value;
+    if (!nid) return;
+    hazReporterName.value = "بحث...";
+    hazReporterName.disabled = true;
+    try {
+      const r = await callApi("getRecipientByNID", { nationalId: nid });
+      if (r.status === "found") {
+        hazReporterName.value = r.name;
+        hazReporterCompany.value = r.contractor;
+        hazReporterName.disabled = true;
+      } else {
+        hazReporterName.value = "";
+        hazReporterName.disabled = false;
+        hazReporterName.focus();
+      }
+    } catch (e) {
+      hazReporterName.value = "";
+      hazReporterName.disabled = false;
+    }
+  }
+
+  function addHazAction() {
+    if (!hazActionText.value || !hazActionDate.value) return;
+    hazActionsCart.push({
+      text: hazActionText.value,
+      targetDate: hazActionDate.value,
+    });
+    renderHazActions();
+    hazActionText.value = "";
+    hazActionDate.value = "";
+  }
+  function renderHazActions() {
+    if (hazActionsList)
+      hazActionsList.innerHTML = hazActionsCart
+        .map(
+          (a, i) =>
+            `<div>${a.text} (${a.targetDate}) <button onclick="remHazAct(${i})">X</button></div>`,
+        )
+        .join("");
+  }
+  window.remHazAct = (i) => {
+    hazActionsCart.splice(i, 1);
+    renderHazActions();
+  };
+
+  if (hazForm) {
+    hazForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const data = {
+        project: hazProject.value,
+        description: document.getElementById("haz-desc").value,
+        hazardResult: hazResult.value,
+        reporter: { type: hazReporterType.value },
+        actions: hazActionsCart,
+      };
+
+      if (data.reporter.type === "موظف") {
+        const empId = hazReporterEmp.value;
+        const emp = ppeEmployees.find((x) => x.id == empId);
+        if (!emp) {
+          alert("اختر الموظف");
+          return;
+        }
+        data.reporter.id = emp.id;
+        data.reporter.name = emp.name;
+        data.reporter.company = "السويدي";
+      } else {
+        data.reporter.id = hazReporterNid.value;
+        data.reporter.name = hazReporterName.value;
+        data.reporter.company = hazReporterCompany.value;
+        data.reporter.isNew = !hazReporterName.disabled;
+        if (
+          !data.reporter.id ||
+          !data.reporter.name ||
+          !data.reporter.company
+        ) {
+          alert("بيانات المقاول ناقصة");
+          return;
+        }
+      }
+
+      hazSaveBtn.disabled = true;
+      hazSaveBtn.textContent = "جاري الحفظ...";
+      try {
+        const r = await callApi("saveHazardFull", {
+          hazData: data,
+          userInfo: currentUser,
+        });
+        showMessage(hazSaveMsg, r.message, true);
+        hazForm.reset();
+        initHazardPage();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        hazSaveBtn.disabled = false;
+        hazSaveBtn.textContent = "حفظ التقرير";
+      }
+    });
+  }
+
+  // Events
+  if (hazProject)
+    hazProject.addEventListener("change", () => {
+      updateHazEmployees();
+      updateHazContractors();
+    });
+  if (hazReporterType)
+    hazReporterType.addEventListener("change", checkHazReporterType);
+  if (hazNidSearchBtn) hazNidSearchBtn.addEventListener("click", searchHazNid);
+  if (hazAddActionBtn) hazAddActionBtn.addEventListener("click", addHazAction);
+
+  // --- My Hazards Logic ---
+  async function loadMyOpenHazards() {
+    if (!myHazList) return;
+    myHazList.innerHTML = "جاري التحميل...";
+    try {
+      const r = await callApi("getUserOpenHazards", { userInfo: currentUser });
+      let h = `<table class="results-table"><thead><tr><th>ID</th><th>Project</th><th>Desc</th><th>Action</th></tr></thead><tbody>`;
+      if (r.hazards && r.hazards.length > 0) {
+        r.hazards.forEach((hz) => {
+          h += `<tr><td>${hz.id}</td><td>${hz.project}</td><td title="${hz.desc}">${hz.desc.substring(0, 30)}...</td>
+                  <td><button class="btn-small btn-danger" onclick="handleCloseHaz('${hz.id}')">إغلاق</button></td></tr>`;
+        });
+        h += "</tbody></table>";
+        myHazList.innerHTML = h;
+      } else {
+        myHazList.innerHTML = "لا توجد تقارير مفتوحة.";
+      }
+    } catch (e) {
+      myHazList.innerHTML = e.message;
+    }
+  }
+
+  window.handleCloseHaz = async function (id) {
+    const note = prompt("ملاحظات الإغلاق:");
+    if (note === null) return;
+    try {
+      const r = await callApi("closeHazard", { hazId: id, closingNote: note });
+      alert(r.message);
+      loadMyOpenHazards();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  if (refreshHazBtn) refreshHazBtn.addEventListener("click", loadMyOpenHazards);
 });
 // --- END DOMContentLoaded ---

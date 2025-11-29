@@ -1055,6 +1055,200 @@
                         ></p>
                     </form>
                 </section>
+                <section
+                    id="NewHazard"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-exclamation-circle"></i> تسجيل تقرير
+                        خطر (Hazard)
+                    </h2>
+                    <form id="haz-form" class="app-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>التاريخ:</label
+                                ><input
+                                    type="text"
+                                    id="haz-view-date"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>الوقت:</label
+                                ><input
+                                    type="text"
+                                    id="haz-view-time"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>المستخدم (المسجل):</label
+                            ><input
+                                type="text"
+                                id="haz-issuer"
+                                readonly
+                                style="background: #eee"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="haz-project" class="required"
+                                >المشروع:</label
+                            >
+                            <select id="haz-project" required></select>
+                        </div>
+
+                        <div
+                            class="form-group"
+                            style="
+                                border: 1px solid #ddd;
+                                padding: 10px;
+                                border-radius: 5px;
+                            "
+                        >
+                            <label class="required"
+                                >بيانات المُبلغ عن الخطر:</label
+                            >
+                            <div class="form-group">
+                                <label for="haz-reporter-type"
+                                    >نوع المُبلغ:</label
+                                >
+                                <select id="haz-reporter-type">
+                                    <option value="موظف">موظف (السويدي)</option>
+                                    <option value="مقاول">فرد مقاول</option>
+                                </select>
+                            </div>
+
+                            <div id="haz-emp-group">
+                                <div class="form-group">
+                                    <label for="haz-reporter-emp"
+                                        >اسم الموظف:</label
+                                    >
+                                    <select id="haz-reporter-emp"></select>
+                                </div>
+                            </div>
+
+                            <div id="haz-cont-group" style="display: none">
+                                <div class="form-group">
+                                    <label for="haz-reporter-company"
+                                        >شركة المقاول:</label
+                                    >
+                                    <select id="haz-reporter-company"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>الرقم القومي:</label>
+                                    <div class="input-with-button">
+                                        <input
+                                            type="text"
+                                            id="haz-reporter-nid"
+                                            placeholder="بحث..."
+                                        />
+                                        <button
+                                            type="button"
+                                            id="haz-nid-search-btn"
+                                            class="btn-small"
+                                        >
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>الاسم:</label
+                                    ><input
+                                        type="text"
+                                        id="haz-reporter-name"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="haz-desc" class="required"
+                                >وصف الخطورة:</label
+                            >
+                            <textarea
+                                id="haz-desc"
+                                rows="3"
+                                required
+                            ></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="haz-result" class="required"
+                                >النتيجة المتوقعة (Hazard Result):</label
+                            >
+                            <select id="haz-result" required>
+                                <option value="">جاري التحميل...</option>
+                            </select>
+                        </div>
+
+                        <h4>الإجراءات التصحيحية</h4>
+                        <div class="form-row" style="align-items: flex-end">
+                            <div class="form-group" style="flex-grow: 2">
+                                <label>الإجراء:</label
+                                ><input type="text" id="haz-action-text" />
+                            </div>
+                            <div class="form-group">
+                                <label>تاريخ:</label
+                                ><input type="date" id="haz-action-date" />
+                            </div>
+                            <div class="form-group">
+                                <button
+                                    type="button"
+                                    id="haz-add-action-btn"
+                                    class="btn btn-secondary"
+                                >
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                            id="haz-actions-list"
+                            style="margin-bottom: 20px"
+                        ></div>
+
+                        <button
+                            type="submit"
+                            id="haz-save-btn"
+                            class="btn"
+                            style="width: 100%"
+                        >
+                            حفظ التقرير
+                        </button>
+                        <p
+                            id="haz-save-msg"
+                            class="success-message"
+                            style="display: none"
+                        ></p>
+                    </form>
+                </section>
+
+                <section
+                    id="MyHazards"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-list-alt"></i> تقاريري المفتوحة
+                        (Hazards)
+                    </h2>
+                    <div class="app-form">
+                        <button
+                            type="button"
+                            id="refresh-haz-btn"
+                            class="btn btn-secondary"
+                            style="margin-bottom: 15px"
+                        >
+                            تحديث
+                        </button>
+                        <div id="my-haz-list" class="results-table-container">
+                            <p style="text-align: center">جاري التحميل...</p>
+                        </div>
+                    </div>
+                </section>
             </main>
         </div>
 

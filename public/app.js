@@ -118,6 +118,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const ppeNotes = document.getElementById("ppe-notes");
   const ppeSaveBtn = document.getElementById("ppe-save-btn");
   const ppeMainMessage = document.getElementById("ppe-main-message");
+  const ppeShowAllEmp = document.getElementById("ppe-show-all-emp"); // (جديد)
   const ppeSaveMessage = document.getElementById("ppe-save-message");
 
   // (جديد) Stock Report Selectors
@@ -1348,31 +1349,52 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   /**
    * (جديد) دالة فلترة قايمة الموظفين بناءً على المشروع المختار
    */
+  /**
+   * (معدل) دالة فلترة قايمة الموظفين بناءً على المشروع أو عرض الكل
+   */
   function updateEmployeeDropdown() {
-    // 1. هات اسم المشروع اللي اختاره
+    // 1. هات اسم المشروع المختار
     const selectedProject = ppeRecipientLocation.value;
+    const showAll = ppeShowAllEmp.checked; // هل الزرار متعلم؟
 
-    // 2. لو مختارش مشروع، فضي القايمة
-    if (!selectedProject) {
+    // 2. تفريغ القائمة
+    ppeRecipientEmployee.innerHTML = '<option value="">-- اختر --</option>';
+
+    // لو مفيش مشروع ومفيش عرض للكل، نخرج
+    if (!selectedProject && !showAll) {
       ppeRecipientEmployee.innerHTML =
         '<option value="">-- اختر المشروع أولاً --</option>';
       return;
     }
 
-    // 3. (الأهم) فلتر قايمة الموظفين العالمية
-    const filteredEmployees = ppeEmployees.filter(
-      (emp) => emp.project === selectedProject,
-    );
+    // 3. تحديد القائمة (إما الكل أو المفلترة)
+    let list = [];
+    if (showAll) {
+      list = ppeEmployees; // كل الموظفين
+    } else {
+      // فلترة حسب المشروع فقط
+      list = ppeEmployees.filter((emp) => emp.project === selectedProject);
+    }
 
-    // 4. اعرض النتيجة
-    if (filteredEmployees.length === 0) {
+    // 4. العرض
+    if (list.length === 0) {
       ppeRecipientEmployee.innerHTML =
-        '<option value="">-- لا يوجد موظفين بهذا المشروع --</option>';
+        '<option value="">-- لا يوجد موظفين --</option>';
       return;
     }
 
-    // 5. املأ القايمة بالموظفين المفلترين
-    populateSelect(ppeRecipientEmployee, filteredEmployees, "id", "name");
+    // 5. ملء القائمة
+    list.forEach((emp) => {
+      // لو بنعرض الكل، بنكتب اسم المشروع جنب اسمه للتوضيح
+      const displayText = showAll ? `${emp.name} (${emp.project})` : emp.name;
+
+      const opt = new Option(displayText, emp.id);
+      // بننقل البيانات الإضافية عشان لو احتاجناها في الحفظ
+      opt.dataset.company = emp.company;
+      opt.dataset.project = emp.project;
+
+      ppeRecipientEmployee.add(opt);
+    });
   }
 
   /**
@@ -1832,6 +1854,9 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   }
   if (ppeForm) {
     ppeForm.addEventListener("submit", handlePpeSave);
+  }
+  if (ppeShowAllEmp) {
+    ppeShowAllEmp.addEventListener("change", updateEmployeeDropdown);
   }
 
   // --- نهاية وحدة المخازن ---

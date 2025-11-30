@@ -472,3 +472,51 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--light-gray); di
 ::-webkit-scrollbar-thumb:hover {
     background: #C8102E; /* لون أحمر أغمق قليلاً عند التحويم */
 }
+
+/* ========================================= */
+/* --- تنسيق القائمة الجانبية المنسدلة --- */
+/* ========================================= */
+
+/* رابط العنوان الرئيسي (الأب) */
+#sidebar-menu li a.menu-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* أيقونة السهم الصغير */
+#sidebar-menu li a.menu-toggle .fa-chevron-down {
+    transition: transform 0.3s ease;
+    font-size: 0.8em;
+}
+
+/* تدوير السهم عند الفتح */
+#sidebar-menu li a.menu-toggle.expanded .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+/* القائمة الفرعية (مخفية افتراضياً) */
+.submenu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background-color: rgba(0, 0, 0, 0.1); /* لون أغمق قليلاً */
+    display: none; /* مخفي */
+}
+
+/* إظهار القائمة الفرعية */
+.submenu.show {
+    display: block;
+}
+
+/* روابط القائمة الفرعية */
+.submenu li a {
+    padding-right: 45px !important; /* إزاحة للداخل لتمييزها */
+    font-size: 0.95em;
+    border-bottom: none !important;
+}
+
+.submenu li a:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}

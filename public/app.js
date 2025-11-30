@@ -165,6 +165,53 @@ document.addEventListener("DOMContentLoaded", function () {
     NewNearMiss: "Near Miss", // Example
   };
 
+  // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
+  const sidebarStructure = [
+    // 1. الرئيسية (رابط مباشر)
+    { type: "link", id: "Dashboard" },
+
+    // 2. مجموعة التصاريح (قائمة منسدلة - لأن تحتها 3 حاجات)
+    {
+      type: "group",
+      title: "نظام التصاريح",
+      icon: "fas fa-file-contract",
+      children: ["NewPermit", "ClosePermit", "MonitorPermits"],
+    },
+
+    // 3. مجموعة الملاحظات (قائمة منسدلة - تحتها 2)
+    {
+      type: "group",
+      title: "الملاحظات",
+      icon: "fas fa-eye",
+      children: ["NewObservation", "MyObservations"],
+    },
+
+    // 4. مجموعة الهازارد (قائمة منسدلة - تحتها 2)
+    {
+      type: "group",
+      title: "تقارير الخطر",
+      icon: "fas fa-exclamation-circle",
+      children: ["NewHazard", "MyHazards"],
+    },
+
+    // 5. مجموعة المخازن (قائمة منسدلة - تحتها 2)
+    {
+      type: "group",
+      title: "المخازن والمهمات",
+      icon: "fas fa-boxes",
+      children: ["PpeTransactions", "ProjectStockReport"],
+    },
+
+    // 6. نظام التدريب (رابط مباشر - لأنه حاجة واحدة)
+    { type: "link", id: "NewTraining" },
+
+    // 7. تقييم الموظفين (رابط مباشر - لأنه حاجة واحدة)
+    { type: "link", id: "KpiEvaluation" },
+
+    // 8. أخرى (رابط مباشر)
+    { type: "link", id: "NewNearMiss" },
+  ];
+
   // --- === UTILITY FUNCTIONS (Defined FIRST!) === ---
   function showLoader(message = "جاري التحميل...") {
     const loaderText = loader ? loader.querySelector("p") : null;
@@ -392,63 +439,108 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // (دالة بناء السايد بار الجديدة - تدعم القوائم المنسدلة)
   function buildSidebar(sectionsString) {
-    if (!sidebarMenu) {
-      console.error("#sidebar-menu not found.");
-      return;
-    }
+    if (!sidebarMenu) return;
     sidebarMenu.innerHTML = "";
-    if (!sectionsString) {
-      sidebarMenu.innerHTML = "<li><a>لا أقسام</a></li>";
-      return;
-    }
-    let sections = [];
-    const cleanedString = sectionsString; // Assumes cleaned by backend
-    if (cleanedString.toUpperCase() === "ALL") {
-      sections = Object.keys(sectionNames);
+
+    // 1. تحديد صلاحيات المستخدم
+    if (!sectionsString) return;
+    let userSections = [];
+    if (sectionsString.toUpperCase() === "ALL") {
+      userSections = Object.keys(sectionNames);
     } else {
-      sections = cleanedString
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s);
+      userSections = sectionsString.split(",").map((s) => s.trim());
     }
-    if (sections.length === 0) {
-      sidebarMenu.innerHTML = "<li><a>لا أقسام متاحة</a></li>";
-      return;
-    }
-    let isFirstLink = true;
-    sections.forEach((sectionId) => {
-      if (sectionNames[sectionId]) {
-        const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.href = "#";
-        a.dataset.section = sectionId;
-        const icon = document.createElement("i");
-        icon.className = sectionIcons[sectionId] || "fas fa-question-circle";
-        a.appendChild(icon);
-        a.appendChild(document.createTextNode(" " + sectionNames[sectionId]));
-        if (isFirstLink) {
-          a.classList.add("active");
-          isFirstLink = false;
+
+    // 2. اللف على الهيكل المحدد (sidebarStructure)
+    sidebarStructure.forEach((item) => {
+      // حالة أ: رابط عادي (ليس مجموعة)
+      if (item.type === "link") {
+        if (userSections.includes(item.id)) {
+          createSingleLink(item.id, sidebarMenu);
         }
-        a.addEventListener("click", function (e) {
-          e.preventDefault();
-          const targetId = this.dataset.section;
-          showSection(targetId);
-          sidebarMenu
-            .querySelectorAll("a")
-            .forEach((link) => link.classList.remove("active"));
-          this.classList.add("active");
-          if (window.innerWidth <= 768 && sidebar) {
-            sidebar.classList.remove("active");
-          }
-        });
-        li.appendChild(a);
-        sidebarMenu.appendChild(li);
-      } else {
-        console.warn(`Section ID "${sectionId}" ignored.`);
+      }
+
+      // حالة ب: مجموعة منسدلة
+      else if (item.type === "group") {
+        // فلترة الأبناء: هل المستخدم لديه صلاحية لأي من أبناء هذه المجموعة؟
+        const allowedChildren = item.children.filter((childId) =>
+          userSections.includes(childId),
+        );
+
+        // إذا كان لديه صلاحية لواحد على الأقل، اعرض المجموعة
+        if (allowedChildren.length > 0) {
+          createGroupMenu(item.title, item.icon, allowedChildren, sidebarMenu);
+        }
       }
     });
+  }
+
+  // دالة مساعدة لإنشاء رابط عادي
+  function createSingleLink(sectionId, parentContainer) {
+    if (!sectionNames[sectionId]) return;
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = "#";
+    a.dataset.section = sectionId;
+    a.innerHTML = `<i class="${sectionIcons[sectionId]}"></i> ${sectionNames[sectionId]}`;
+
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      handleMenuClick(this);
+    });
+
+    li.appendChild(a);
+    parentContainer.appendChild(li);
+  }
+
+  // دالة مساعدة لإنشاء قائمة منسدلة
+  function createGroupMenu(title, iconClass, childrenIds, parentContainer) {
+    const li = document.createElement("li");
+
+    // 1. رأس القائمة (العنوان)
+    const aToggle = document.createElement("a");
+    aToggle.href = "#";
+    aToggle.className = "menu-toggle";
+    aToggle.innerHTML = `<span><i class="${iconClass}"></i> ${title}</span> <i class="fas fa-chevron-down"></i>`;
+
+    // 2. حاوية الأبناء (Submenu)
+    const ulSub = document.createElement("ul");
+    ulSub.className = "submenu";
+
+    // إضافة الأبناء
+    childrenIds.forEach((childId) => {
+      createSingleLink(childId, ulSub);
+    });
+
+    // 3. حدث الضغط (فتح/غلق)
+    aToggle.addEventListener("click", function (e) {
+      e.preventDefault();
+      this.classList.toggle("expanded"); // لتدوير السهم
+      ulSub.classList.toggle("show"); // لإظهار القائمة
+    });
+
+    li.appendChild(aToggle);
+    li.appendChild(ulSub);
+    parentContainer.appendChild(li);
+  }
+
+  // دالة التعامل مع الضغط على الرابط النهائي
+  function handleMenuClick(linkElement) {
+    const targetId = linkElement.dataset.section;
+    showSection(targetId);
+
+    // إزالة Active من الكل
+    document
+      .querySelectorAll("#sidebar-menu a")
+      .forEach((l) => l.classList.remove("active"));
+    linkElement.classList.add("active");
+
+    // في الموبايل، اغلق السايد بار
+    if (window.innerWidth <= 768 && sidebar) {
+      sidebar.classList.remove("active");
+    }
   }
 
   // (*** هذه هي الدالة المُعدلة ***)
@@ -1606,7 +1698,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
           if (!selectedEmp) throw new Error("الرجاء اختيار موظف صحيح.");
           transactionData.recipient.id = selectedEmp.id;
           transactionData.recipient.name = selectedEmp.name;
-          transactionData.recipient.company = selectedEmp.company; // (سويدي مثلاً)
+          transactionData.recipient.company = selectedEmp.company; // (سويدي t�ثلاً)
         } else if (transactionData.recipient.type === "مقاول") {
           transactionData.recipient.id = ppeRecipientNid.value;
           transactionData.recipient.name = ppeRecipientName.value;

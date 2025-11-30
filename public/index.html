@@ -295,7 +295,7 @@
                             <input
                                 type="text"
                                 id="obs-location-detail"
-                                placeholder="مثال:منطقة السقالات"
+                                placeholder="مثال: الدور الثاني - منطقة السقالات"
                                 required
                             />
                         </div>
@@ -314,7 +314,7 @@
                                         ظروف غير آمنة (Unsafe Condition)
                                     </option>
                                     <option value="Environmental">
-                                      تاثير بيئي (Environmental Impact)
+                                        تأثير بيئي (Environmental Impact)
                                     </option>
                                     <option value="Positive">
                                         ملاحظة إيجابية (Positive)
@@ -441,7 +441,48 @@
                         ></p>
                     </form>
                 </section>
-
+                <section
+                    id="MonitorObservations"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2><i class="fas fa-search"></i> سجل الملاحظات (بحث)</h2>
+                    <div class="app-form">
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select id="mon-obs-project">
+                                    <option value="">الكل</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>من:</label
+                                    ><input type="date" id="mon-obs-from" />
+                                </div>
+                                <div class="form-group">
+                                    <label>إلى:</label
+                                    ><input type="date" id="mon-obs-to" />
+                                </div>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="mon-obs-open" />
+                                <label
+                                    for="mon-obs-open"
+                                    style="font-weight: normal"
+                                    >المفتوحة فقط</label
+                                >
+                            </div>
+                            <button type="button" id="mon-obs-btn" class="btn">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+                        <div
+                            id="mon-obs-table"
+                            class="results-table-container"
+                        ></div>
+                    </div>
+                </section>
                 <section
                     id="MonitorPermits"
                     class="page-section"
@@ -1258,6 +1299,51 @@
                         <div id="my-haz-list" class="results-table-container">
                             <p style="text-align: center">جاري التحميل...</p>
                         </div>
+                    </div>
+                </section>
+                <section
+                    id="MonitorHazards"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-search-location"></i> سجل تقارير الخطر
+                        (بحث)
+                    </h2>
+                    <div class="app-form">
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select id="mon-haz-project">
+                                    <option value="">الكل</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>من:</label
+                                    ><input type="date" id="mon-haz-from" />
+                                </div>
+                                <div class="form-group">
+                                    <label>إلى:</label
+                                    ><input type="date" id="mon-haz-to" />
+                                </div>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="mon-haz-open" />
+                                <label
+                                    for="mon-haz-open"
+                                    style="font-weight: normal"
+                                    >المفتوحة فقط</label
+                                >
+                            </div>
+                            <button type="button" id="mon-haz-btn" class="btn">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+                        <div
+                            id="mon-haz-table"
+                            class="results-table-container"
+                        ></div>
                     </div>
                 </section>
             </main>

@@ -148,6 +148,8 @@ document.addEventListener("DOMContentLoaded", function () {
     PpeTransactions: "fas fa-boxes", // (جديد)
     ProjectStockReport: "fas fa-chart-pie", // (جديد)
     NewTraining: "fas fa-chalkboard-teacher",
+    MonitorObservations: "fas fa-search",
+    MonitorHazards: "fas fa-search-location",
     NewNearMiss: "fas fa-exclamation-triangle", // Example
   };
   const sectionNames = {
@@ -163,6 +165,8 @@ document.addEventListener("DOMContentLoaded", function () {
     PpeTransactions: "حركات المخزن", // (جديد)
     ProjectStockReport: "أرصدة المخازن", // (جديد)
     NewTraining: "تسجيل تدريب", // (*** جديد ***) اسم القسم
+    MonitorObservations: "سجل الملاحظات",
+    MonitorHazards: "سجل المخاطر",
     NewNearMiss: "Near Miss", // Example
   };
 
@@ -184,7 +188,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type: "group",
       title: "الملاحظات",
       icon: "fas fa-eye",
-      children: ["NewObservation", "MyObservations"],
+      children: ["NewObservation", "MyObservations", "MonitorObservations"], // أضفناها هنا
     },
 
     // 4. مجموعة الهازارد (قائمة منسدلة - تحتها 2)
@@ -192,7 +196,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type: "group",
       title: "تقارير الخطر",
       icon: "fas fa-exclamation-circle",
-      children: ["NewHazard", "MyHazards"],
+      children: ["NewHazard", "MyHazards", "MonitorHazards"], // أضفناها هنا
     },
 
     // 5. مجموعة المخازن (قائمة منسدلة - تحتها 2)
@@ -584,6 +588,10 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       if (sectionId === "NewHazard") initHazardPage();
       if (sectionId === "MyHazards") loadMyOpenHazards();
+      if (sectionId === "MonitorObservations")
+        populateMonitorDropdowns(monObsProject);
+      if (sectionId === "MonitorHazards")
+        populateMonitorDropdowns(monHazProject);
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -2299,35 +2307,50 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   const obsActionsList = document.getElementById("obs-actions-list");
   const obsSaveBtn = document.getElementById("obs-save-btn");
   const obsSaveMsg = document.getElementById("obs-save-msg");
+  const monObsProject = document.getElementById("mon-obs-project");
+  const monObsFrom = document.getElementById("mon-obs-from");
+  const monObsTo = document.getElementById("mon-obs-to");
+  const monObsOpen = document.getElementById("mon-obs-open");
+  const monObsBtn = document.getElementById("mon-obs-btn");
+  const monObsTable = document.getElementById("mon-obs-table");
 
   let obsActionsCart = []; // سلة الإجراءات
 
   async function initObservationPage() {
     console.log("بدء تشغيل صفحة الملاحظات...");
 
-    // 1. ضبط الوقت والتاريخ
+    // 1. ضبط التاريخ والاسم (يدوياً لضمان الشكل الصحيح)
     const now = new Date();
-    if (obsViewDate) obsViewDate.value = now.toLocaleDateString("en-CA");
-    if (obsViewTime)
-      obsViewTime.value = now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0"); // شهر 1 يبقى 01
+    const day = String(now.getDate()).padStart(2, "0"); // يوم 5 يبقى 05
+    const dateString = `${year}-${month}-${day}`; // النتيجة: 2025-11-30
 
-    // 2. تعبئة المشاريع (بناءً على صلاحيات المستخدم)
+    // تعيين التاريخ
+    if (obsViewDate) obsViewDate.value = dateString;
+
+    // تعيين اسم المستخدم (المصدر)
+    const obsIssuerField = document.getElementById("obs-issuer"); // تأكدنا من الـ Selector
+    if (obsIssuerField && currentUser) {
+      obsIssuerField.value = currentUser.username;
+    }
+
+    // 2. تعبئة المشاريع
     if (obsProject && obsProject.options.length <= 1) {
-      // نحاول نستخدم البيانات المحملة مسبقاً من المخزن لتسريع الأداء
       if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
-        fillSelect(obsProject, ppeLocations);
+        const userProj = (currentUser.projects || "").toString();
+        let accProj = ppeLocations;
+        if (userProj !== "ALL") {
+          accProj = ppeLocations.filter((p) => userProj.includes(p));
+        }
+        fillSelect(obsProject, accProj);
       } else {
-        // لو مش موجودة، نحملها
         try {
           const r = await callApi("getInventoryInitData", {
             userInfo: currentUser,
           });
           if (r.status === "success") {
-            // فلترة حسب الصلاحية
+            ppeLocations = r.locations;
             const userProj = (currentUser.projects || "").toString();
             let accProj = r.locations;
             if (userProj !== "ALL") {
@@ -2341,7 +2364,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       }
     }
 
-    // 3. تعبئة المخاطر (Hazard Category)
+    // 3. تعبئة المخاطر
     if (obsHazard && obsHazard.options.length <= 1) {
       obsHazard.innerHTML = "<option>جاري التحميل...</option>";
       try {
@@ -2352,19 +2375,17 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
           obsHazard.innerHTML = '<option value="">فشل التحميل</option>';
         }
       } catch (e) {
-        console.error(e);
         obsHazard.innerHTML = '<option value="">خطأ اتصال</option>';
       }
     }
 
     // تصفير
     obsActionsCart = [];
-    renderObsActions();
+    if (typeof renderObsActions === "function") renderObsActions();
     if (document.getElementById("resp-elsewedy"))
       document.getElementById("resp-elsewedy").checked = true;
-    toggleObsContractor();
+    if (typeof toggleObsContractor === "function") toggleObsContractor();
   }
-
   // إظهار/إخفاء المقاول حسب الراديو
   function toggleObsContractor() {
     let isCont = false;
@@ -2635,7 +2656,12 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   const hazActionsList = document.getElementById("haz-actions-list");
   const hazSaveBtn = document.getElementById("haz-save-btn");
   const hazSaveMsg = document.getElementById("haz-save-msg");
-
+  const monHazProject = document.getElementById("mon-haz-project");
+  const monHazFrom = document.getElementById("mon-haz-from");
+  const monHazTo = document.getElementById("mon-haz-to");
+  const monHazOpen = document.getElementById("mon-haz-open");
+  const monHazBtn = document.getElementById("mon-haz-btn");
+  const monHazTable = document.getElementById("mon-haz-table");
   // My Hazards Selectors
   const myHazList = document.getElementById("my-haz-list");
   const refreshHazBtn = document.getElementById("refresh-haz-btn");
@@ -2643,17 +2669,26 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   let hazActionsCart = [];
 
   async function initHazardPage() {
-    const now = new Date();
-    if (hazViewDate) hazViewDate.value = now.toLocaleDateString("en-CA");
-    if (hazViewTime)
-      hazViewTime.value = now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-    if (hazIssuer) hazIssuer.value = currentUser.username;
+    console.log("بدء تشغيل صفحة تقارير الخطر...");
 
-    // تعبئة المشاريع (من الذاكرة لو موجودة)
+    // 1. ضبط التاريخ والاسم (يدوياً)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const dateString = `${year}-${month}-${day}`; // النتيجة: 2025-11-30
+
+    // تعيين التاريخ
+    if (document.getElementById("haz-view-date")) {
+      document.getElementById("haz-view-date").value = dateString;
+    }
+
+    // تعيين اسم المستخدم (المصدر)
+    if (document.getElementById("haz-issuer") && currentUser) {
+      document.getElementById("haz-issuer").value = currentUser.username;
+    }
+
+    // 2. تعبئة المشاريع
     if (hazProject && hazProject.options.length <= 1) {
       if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
         const userProj = (currentUser.projects || "").toString();
@@ -2663,16 +2698,24 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
             : ppeLocations.filter((p) => userProj.includes(p));
         fillSelect(hazProject, acc);
       } else {
-        // تحميل احتياطي
         callApi("getInventoryInitData", { userInfo: currentUser }).then((r) => {
-          fillSelect(hazProject, r.locations);
-          ppeEmployees = r.employees;
-          ppeContractors = r.contractors;
+          if (r.status === "success") {
+            ppeLocations = r.locations;
+            ppeEmployees = r.employees;
+            ppeContractors = r.contractors;
+
+            const userProj = (currentUser.projects || "").toString();
+            const acc =
+              userProj === "ALL"
+                ? r.locations
+                : r.locations.filter((p) => userProj.includes(p));
+            fillSelect(hazProject, acc);
+          }
         });
       }
     }
 
-    // تعبئة قائمة المخاطر (من Hazrads_List)
+    // 3. تعبئة قائمة المخاطر
     if (hazResult && hazResult.options.length <= 1) {
       hazResult.innerHTML = "<option>جاري التحميل...</option>";
       callApi("getHazardsList", {}).then((r) => {
@@ -2681,11 +2724,14 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       });
     }
 
+    // 4. تصفير
     hazActionsCart = [];
-    renderHazActions();
-    checkHazReporterType();
+    if (typeof renderHazActions === "function") renderHazActions();
+    if (hazReporterType) {
+      hazReporterType.value = "موظف";
+      if (typeof checkHazReporterType === "function") checkHazReporterType();
+    }
   }
-
   function checkHazReporterType() {
     const type = hazReporterType.value;
     hazEmpGroup.style.display = type === "موظف" ? "block" : "none";
@@ -2865,5 +2911,116 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   };
 
   if (refreshHazBtn) refreshHazBtn.addEventListener("click", loadMyOpenHazards);
+
+  // =================================================================
+  // --- (جديد) وحدة متابعة الملاحظات والمخاطر (MONITORING V2) ---
+  // =================================================================
+
+  // دالة عامة لتعبئة مشاريع البحث
+  function populateMonitorDropdowns(selectEl) {
+    if (!selectEl || !initialData) return;
+    selectEl.innerHTML = '<option value="ALL_ACCESSIBLE">الكل</option>';
+    if (initialData.projects) {
+      initialData.projects.forEach((p) => selectEl.add(new Option(p, p)));
+    }
+  }
+
+  // 1. منطق بحث الملاحظات
+  async function searchObservations() {
+    monObsTable.innerHTML = "جاري البحث...";
+    const filters = {
+      project: monObsProject.value,
+      fromDate: monObsFrom.value,
+      toDate: monObsTo.value,
+      openOnly: monObsOpen.checked,
+    };
+
+    try {
+      const r = await callApi("searchObservations", {
+        filters: filters,
+        userInfo: currentUser,
+      });
+      renderMonitorTable(r.data, monObsTable);
+    } catch (e) {
+      monObsTable.innerHTML = e.message;
+    }
+  }
+
+  // 2. منطق بحث المخاطر
+  async function searchHazards() {
+    monHazTable.innerHTML = "جاري البحث...";
+    const filters = {
+      project: monHazProject.value,
+      fromDate: monHazFrom.value,
+      toDate: monHazTo.value,
+      openOnly: monHazOpen.checked,
+    };
+
+    try {
+      const r = await callApi("searchHazards", {
+        filters: filters,
+        userInfo: currentUser,
+      });
+      renderMonitorTable(r.data, monHazTable);
+    } catch (e) {
+      monHazTable.innerHTML = e.message;
+    }
+  }
+
+  // دالة عامة لرسم الجدول (لأنهم شبه بعض)
+  // دالة عامة لرسم الجدول (معدلة: تاريخ مضبوط + وصف كامل)
+  function renderMonitorTable(data, container) {
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
+      return;
+    }
+
+    let html = `<table class="results-table">
+          <thead>
+              <tr>
+                  <th>الكود</th>
+                  <th>التاريخ</th>
+                  <th>المصدر</th>
+                  <th>المشروع</th>
+                  <th>الوصف بالكامل</th> <th>الحالة</th>
+              </tr>
+          </thead>
+          <tbody>`;
+
+    data.forEach((row) => {
+      // 1. إصلاح تنسيق التاريخ (إزالة التوقيت T...)
+      let dateDisplay = row.date;
+      try {
+        const d = new Date(row.date);
+        // تنسيق يدوي: YYYY-MM-DD
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        dateDisplay = `${year}-${month}-${day}`;
+      } catch (e) {
+        // لو حصل خطأ، سيب التاريخ زي ما هو
+      }
+
+      html += `<tr>
+              <td><strong>${row.id}</strong></td>
+
+              <td style="white-space:nowrap;">${dateDisplay}</td>
+
+              <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
+              <td>${row.project}</td>
+
+              <td style="min-width:200px; white-space: pre-wrap;">${row.desc}</td>
+
+              <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
+          </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  }
+
+  // Events
+  if (monObsBtn) monObsBtn.addEventListener("click", searchObservations);
+  if (monHazBtn) monHazBtn.addEventListener("click", searchHazards);
 });
 // --- END DOMContentLoaded ---

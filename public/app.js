@@ -145,6 +145,7 @@ document.addEventListener("DOMContentLoaded", function () {
     MyHazards: "fas fa-list-alt",
     MonitorPermits: "fas fa-tasks",
     KpiEvaluation: "fas fa-chart-line",
+    ContractorEvaluation: "fas fa-hard-hat",
     PpeTransactions: "fas fa-boxes", // (جديد)
     ProjectStockReport: "fas fa-chart-pie", // (جديد)
     NewTraining: "fas fa-chalkboard-teacher",
@@ -162,6 +163,7 @@ document.addEventListener("DOMContentLoaded", function () {
     MyHazards: "تقارير الخطر المفتوحة",
     MonitorPermits: "متابعة التصاريح",
     KpiEvaluation: "تقييم الموظفين",
+    ContractorEvaluation: "تقييم المقاولين", // (جديد)
     PpeTransactions: "حركات المخزن", // (جديد)
     ProjectStockReport: "أرصدة المخازن", // (جديد)
     NewTraining: "تسجيل تدريب", // (*** جديد ***) اسم القسم
@@ -211,7 +213,12 @@ document.addEventListener("DOMContentLoaded", function () {
     { type: "link", id: "NewTraining" },
 
     // 7. تقييم الموظفين (رابط مباشر - لأنه حاجة واحدة)
-    { type: "link", id: "KpiEvaluation" },
+    {
+      type: "group",
+      title: "نظام التقييم (KPIs)",
+      icon: "fas fa-chart-line",
+      children: ["KpiEvaluation", "ContractorEvaluation"],
+    },
 
     // 8. أخرى (رابط مباشر)
     { type: "link", id: "NewNearMiss" },
@@ -592,6 +599,7 @@ document.addEventListener("DOMContentLoaded", function () {
         populateMonitorDropdowns(monObsProject);
       if (sectionId === "MonitorHazards")
         populateMonitorDropdowns(monHazProject);
+      if (sectionId === "ContractorEvaluation") initContractorEvalPage();
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -1698,7 +1706,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
       // 2. تجميع بيانات "المواقع"
       transactionData.locations = {};
-      if (transactionData.transactionType === "صرف") {
+      if (transactionData.transactionType === "ص �ف") {
         transactionData.locations.source = ppeRecipientLocation.value;
       } else if (transactionData.transactionType === "مرتجع") {
         transactionData.locations.destination = ppeRecipientLocation.value;
@@ -3022,5 +3030,212 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   // Events
   if (monObsBtn) monObsBtn.addEventListener("click", searchObservations);
   if (monHazBtn) monHazBtn.addEventListener("click", searchHazards);
+
+  // =================================================================
+  // --- (جديد) وحدة تقييم المقاولين ---
+  // =================================================================
+
+  const contEvalProject = document.getElementById("cont-eval-project");
+  const contEvalMonth = document.getElementById("cont-eval-month");
+  const contEvalContractor = document.getElementById("cont-eval-contractor");
+  const contEvalLoadBtn = document.getElementById("cont-eval-load-btn");
+  const contKpiContainer = document.getElementById("cont-kpi-container");
+  const contEvalFooter = document.getElementById("cont-eval-footer");
+  const contTotalScoreEl = document.getElementById("cont-total-score");
+  const contMaxScoreEl = document.getElementById("cont-max-score");
+  const contEvalForm = document.getElementById("cont-eval-form");
+
+  let currentContKPIs = [];
+
+  function initContractorEvalPage() {
+    // 1. ضبط الشهر الحالي
+    if (!contEvalMonth.value) {
+      const d = new Date();
+      contEvalMonth.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}`;
+    }
+
+    // 2. تعبئة المشاريع (نفس منطق الصلاحيات)
+    if (contEvalProject.options.length <= 1) {
+      const userProj = (currentUser.projects || "").toString();
+      let acc = [];
+      if (initialData && initialData.projects) {
+        acc =
+          userProj === "ALL"
+            ? initialData.projects
+            : initialData.projects.filter((p) => userProj.includes(p));
+        fillSelect(contEvalProject, acc);
+      }
+    }
+
+    // تصفير
+    contKpiContainer.innerHTML =
+      '<p style="text-align:center; color:#777;">اختر البيانات واضغط "بدء التقييم"</p>';
+    contEvalFooter.style.display = "none";
+    contEvalContractor.innerHTML =
+      '<option value="">-- اختر المشروع أولاً --</option>';
+    contEvalContractor.disabled = true;
+  }
+
+  // عند تغيير المشروع -> هات المقاولين
+  async function updateContEvalContractors() {
+    const proj = contEvalProject.value;
+    if (!proj) return;
+
+    contEvalContractor.innerHTML = "<option>جاري التحميل...</option>";
+    contEvalContractor.disabled = true;
+
+    try {
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      if (r.contractors && r.contractors.length > 0) {
+        fillSelect(contEvalContractor, r.contractors);
+        contEvalContractor.disabled = false;
+      } else {
+        contEvalContractor.innerHTML =
+          '<option value="">لا يوجد مقاولين</option>';
+      }
+    } catch (e) {
+      contEvalContractor.innerHTML = "<option>خطأ</option>";
+    }
+  }
+
+  // عند الضغط على "بدء التقييم" -> هات البنود
+  async function loadContractorKPIs() {
+    const proj = contEvalProject.value;
+    const cont = contEvalContractor.value;
+    const month = contEvalMonth.value;
+
+    if (!proj || !cont || !month) {
+      alert("الرجاء اختيار المشروع والمقاول والشهر.");
+      return;
+    }
+
+    contKpiContainer.innerHTML =
+      '<div class="loader-small">جاري جلب بنود التقييم...</div>';
+    contEvalFooter.style.display = "none";
+
+    try {
+      const r = await callApi("getContractorKPIs", { month: month });
+      if (r.status === "success" && r.kpis.length > 0) {
+        renderContKPIs(r.kpis);
+      } else {
+        contKpiContainer.innerHTML = "<p>لا توجد بنود تقييم لهذا الشهر.</p>";
+      }
+    } catch (e) {
+      contKpiContainer.innerHTML = `<p class="error-message">${e.message}</p>`;
+    }
+  }
+
+  // رسم البنود
+  function renderContKPIs(kpis) {
+    currentContKPIs = kpis;
+    contKpiContainer.innerHTML = "";
+    let totalMax = 0;
+
+    kpis.forEach((k) => {
+      totalMax += parseFloat(k.max);
+
+      const div = document.createElement("div");
+      div.className = "kpi-card"; // نفس ستايل كروت الموظفين
+      div.innerHTML = `
+              <div class="kpi-card-info">
+                  <h4>${k.desc}</h4>
+                  <p><small>${k.freq}</small> | الدرجة القصوى: <span>${k.max}</span></p>
+              </div>
+              <div class="kpi-card-input">
+                  <input type="number" class="kpi-score-input cont-score" 
+                         data-id="${k.id}" data-max="${k.max}"
+                         min="0" max="${k.max}" step="any" placeholder="0">
+              </div>
+          `;
+      contKpiContainer.appendChild(div);
+    });
+
+    // تحديث الفوتر
+    contMaxScoreEl.textContent = totalMax;
+    contTotalScoreEl.textContent = "0";
+    contEvalFooter.style.display = "block";
+
+    // تفعيل الحساب التلقائي للمجموع
+    document.querySelectorAll(".cont-score").forEach((inp) => {
+      inp.addEventListener("input", calculateContTotal);
+    });
+  }
+
+  function calculateContTotal() {
+    let total = 0;
+    document.querySelectorAll(".cont-score").forEach((inp) => {
+      let val = parseFloat(inp.value);
+      if (isNaN(val)) val = 0;
+      total += val;
+    });
+    contTotalScoreEl.textContent = total;
+  }
+
+  // حفظ التقييم
+  if (contEvalForm) {
+    contEvalForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!confirm("هل أنت متأكد من حفظ التقييم؟")) return;
+
+      // تجميع الدرجات
+      const scores = [];
+      let validationErr = false;
+      let totalScore = 0;
+
+      document.querySelectorAll(".cont-score").forEach((inp) => {
+        const val = parseFloat(inp.value);
+        const max = parseFloat(inp.dataset.max);
+
+        if (val < 0 || val > max) {
+          inp.style.borderColor = "red";
+          validationErr = true;
+        } else {
+          inp.style.borderColor = "";
+          scores.push({ id: inp.dataset.id, score: val || 0 });
+          totalScore += val || 0;
+        }
+      });
+
+      if (validationErr) {
+        alert("تأكد من صحة الدرجات (لا تتجاوز الحد الأقصى).");
+        return;
+      }
+
+      const data = {
+        project: contEvalProject.value,
+        contractor: contEvalContractor.value,
+        month: contEvalMonth.value,
+        totalScore: totalScore,
+        maxScore: parseFloat(contMaxScoreEl.textContent),
+        scores: scores,
+      };
+
+      const btn = contEvalForm.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = "جاري الحفظ...";
+
+      try {
+        const r = await callApi("saveContractorEval", {
+          evalData: data,
+          userInfo: currentUser,
+        });
+        alert(r.message);
+        contKpiContainer.innerHTML = "";
+        contEvalFooter.style.display = "none";
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "حفظ التقييم";
+      }
+    });
+  }
+
+  if (contEvalProject)
+    contEvalProject.addEventListener("change", updateContEvalContractors);
+  if (contEvalLoadBtn)
+    contEvalLoadBtn.addEventListener("click", loadContractorKPIs);
 });
 // --- END DOMContentLoaded ---

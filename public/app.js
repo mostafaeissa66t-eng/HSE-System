@@ -3237,5 +3237,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     contEvalProject.addEventListener("change", updateContEvalContractors);
   if (contEvalLoadBtn)
     contEvalLoadBtn.addEventListener("click", loadContractorKPIs);
+
+  
 });
 // --- END DOMContentLoaded ---

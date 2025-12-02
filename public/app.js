@@ -384,31 +384,47 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function onLoginSuccess(response) {
+    // حفظ الجلسة
     localStorage.setItem("hse_user_session", JSON.stringify(response.userInfo));
+
     currentUser = response.userInfo;
+
+    // إخفاء اللوجن وإظهار التطبيق
     if (loginScreen) loginScreen.style.display = "none";
     if (appWrapper) appWrapper.style.display = "flex";
+
+    // (1) تحديث بيانات السايد بار (القديم)
     const wu = document.getElementById("welcome-user");
     const ur = document.getElementById("user-role");
-    if (wu) wu.textContent = `أهلاً، ${currentUser.username || "?"}`;
-    if (ur) ur.textContent = currentUser.role || "?";
+    if (wu) wu.textContent = `أهلاً، ${currentUser.username}`;
+    if (ur) ur.textContent = currentUser.role;
+
+    // (2) تحديث لوحة التحكم الجديدة (Dashboard)
+    const dashWelcome = document.getElementById("dash-welcome");
+    const dashRoleVal = document.getElementById("dash-role-val");
+    const dashDateVal = document.getElementById("dash-date-val");
+
+    if (dashWelcome)
+      dashWelcome.textContent = `مرحباً بك، ${currentUser.username}`;
+    if (dashRoleVal) dashRoleVal.textContent = currentUser.role;
+
+    // وضع تاريخ اليوم بالعربي أو الإنجليزي
+    if (dashDateVal) {
+      const options = {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      };
+      dashDateVal.textContent = new Date().toLocaleDateString("ar-EG", options);
+    }
+
+    // تشغيل باقي النظام
     buildSidebar(currentUser.sections);
     loadInitialData();
-    const firstLink = sidebarMenu ? sidebarMenu.querySelector("a") : null;
-    let initialSection = "Dashboard";
-    if (firstLink && firstLink.dataset.section) {
-      initialSection = firstLink.dataset.section;
-    } else if (
-      currentUser.sections &&
-      !currentUser.sections.toUpperCase().includes("DASHBOARD")
-    ) {
-      const secs = String(currentUser.sections)
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s);
-      if (secs.length > 0 && sectionNames[secs[0]]) initialSection = secs[0];
-    }
-    showSection(initialSection);
+
+    // التوجيه للداشبورد
+    showSection("Dashboard");
   }
   function onLoginFailure(error) {
     const errorMessage =
@@ -3237,7 +3253,5 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     contEvalProject.addEventListener("change", updateContEvalContractors);
   if (contEvalLoadBtn)
     contEvalLoadBtn.addEventListener("click", loadContractorKPIs);
-
-  
 });
 // --- END DOMContentLoaded ---

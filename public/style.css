@@ -136,7 +136,7 @@ body {
 #app-wrapper { display: none; flex: 1; width: 100%; align-items: stretch; }
 #sidebar { min-width: 250px; max-width: 250px; background: var(--white-bg); color: var(--secondary-color); display: flex; flex-direction: column; border-left: 1px solid #e0e0e0; transition: margin-right 0.3s; }
 .sidebar-header { padding: 15px; background: #fdfdfd; text-align: center; border-bottom: 1px solid #e0e0e0; }
-.sidebar-header .logo { max-width: 160px; margin-bottom: 10px; }
+.sidebar-header .logo { max-width: 200px; margin-bottom: 10px; }
 .sidebar-header h3 { font-size: 1rem; color: var(--secondary-color); margin: 0; font-weight: 600; }
 .sidebar-header p { font-size: 0.8rem; color: var(--dark-gray); margin: 0; }
 #sidebar-menu { padding: 10px 0; flex-grow: 1; list-style: none; margin: 0; overflow-y: auto; }
@@ -428,4 +428,106 @@ body {
 .back-to-dash-btn:hover i {
     transform: translateX(-3px); 
     transition: transform 0.2s;
+}
+
+/* ========================================= */
+/* --- تنسيقات لوحة التحكم (Dashboard) --- */
+/* ========================================= */
+
+.welcome-card {
+    background: linear-gradient(135deg, #ffffff 70%, #fff5f6 100%);
+    border: 1px solid var(--medium-gray);
+    border-radius: 12px;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    min-height: 250px;
+}
+
+.welcome-text-content {
+    flex: 1;
+}
+
+/* عنوان الترحيب */
+.welcome-text-content h2 {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    border-bottom: none !important; /* إزالة الخط الافتراضي */
+    padding-bottom: 0 !important;
+}
+
+/* النصوص الفرعية */
+.dash-role, .dash-date {
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.dash-role i, .dash-date i {
+    color: var(--primary-color);
+    margin-left: 8px;
+    width: 20px;
+    text-align: center;
+}
+
+.dash-role span, .dash-date span {
+    color: #555;
+    font-weight: 500;
+}
+
+/* الشعار */
+.dash-quote {
+    margin-top: 25px;
+    padding: 10px 15px;
+    background-color: #fdfdfd;
+    border-right: 4px solid var(--primary-color);
+    font-style: italic;
+    color: var(--dark-gray);
+    font-weight: 600;
+    display: inline-block;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+
+/* الصورة */
+.welcome-image-content {
+    flex: 0 0 300px; /* عرض ثابت للصورة */
+    text-align: center;
+}
+
+.dash-img {
+    max-width: 100%;
+    height: auto;
+    max-height: 200px;
+    object-fit: contain;
+    /* تأثير ظل خفيف للصورة */
+    filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1));
+    transition: transform 0.3s ease;
+}
+
+.dash-img:hover {
+    transform: scale(1.05);
+}
+
+/* موبايل */
+@media (max-width: 768px) {
+    .welcome-card {
+        flex-direction: column-reverse; /* الصورة فوق والكلام تحت */
+        text-align: center;
+        padding: 20px;
+    }
+    .welcome-image-content {
+        flex: none;
+        margin-bottom: 20px;
+    }
+    .dash-img {
+        max-height: 150px;
+    }
+    .dash-quote {
+        width: 100%;
+    }
 }

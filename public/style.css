@@ -531,3 +531,89 @@ body {
         width: 100%;
     }
 }
+
+/* ========================================= */
+/* --- (تحديث) تحسينات قسم تقرير المخازن --- */
+/* ========================================= */
+
+/* 1. تحسين حاوية الجدول */
+#stock-report-results-table {
+    margin-top: 25px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05); /* ظل ناعم */
+    overflow: hidden; /* لضمان الحواف الدائرية */
+    border: 1px solid var(--medium-gray);
+}
+
+/* 2. عنوان التقرير (اسم المخزن) */
+#stock-report-results-table h3 {
+    background-color: #fdfdfd;
+    color: var(--secondary-color);
+    padding: 20px;
+    margin: 0;
+    border-bottom: 1px solid #eee;
+    font-size: 1.3rem;
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: -0.5px;
+}
+
+/* 3. تنسيق الجدول نفسه */
+#stock-report-results-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+/* رأس الجدول (أحمر) */
+#stock-report-results-table th {
+    background-color: var(--primary-color); /* الخلفية حمراء */
+    color: white; /* النص أبيض */
+    padding: 15px;
+    text-align: center;
+    font-weight: 700;
+    border: none; /* إزالة الحدود القديمة */
+    white-space: nowrap;
+}
+
+/* خلايا الجدول */
+#stock-report-results-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    color: #444;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+/* تلوين الصفوف (Zebra Striping) */
+#stock-report-results-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* تأثير عند المرور (Hover) */
+#stock-report-results-table tbody tr:hover {
+    background-color: #fff0f3; /* أحمر فاتح جداً */
+    transition: background-color 0.2s ease;
+}
+
+/* 4. تمييز عمود "الكمية المتاحة" (آخر عمود) */
+#stock-report-results-table td:last-child {
+    font-weight: 800;
+    color: var(--primary-color); /* الرقم باللون الأحمر */
+    font-size: 1.1em;
+    background-color: rgba(200, 16, 46, 0.03); /* خلفية خفيفة جداً للعمود */
+}
+
+/* تحسين شكل الفلاتر في هذا القسم */
+#ProjectStockReport .filter-controls {
+    align-items: flex-end;
+    gap: 15px;
+}
+#ProjectStockReport .filter-controls .form-group {
+    flex: 3; /* القائمة تأخذ مساحة أكبر */
+}
+#ProjectStockReport .filter-controls .btn {
+    flex: 1; /* الزر يأخذ مساحة أقل */
+}

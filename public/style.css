@@ -362,3 +362,58 @@ body {
     #sidebar { margin-right: 0 !important; position: static !important; height: auto !important; box-shadow: none !important; }
     .mobile-header { display: none !important; }
 }
+/* تنسيق رابط العودة للداشبورد */
+.back-link {
+    display: inline-block;
+        margin-bottom: 20px;
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        border-bottom: 1px solid transparent;
+        margin-top: 40px;
+}
+
+.back-link:hover {
+    color: #a00d23; /* لون أغمق عند الوقوف عليه */
+    border-bottom-color: #a00d23; /* ظهور الخط */
+    transform: translateX(-5px); /* حركة بسيطة لليسار (اتجاه السهم) */
+}
+
+.back-link i {
+    margin-right: 5px; /* مسافة بين السهم والكلمة */
+}
+
+/* ========================================= */
+/* --- زر العودة للداشبورد (داخل السايدبار) --- */
+/* ========================================= */
+
+.sidebar-footer {
+    display: flex;
+    flex-direction: column; /* لترتيب الأزرار فوق بعض */
+    gap: 5px; /* مسافة بين الزرين */
+}
+
+.back-to-dash-btn {
+    color: var(--primary-color) !important; /* لون أحمر مميز */
+    font-weight: 700 !important;
+    border-bottom: 1px solid #eee; /* خط فاصل خفيف تحته */
+    padding-bottom: 15px !important; /* مسافة قبل الخط */
+    margin-bottom: 5px;
+}
+
+.back-to-dash-btn:hover {
+    background-color: #fdf0f2; /* خلفية حمراء خفيفة جداً عند اللمس */
+}
+
+.back-to-dash-btn i {
+    margin-left: 10px; /* مسافة للأيقونة */
+    transform: scaleX(1); /* اتجاه السهم */
+}
+
+/* (اختياري) تحريك السهم عند الوقوف عليه */
+.back-to-dash-btn:hover i {
+    transform: translateX(-3px); 
+    transition: transform 0.2s;
+}

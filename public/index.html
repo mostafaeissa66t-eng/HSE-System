@@ -3,9 +3,10 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>HSE Management System</title>
+        <title>HSE Digitalization System</title>
         <link rel="stylesheet" href="style.css" />
         <link rel="icon" type="image/png" href="TURNKEY3.png" />
+
         <link
             href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap"
             rel="stylesheet"
@@ -21,32 +22,163 @@
             <p>جاري التحميل...</p>
         </div>
 
-        <div id="login-screen">
-            <div class="login-container">
-                <img src="../turnkey.png" alt="Logo" class="logo" />
-                <h3>HSE Degital System</h3>
-                <form id="login-form">
-                    <div class="form-group">
-                        <label for="username"><i class="fas fa-user"></i></label
-                        ><input
-                            type="text"
-                            id="username"
-                            placeholder="اسم المستخدم"
-                            required
-                        />
+        <div id="login-screen" class="split-screen">
+            <div class="left-pane">
+                <div class="login-container">
+                    <img src="../turnkey.png" alt="Turnkey Logo" class="logo" />
+                    <p class="welcome-text">
+                        Welcome to HSE Digitalization System
+                    </p>
+
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="username"
+                                ><i class="fas fa-user"></i> Username</label
+                            >
+                            <input
+                                type="text"
+                                id="username"
+                                placeholder="اسم المستخدم"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="password"
+                                ><i class="fas fa-lock"></i> Password</label
+                            >
+                            <input
+                                type="password"
+                                id="password"
+                                placeholder="كلمة المرور"
+                                required
+                            />
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            تسجيل الدخول
+                        </button>
+                        <p id="login-error" class="error-message"></p>
+                    </form>
+                </div>
+            </div>
+
+            <div class="right-pane">
+                <button
+                    id="lang-switch-btn"
+                    class="lang-btn"
+                    onclick="toggleLanguage()"
+                >
+                    <i class="fas fa-globe"></i> <span>العربية</span>
+                </button>
+
+                <div id="content-en" class="info-content fade-in">
+                    <h1>
+                        TURNKEY HSE <br />
+                        Digitalization System
+                    </h1>
+
+                    <p class="intro-text">
+                        A transformational solution designed and developed
+                        entirely by
+                        <strong>TURNKEY Projects HSE Department</strong>.
+                        Crafted to facilitate documentation for credible records
+                        while aiming at a <strong>paperless workflow</strong> to
+                        preserve the environment and achieve
+                        <strong>Sustainability Goals</strong>.
+                    </p>
+
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4><i class="fas fa-star"></i> Benefits</h4>
+                            <ul>
+                                <li>Access data quickly and easily</li>
+                                <li>Improve data security & credibility</li>
+                                <li>Standardize Workflow</li>
+                                <li>
+                                    Preserving the environment & achieving
+                                    sustainability
+                                </li>
+                                <li>Generate customizable reports</li>
+                            </ul>
+                        </div>
+
+                        <div class="info-box">
+                            <h4>
+                                <i class="fas fa-file-contract"></i>
+                                Capabilities
+                            </h4>
+                            <ul>
+                                <li>PPEs & Equipment Tracking</li>
+                                <li>Permit To Work (PTW)</li>
+                                <li>Violations & Incidents</li>
+                                <li>HSE Training Records</li>
+                            </ul>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="password"><i class="fas fa-lock"></i></label
-                        ><input
-                            type="password"
-                            id="password"
-                            placeholder="كلمة المرور"
-                            required
-                        />
+
+                    <div class="footer-note">
+                        <p>
+                            In addition, users can extract required reports by
+                            generating reports with customizable fields, which
+                            will help to both collect relevant data as well as
+                            analyze the required data for better insights.
+                        </p>
                     </div>
-                    <button type="submit" class="btn">تسجيل الدخول</button>
-                    <p id="login-error" class="error-message"></p>
-                </form>
+                </div>
+
+                <div
+                    id="content-ar"
+                    class="info-content fade-in"
+                    style="display: none"
+                    dir="rtl"
+                >
+                    <h1>
+                        نظام السلامة والصحة المهنية والبيئة <br />
+                        بقطاع المشروعات
+                    </h1>
+
+                    <p class="intro-text">
+                        حل جذري تم تصميمه وتطويره بالكامل بواسطة
+                        <strong>قسم السلامة بمشروعات تيرنكي</strong>. يهدف
+                        لتسهيل التوثيق والحصول على سجلات موثوقة، مع ضمان الحفاظ
+                        على البيئة عبر تقليل استخدام الورق، تحقيقاً لأهداف
+                        الاستدامة.
+                    </p>
+
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4><i class="fas fa-star"></i> فوائد النظام</h4>
+                            <ul>
+                                <li>الوصول للبيانات بسرعة وسهولة</li>
+                                <li>تحسين أمن ومصداقية البيانات</li>
+                                <li>توحيد إجراءات العمل (Standardization)</li>
+                                <li>الحفاظ على البيئة وتحقيق الاستدامة</li>
+                                <li>استخراج تقارير مخصصة</li>
+                            </ul>
+                        </div>
+
+                        <div class="info-box">
+                            <h4>
+                                <i class="fas fa-file-contract"></i> إمكانيات
+                                النظام
+                            </h4>
+                            <ul>
+                                <li>متابعة المهمات والمعدات (PPEs)</li>
+                                <li>نظام تصاريح العمل (PTW)</li>
+                                <li>تسجيل المخالفات والحوادث</li>
+                                <li>سجلات التدريب (HSE Training)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="footer-note">
+                        <p>
+                            بالإضافة إلى ذلك، يمكن للمستخدمين استخراج التقارير
+                            المطلوبة عبر حقول مخصصة، مما يساعد في جمع البيانات
+                            ذات الصلة وتحليلها للحصول على رؤى أفضل لاتخاذ
+                            القرار.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -488,45 +620,46 @@
                     class="page-section"
                     style="display: none"
                 >
-                    <h2><i class="fas fa-tasks"></i> متابعة التصاريح</h2>
-                    <div class="filter-controls">
-                        <div class="form-row">
+                    <h2><i class="fas fa-tasks"></i> سجل التصاريح (بحث)</h2>
+
+                    <div class="app-form">
+                        <div class="filter-controls">
                             <div class="form-group">
                                 <label for="monitor-project-filter"
                                     >المشروع:</label
-                                ><select id="monitor-project-filter">
-                                    <option value="ALL_ACCESSIBLE">
-                                        كل المتاح لي
-                                    </option>
+                                >
+                                <select id="monitor-project-filter">
+                                    <option value="ALL_ACCESSIBLE">الكل</option>
                                 </select>
                             </div>
+
                             <div class="form-group">
                                 <label for="monitor-requester-filter"
                                     >الجهة الطالبة:</label
-                                ><select id="monitor-requester-filter">
+                                >
+                                <select id="monitor-requester-filter">
                                     <option value="">الكل</option>
                                 </select>
                             </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="monitor-from-date">من تاريخ:</label
-                                ><input type="date" id="monitor-from-date" />
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="monitor-from-date">من:</label>
+                                    <input type="date" id="monitor-from-date" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="monitor-to-date">إلى:</label>
+                                    <input type="date" id="monitor-to-date" />
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="monitor-to-date">إلى تاريخ:</label
-                                ><input type="date" id="monitor-to-date" />
-                            </div>
-                        </div>
-                        <div class="form-row filter-options">
-                            <div class="form-group checkbox-group">
-                                <input
-                                    type="checkbox"
-                                    id="monitor-open-only"
-                                /><label for="monitor-open-only"
-                                    >عرض المفتوحة فقط</label
+
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="monitor-open-only" />
+                                <label for="monitor-open-only"
+                                    >المفتوحة فقط</label
                                 >
                             </div>
+
                             <button
                                 type="button"
                                 id="monitor-search-btn"
@@ -535,17 +668,27 @@
                                 <i class="fas fa-search"></i> بحث
                             </button>
                         </div>
+
                         <p
                             id="monitor-message"
                             class="error-message"
                             style="text-align: center; display: none"
                         ></p>
-                    </div>
-                    <div
-                        id="monitor-results-table"
-                        class="results-table-container"
-                    >
-                        <p>حدد معايير البحث...</p>
+
+                        <div
+                            id="monitor-results-table"
+                            class="results-table-container"
+                        >
+                            <p
+                                style="
+                                    text-align: center;
+                                    padding: 20px;
+                                    color: #666;
+                                "
+                            >
+                                حدد معايير البحث...
+                            </p>
+                        </div>
                     </div>
                 </section>
                 <section
@@ -1424,5 +1567,43 @@
         </div>
 
         <script src="app.js"></script>
+        <script>
+            function toggleLanguage() {
+                const enDiv = document.getElementById("content-en");
+                const arDiv = document.getElementById("content-ar");
+                const btn = document.getElementById("lang-switch-btn");
+                const btnText = btn.querySelector("span");
+
+                if (enDiv.style.display === "none") {
+                    // --- العودة للإنجليزية (يمين) ---
+                    arDiv.style.display = "none";
+                    enDiv.style.display = "block";
+
+                    btnText.textContent = "العربية";
+
+                    // إزالة كلاس اليسار (ليرجع يمين)
+                    btn.classList.remove("ar-pos");
+
+                    // Animation
+                    enDiv.classList.remove("fade-in");
+                    void enDiv.offsetWidth;
+                    enDiv.classList.add("fade-in");
+                } else {
+                    // --- التحويل للعربية (شمال) ---
+                    enDiv.style.display = "none";
+                    arDiv.style.display = "block";
+
+                    btnText.textContent = "English";
+
+                    // إضافة كلاس اليسار
+                    btn.classList.add("ar-pos");
+
+                    // Animation
+                    arDiv.classList.remove("fade-in");
+                    void arDiv.offsetWidth;
+                    arDiv.classList.add("fade-in");
+                }
+            }
+        </script>
     </body>
 </html>

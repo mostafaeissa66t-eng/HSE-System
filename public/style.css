@@ -617,3 +617,138 @@ body {
 #ProjectStockReport .filter-controls .btn {
     flex: 1; /* الزر يأخذ مساحة أقل */
 }
+
+/* ========================================= */
+/* --- (إضافة) تحسين جدول التصاريح والمتابعة --- */
+/* ========================================= */
+
+/* 1. تنسيق فلاتر البحث (سطر واحد متناسق) */
+.filter-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 15px;
+    flex-wrap: nowrap; /* منع النزول لسطر جديد */
+}
+
+.filter-controls .form-group {
+    margin-bottom: 0;
+    min-width: 150px;
+    flex: 1;
+}
+
+/* تنسيق مجموعة التاريخ */
+.filter-controls .form-row {
+    display: flex;
+    gap: 10px;
+    flex: 2;
+    width: auto;
+    margin: 0;
+    flex-wrap: nowrap !important;
+    align-items: flex-end;
+}
+.filter-controls .form-row .form-group {
+    min-width: 120px;
+}
+
+.filter-controls .btn {
+    height: 42px;
+    margin-top: 0;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+/* 2. إصلاح كروت "إغلاق التصاريح" */
+#open-permits-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.permit-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid var(--medium-gray);
+    border-radius: 8px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    transition: transform 0.2s ease;
+}
+
+.permit-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.05);
+    border-color: var(--primary-color);
+}
+
+/* 3. زر الإغلاق (البيضاوي الأنيق) */
+.btn-close, 
+.permit-card button, 
+.results-table button.btn-danger,
+.results-table button.btn-small {
+    background-color: #ffebee !important;
+    color: #c62828 !important;
+    border: 1px solid #ffcdd2 !important;
+    border-radius: 50px !important;
+    padding: 5px 15px !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    font-family: 'Cairo', sans-serif !important;
+    width: auto !important;
+    height: auto !important;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: none !important;
+    display: inline-block;
+}
+
+.btn-close:hover, 
+.permit-card button:hover,
+.results-table button:hover {
+    background-color: #c62828 !important;
+    color: #ffffff !important;
+    border-color: #c62828 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(198, 40, 40, 0.3) !important;
+}
+
+/* 4. إصلاح عرض وصف الجدول (Wrap Text) */
+.results-table td {
+    white-space: normal !important;    /* السماح بنزول السطر */
+    word-wrap: break-word !important;  /* كسر الكلمات الطويلة */
+    vertical-align: top;
+    line-height: 1.6;
+    padding: 12px 10px;
+    max-width: 400px;
+    min-width: 150px;
+}
+.results-table th {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* --- استثناء للموبايل --- */
+@media (max-width: 992px) {
+    .filter-controls { flex-wrap: wrap !important; }
+    .filter-controls .form-group, 
+    .filter-controls .form-row, 
+    .filter-controls .btn, 
+    .filter-controls .checkbox-group { 
+        flex: 1 1 100%; 
+        width: 100%; 
+    }
+    .filter-controls .form-row { flex-direction: row; }
+
+    .permit-card { 
+        flex-direction: column; 
+        align-items: stretch; 
+        text-align: right; 
+    }
+    .permit-card .btn-close { 
+        width: 100% !important; 
+        text-align: center; 
+        margin-top: 10px; 
+    }
+}

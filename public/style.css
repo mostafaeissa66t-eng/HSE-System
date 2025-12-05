@@ -280,8 +280,21 @@ body {
 .checkbox-group input[type="checkbox"] { width: 16px !important; height: 16px !important; margin: 0; cursor: pointer; flex-shrink: 0; display: inline-block; margin-left: 8px; }
 .checkbox-group label { margin: 0; font-weight: 500; cursor: pointer; font-size: 0.9rem; display: inline-block; }
 
-.results-table-container { overflow-x: auto; width: 100%; border-radius: 5px; border: 1px solid var(--medium-gray); }
-.results-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+/* (إضافة) تفعيل السكرول الأفقي لجميع الجداول في الموبايل */
+.results-table-container {
+    overflow-x: auto !important; /* إجبار السكرول الأفقي */
+    -webkit-overflow-scrolling: touch; /* سكرول ناعم للموبايل */
+    width: 100%;
+    display: block;
+    margin-top: 15px;
+    border: 1px solid var(--medium-gray); /* تأكيد الحدود */
+}
+
+/* (إضافة) إجبار الجدول على أن يكون عريضاً */
+.results-table {
+    min-width: 600px; /* الجدول سيكون أعرض من شاشة الموبايل فيظهر السكرول */
+    width: 100%;
+}
 .results-table th, .results-table td { border-bottom: 1px solid var(--medium-gray); padding: 12px; text-align: right; vertical-align: middle; }
 .results-table th { background-color: #f1f1f1; font-weight: 700; white-space: nowrap; color: var(--primary-color); }
 .results-table tbody tr:nth-child(even) { background-color: #fcfcfc; }
@@ -356,6 +369,16 @@ body {
     .filter-controls { flex-wrap: wrap !important; }
     .filter-controls .form-group, .filter-controls .form-row, .filter-controls .btn, .filter-controls .checkbox-group { flex: 1 1 100%; width: 100%; }
     .filter-controls .form-row { flex-direction: row; }
+    .results-table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        display: block;
+        border: 1px solid var(--medium-gray);
+    }
+    .results-table {
+        min-width: 600px; /* العرض الإجباري */
+    }
 }
 
 @media (max-width: 768px) {

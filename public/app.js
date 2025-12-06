@@ -159,6 +159,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewNcrViolation: "fas fa-exclamation-triangle",
     MyNCRs: "fas fa-clipboard-check",
     MonitorNcrViolations: "fas fa-folder-open",
+    NewContractor: "fas fa-file-upload", // أيقونة رفع ملف
     NewNearMiss: "fas fa-exclamation-triangle", // Example
   };
   const sectionNames = {
@@ -180,6 +181,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewNcrViolation: "تسجيل NCR / مخالفة",
     MyNCRs: "متابعة NCR", // (جديد)
     MonitorNcrViolations: "سجل المخالفات و NCR",
+    NewContractor: "تسجيل مقاولين (اشتراطات)",
     NewNearMiss: "Near Miss", // Example
   };
 
@@ -230,7 +232,12 @@ document.addEventListener("DOMContentLoaded", function () {
       icon: "fas fa-chart-line",
       children: ["KpiEvaluation", "ContractorEvaluation"],
     },
-
+    {
+      type: "group",
+      title: "إدارة المقاولين",
+      icon: "fas fa-hard-hat", // أيقونة الخوذة (مناسبة للمقاولين)
+      children: ["NewContractor"],
+    },
     // 8. أخرى (رابط مباشر)
     { type: "link", id: "NewNearMiss" },
     {
@@ -640,6 +647,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "MyNCRs") loadMyOpenNCRs();
       if (sectionId === "MonitorNcrViolations")
         populateMonitorDropdowns(monNcrVioProject);
+      if (sectionId === "NewContractor") initContractorPage();
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -2592,7 +2600,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         alert("خطأ: " + err.message);
       } finally {
         obsSaveBtn.disabled = false;
-        obsSaveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الملاحظة';
+        obsSaveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الم/�احظة';
       }
     });
   }
@@ -4208,5 +4216,165 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   }
 
   if (monNcrVioBtn) monNcrVioBtn.addEventListener("click", searchNcrViolations);
+
+  // =================================================================
+  // --- (معدل) وحدة المقاولين والرفع (Contractors Upload) ---
+  // =================================================================
+
+  const contForm = document.getElementById("contractor-form");
+  const contDate = document.getElementById("cont-date");
+  const contTime = document.getElementById("cont-time");
+  const contIssuer = document.getElementById("cont-issuer");
+  const contProject = document.getElementById("cont-project");
+  const contContractor = document.getElementById("cont-contractor"); // (جديد)
+  const contFile = document.getElementById("cont-file");
+  const fileNameDisplay = document.getElementById("file-name-display");
+  const contSaveBtn = document.getElementById("cont-save-btn");
+  const contSaveMsg = document.getElementById("cont-save-msg");
+
+  function initContractorPage() {
+    const now = new Date();
+    // تنسيق التاريخ والوقت
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    if (contDate) contDate.value = `${year}-${month}-${day}`;
+
+    const hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const strHours = String(hours % 12 || 12).padStart(2, "0");
+    if (contTime) contTime.value = `${strHours}:${minutes} ${ampm}`;
+
+    if (contIssuer) contIssuer.value = currentUser.username;
+
+    // تعبئة المشاريع
+    if (contProject && contProject.options.length <= 1) {
+      if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+        const userProj = (currentUser.projects || "").toString();
+        const acc =
+          userProj === "ALL"
+            ? ppeLocations
+            : ppeLocations.filter((p) => userProj.includes(p));
+        fillSelect(contProject, acc);
+      } else {
+        callApi("getInventoryInitData", { userInfo: currentUser }).then((r) => {
+          if (r.status === "success") fillSelect(contProject, r.locations);
+        });
+      }
+    }
+
+    // تصفير قائمة المقاول
+    if (contContractor) {
+      contContractor.innerHTML =
+        '<option value="">-- اختر المشروع أولاً --</option>';
+      contContractor.disabled = true;
+    }
+  }
+
+  // (جديد) دالة جلب المقاولين عند تغيير المشروع
+  async function updateContUploadContractors() {
+    const proj = contProject.value;
+    if (!proj) return;
+
+    contContractor.innerHTML = "<option>جاري التحميل...</option>";
+    contContractor.disabled = true;
+
+    try {
+      // نستخدم نفس الدالة الموجودة في السيرفر
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      if (r.contractors && r.contractors.length > 0) {
+        fillSelect(contContractor, r.contractors);
+        contContractor.disabled = false;
+      } else {
+        contContractor.innerHTML = '<option value="">لا يوجد مقاولين</option>';
+      }
+    } catch (e) {
+      contContractor.innerHTML = "<option>خطأ</option>";
+    }
+  }
+
+  // عرض اسم الملف
+  if (contFile) {
+    contFile.addEventListener("change", function () {
+      if (this.files && this.files[0]) {
+        fileNameDisplay.textContent = this.files[0].name;
+        fileNameDisplay.style.color = "#28a745";
+      } else {
+        fileNameDisplay.textContent = "لم يتم اختيار ملف";
+        fileNameDisplay.style.color = "#555";
+      }
+    });
+  }
+
+  // الحفظ
+  if (contForm) {
+    contForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const file = contFile.files[0];
+      if (!contProject.value) {
+        alert("اختر المشروع");
+        return;
+      }
+      if (!contContractor.value) {
+        alert("اختر المقاول");
+        return;
+      }
+      if (!file) {
+        alert("الرجاء اختيار ملف.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert("حجم الملف كبير جداً (الحد الأقصى 5 ميجا).");
+        return;
+      }
+
+      contSaveBtn.disabled = true;
+      contSaveBtn.innerHTML =
+        '<i class="fas fa-spinner fa-spin"></i> جاري الرفع...';
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async function () {
+        try {
+          const base64Data = reader.result.split(",")[1];
+
+          const data = {
+            project: contProject.value,
+            contractor: contContractor.value, // (جديد) إرسال اسم المقاول
+            fileName: file.name,
+            mimeType: file.type,
+            fileData: base64Data,
+          };
+
+          const r = await callApi("saveContractorUpload", {
+            data: data,
+            userInfo: currentUser,
+          });
+          showMessage(contSaveMsg, r.message, true);
+          contForm.reset();
+          fileNameDisplay.textContent = "لم يتم اختيار ملف";
+          initContractorPage(); // إعادة تهيئة
+        } catch (err) {
+          alert("خطأ في الرفع: " + err.message);
+        } finally {
+          contSaveBtn.disabled = false;
+          contSaveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ ورفع الملف';
+        }
+      };
+      reader.onerror = function (error) {
+        alert("خطأ في قراءة الملف: " + error);
+        contSaveBtn.disabled = false;
+      };
+    });
+  }
+
+  // (جديد) ربط حدث تغيير المشروع
+  if (contProject) {
+    contProject.addEventListener("change", updateContUploadContractors);
+  }
 });
 // --- END DOMContentLoaded ---

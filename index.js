@@ -1,12 +1,16 @@
 // =================================================================
-// index.js (Final V8 - No Placeholder Variable)
+// index.js (Final V9 - Fixed 413 Payload Too Large)
 // =================================================================
 const express = require("express");
 const fetch = require("node-fetch"); // Ensure node-fetch@2 is installed
 const path = require("path");
 
 const app = express();
-app.use(express.json());
+
+// (*** التعديل هنا: زيادة مساحة الاستقبال إلى 50 ميجا ***)
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// (*** نهاية التعديل ***)
 
 // Serve static files from 'public'
 app.use(express.static(path.join(__dirname, "public")));
@@ -21,9 +25,9 @@ app.get("/", (req, res) => {
 });
 
 // !!! --- === === === === === === === === === === === === --- !!!
-// !!! --- الصق رابط جوجل آب سكريبت هنا بمنتهى الدقة --- !!!
+// !!! --- رابط جوجل آب سكريبت الخاص بك --- !!!
 const GOOGLE_SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbzPFimIyKdOcLr_YTqcdVbIbHC9GxS-LMNzSGt9Mrija4Lt_MGnjE0Xy6KdqzCE0UjXOg/exec";
+    "https://script.google.com/macros/s/AKfycby_LAMvdgJTrh-H4G1ACrokC5zUcI5YAvKyJOaG-cbmcU_U-f6_P0Bl2oLJHlopC5F9-g/exec";
 // !!! --- === === === === === === === === === === === === --- !!!
 
 // Log initial value
@@ -66,6 +70,8 @@ app.post("/api", async (req, res) => {
         }
 
         console.log(`Forwarding action "${action}"...`);
+
+        // (ملاحظة: fetch هنا سيرسل البيانات الكبيرة عادي لأننا وسعنا الاستقبال فوق)
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -132,4 +138,3 @@ app.listen(PORT, () => {
         console.log(`Using URL: ${GOOGLE_SCRIPT_URL.substring(0, 40)}...`);
     }
 });
-// =================================================================

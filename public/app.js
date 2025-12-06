@@ -848,7 +848,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // تصفير الفورم
     resetPermitForm();
 
-    // التأكد من إخفاء المقاول
+    // الت(�كد من إخفاء المقاول
     const subcontractorGroup = document.getElementById(
       "permit-subcontractor-group",
     );
@@ -4174,7 +4174,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
                   <th>الكود</th>
                   <th>التاريخ</th>
                   <th>المشروع</th>
-                  <th style="width:35%;">الوصف</th>
+                  <th>المصدر</th> <th style="width:30%;">الوصف</th>
                   <th>الحالة</th>
               </tr>
           </thead>
@@ -4196,10 +4196,10 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
       html += `<tr>
               <td>${typeBadge}</td>
-              <td><strong>${row.id}</strong></td>
+              <td style="font-weight:bold;">${row.id}</td>
               <td style="white-space:nowrap;">${dateDisplay}</td>
               <td>${row.project}</td>
-              <td class="desc-cell">${row.desc}</td>
+              <td style="color:#0056b3; font-weight:600;">${row.issuer || "-"}</td> <td class="desc-cell">${row.desc}</td>
               <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
           </tr>`;
     });

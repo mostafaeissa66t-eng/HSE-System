@@ -2209,6 +2209,59 @@
                         </div>
                     </div>
                 </section>
+                <section
+                    id="MonitorNcrViolations"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-search"></i> سجل المخالفات وحالات عدم
+                        المطابقة
+                    </h2>
+
+                    <div class="app-form">
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select id="mon-ncrvio-project">
+                                    <option value="ALL_ACCESSIBLE">الكل</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>من:</label
+                                    ><input type="date" id="mon-ncrvio-from" />
+                                </div>
+                                <div class="form-group">
+                                    <label>إلى:</label
+                                    ><input type="date" id="mon-ncrvio-to" />
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                id="mon-ncrvio-btn"
+                                class="btn"
+                            >
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+
+                        <div
+                            id="mon-ncrvio-table"
+                            class="results-table-container"
+                        >
+                            <p
+                                style="
+                                    text-align: center;
+                                    padding: 20px;
+                                    color: #666;
+                                "
+                            >
+                                حدد معايير البحث...
+                            </p>
+                        </div>
+                    </div>
+                </section>
             </main>
         </div>
 

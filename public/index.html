@@ -2262,6 +2262,128 @@
                         </div>
                     </div>
                 </section>
+                <section
+                    id="NewContractor"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-file-upload"></i> تسجيل مقاولين (رفع
+                        اشتراطات)
+                    </h2>
+
+                    <form id="contractor-form" class="app-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>التاريخ:</label
+                                ><input
+                                    type="text"
+                                    id="cont-date"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>الوقت:</label
+                                ><input
+                                    type="text"
+                                    id="cont-time"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>المستخدم:</label
+                            ><input
+                                type="text"
+                                id="cont-issuer"
+                                readonly
+                                style="background: #eee"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cont-project" class="required"
+                                >المشروع:</label
+                            >
+                            <select id="cont-project" required></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cont-contractor" class="required"
+                                >اسم المقاول:</label
+                            >
+                            <select id="cont-contractor" required disabled>
+                                <option value="">
+                                    -- اختر المشروع أولاً --
+                                </option>
+                            </select>
+                        </div>
+
+                        <div
+                            class="form-group"
+                            style="
+                                border: 2px dashed #ccc;
+                                padding: 20px;
+                                text-align: center;
+                                border-radius: 10px;
+                                background: #fcfcfc;
+                            "
+                        >
+                            <label
+                                for="cont-file"
+                                class="required"
+                                style="
+                                    font-size: 1.1em;
+                                    color: #c8102e;
+                                    cursor: pointer;
+                                "
+                            >
+                                <i
+                                    class="fas fa-cloud-upload-alt"
+                                    style="
+                                        font-size: 2em;
+                                        display: block;
+                                        margin-bottom: 10px;
+                                    "
+                                ></i>
+                                اختر ملف الاشتراطات (PDF)
+                            </label>
+                            <input
+                                type="file"
+                                id="cont-file"
+                                accept="application/pdf"
+                                style="display: none"
+                                required
+                            />
+                            <p
+                                id="file-name-display"
+                                style="
+                                    margin-top: 10px;
+                                    color: #555;
+                                    font-weight: bold;
+                                "
+                            >
+                                لم يتم اختيار ملف
+                            </p>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="cont-save-btn"
+                            class="btn"
+                            style="width: 100%; margin-top: 20px"
+                        >
+                            <i class="fas fa-save"></i> حفظ ورفع الملف
+                        </button>
+                        <p
+                            id="cont-save-msg"
+                            class="success-message"
+                            style="display: none"
+                        ></p>
+                    </form>
+                </section>
             </main>
         </div>
 

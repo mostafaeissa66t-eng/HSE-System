@@ -1605,6 +1605,610 @@
                         ></div>
                     </div>
                 </section>
+                <section
+                    id="NewNcrViolation"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-exclamation-triangle"></i> تسجيل مخالفة
+                        / عدم مطابقة
+                    </h2>
+
+                    <form id="ncr-form" class="app-form">
+                        <div
+                            class="form-group"
+                            style="
+                                background: #fff3cd;
+                                padding: 15px;
+                                border-radius: 8px;
+                                border: 1px solid #ffeeba;
+                            "
+                        >
+                            <label
+                                class="required"
+                                style="font-size: 1.1em; color: #856404"
+                                >نوع التقرير:</label
+                            >
+                            <div
+                                class="radio-group"
+                                style="
+                                    display: flex;
+                                    gap: 30px;
+                                    margin-top: 10px;
+                                "
+                            >
+                                <div>
+                                    <input
+                                        type="radio"
+                                        name="report-type"
+                                        id="type-ncr"
+                                        value="NCR"
+                                        checked
+                                    />
+                                    <label
+                                        for="type-ncr"
+                                        style="font-weight: bold"
+                                        >NCR (حالة عدم مطابقة)</label
+                                    >
+                                </div>
+                                <div>
+                                    <input
+                                        type="radio"
+                                        name="report-type"
+                                        id="type-violation"
+                                        value="Violation"
+                                    />
+                                    <label
+                                        for="type-violation"
+                                        style="font-weight: bold"
+                                        >Violation (مخالفة)</label
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="ncr-fields-container">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>التاريخ:</label>
+                                    <input
+                                        type="text"
+                                        id="ncr-date"
+                                        readonly
+                                        style="background: #eee"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>الوقت:</label>
+                                    <input
+                                        type="text"
+                                        id="ncr-time"
+                                        readonly
+                                        style="background: #eee"
+                                    />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>اسم المستخدم (المسجل):</label>
+                                <input
+                                    type="text"
+                                    id="ncr-issuer"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="ncr-project" class="required"
+                                    >المشروع:</label
+                                >
+                                <select id="ncr-project" required></select>
+                            </div>
+
+                            <hr />
+
+                            <h4>Who observed the NCR (من لاحظ الحالة)</h4>
+                            <div class="form-group">
+                                <label>التبعية:</label>
+                                <select id="ncr-observer-type">
+                                    <option value="السويدي">
+                                        السويدي (Elsewedy)
+                                    </option>
+                                    <option value="مقاول">
+                                        مقاول (Contractor)
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div id="ncr-emp-group">
+                                <div class="form-group">
+                                    <label for="ncr-observer-emp"
+                                        >اسم الموظف:</label
+                                    >
+                                    <select id="ncr-observer-emp"></select>
+                                </div>
+                                <div class="form-group checkbox-group">
+                                    <input
+                                        type="checkbox"
+                                        id="ncr-show-all-emp"
+                                    />
+                                    <label
+                                        for="ncr-show-all-emp"
+                                        style="font-weight: normal"
+                                        >عرض كل الأسماء (زيارة)</label
+                                    >
+                                </div>
+                            </div>
+
+                            <div id="ncr-cont-group" style="display: none">
+                                <div class="form-group">
+                                    <label for="ncr-observer-company"
+                                        >اسم المقاول:</label
+                                    >
+                                    <select id="ncr-observer-company"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>الرقم القومي:</label>
+                                    <div class="input-with-button">
+                                        <input
+                                            type="text"
+                                            id="ncr-observer-nid"
+                                            placeholder="بحث..."
+                                        />
+                                        <button
+                                            type="button"
+                                            id="ncr-nid-search-btn"
+                                            class="btn-small"
+                                        >
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>الاسم:</label
+                                    ><input
+                                        type="text"
+                                        id="ncr-observer-name"
+                                    />
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <div class="form-group">
+                                <label for="ncr-reported-to" class="required"
+                                    >لمن تم الإبلاغ (Reported To):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="ncr-reported-to"
+                                    required
+                                />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ncr-method" class="required"
+                                    >How Observed (طريقة الملاحظة):</label
+                                >
+                                <select id="ncr-method" required>
+                                    <option value="">-- Select --</option>
+                                    <option value="Preventive inspection">
+                                        تفتيش وقائي (Preventive inspection)
+                                    </option>
+                                    <option value="Internal audit">
+                                        مراجعة داخلية (Internal audit)
+                                    </option>
+                                    <option value="Complaint">
+                                        شكوى (Complaint)
+                                    </option>
+                                    <option value="Data Analysis">
+                                        تحليل بيانات (Data Analysis)
+                                    </option>
+                                    <option value="Other">أخرى (Other)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ncr-desc" class="required"
+                                    >Description of Nonconformity (وصف
+                                    الحالة):</label
+                                >
+                                <textarea
+                                    id="ncr-desc"
+                                    rows="3"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ncr-root" class="required"
+                                    >Root causes (الأسباب الجذرية):</label
+                                >
+                                <textarea
+                                    id="ncr-root"
+                                    rows="2"
+                                    placeholder="يمكنك كتابة أكثر من سبب..."
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <hr />
+
+                            <h4>Corrective / Preventive Actions</h4>
+                            <div class="form-row" style="align-items: flex-end">
+                                <div class="form-group" style="flex: 2">
+                                    <label>الإجراء (Action):</label>
+                                    <input type="text" id="ncr-act-text" />
+                                </div>
+                                <div class="form-group">
+                                    <label>المسؤول (Responsible):</label>
+                                    <input type="text" id="ncr-act-resp" />
+                                </div>
+                            </div>
+                            <div class="form-row" style="align-items: flex-end">
+                                <div class="form-group">
+                                    <label>تاريخ التنفيذ (Target Date):</label>
+                                    <input type="date" id="ncr-act-date" />
+                                </div>
+                                <div class="form-group">
+                                    <button
+                                        type="button"
+                                        id="ncr-add-act-btn"
+                                        class="btn btn-secondary"
+                                    >
+                                        <i class="fas fa-plus"></i> إضافة
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div
+                                id="ncr-actions-list"
+                                style="margin-bottom: 20px"
+                            ></div>
+
+                            <button
+                                type="submit"
+                                id="ncr-save-btn"
+                                class="btn"
+                                style="width: 100%"
+                            >
+                                حفظ NCR
+                            </button>
+                            <p
+                                id="ncr-save-msg"
+                                class="success-message"
+                                style="display: none"
+                            ></p>
+                        </div>
+
+                        <div
+                            id="violation-fields-container"
+                            style="display: none"
+                        >
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>التاريخ:</label
+                                    ><input
+                                        type="text"
+                                        id="vio-date"
+                                        readonly
+                                        style="background: #eee"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>الوقت:</label
+                                    ><input
+                                        type="text"
+                                        id="vio-time"
+                                        readonly
+                                        style="background: #eee"
+                                    />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>المسجل:</label
+                                ><input
+                                    type="text"
+                                    id="vio-issuer"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="required">المشروع:</label>
+                                <select id="vio-project" required></select>
+                            </div>
+
+                            <hr />
+
+                            <div
+                                class="form-group"
+                                style="
+                                    border: 1px solid #ddd;
+                                    padding: 15px;
+                                    border-radius: 8px;
+                                "
+                            >
+                                <label class="required">بيانات المخالف:</label>
+                                <div class="form-group">
+                                    <label>نوع المخالف:</label>
+                                    <select id="vio-type">
+                                        <option value="موظف">
+                                            موظف (السويدي)
+                                        </option>
+                                        <option value="مقاول">مقاول</option>
+                                    </select>
+                                </div>
+
+                                <div id="vio-emp-group">
+                                    <div class="form-group">
+                                        <label>اسم الموظف:</label>
+                                        <select id="vio-emp-select"></select>
+                                    </div>
+                                    <div class="form-group checkbox-group">
+                                        <input
+                                            type="checkbox"
+                                            id="vio-show-all-emp"
+                                        />
+                                        <label
+                                            for="vio-show-all-emp"
+                                            style="font-weight: normal"
+                                            >عرض كل الموظفين</label
+                                        >
+                                    </div>
+                                </div>
+
+                                <div id="vio-cont-group" style="display: none">
+                                    <div class="form-group">
+                                        <label>اسم المقاول (الشركة):</label>
+                                        <select id="vio-cont-select"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label
+                                            >اسم الشخص المخالف (اختياري):</label
+                                        ><input
+                                            type="text"
+                                            id="vio-cont-worker-name"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>الرقم القومي (اختياري):</label
+                                        ><input type="text" id="vio-cont-nid" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <div class="form-group">
+                                <label class="required"
+                                    >وصف المخالفة (Description):</label
+                                >
+                                <textarea
+                                    id="vio-desc"
+                                    rows="3"
+                                    required
+                                ></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="required"
+                                    >أقوال مسؤول السلامة (HSE Statement):</label
+                                >
+                                <textarea
+                                    id="vio-hse-stmt"
+                                    rows="2"
+                                    required
+                                ></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="required"
+                                    >أقوال المخالف / الشهود:</label
+                                >
+                                <textarea
+                                    id="vio-violator-stmt"
+                                    rows="2"
+                                    required
+                                ></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="required"
+                                    >الإجراء الفوري المتخذ (Immediate
+                                    Action):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="vio-action-taken"
+                                    required
+                                />
+                            </div>
+
+                            <hr />
+
+                            <div
+                                class="form-group"
+                                style="
+                                    background: #f9f9f9;
+                                    padding: 15px;
+                                    border: 1px solid #ccc;
+                                    border-radius: 8px;
+                                "
+                            >
+                                <label
+                                    class="required"
+                                    style="font-size: 1.1em; color: #c8102e"
+                                    >مستوى المخالفة (Violation Level):</label
+                                >
+
+                                <div
+                                    class="radio-group"
+                                    style="
+                                        display: flex;
+                                        flex-direction: column;
+                                        gap: 10px;
+                                        margin-top: 10px;
+                                    "
+                                >
+                                    <div>
+                                        <input
+                                            type="radio"
+                                            name="vio-level"
+                                            id="lvl-1"
+                                            value="Level 1"
+                                            checked
+                                        />
+                                        <label for="lvl-1"
+                                            >Level 1 (First Warning /
+                                            Re-induction)</label
+                                        >
+                                    </div>
+                                    <div>
+                                        <input
+                                            type="radio"
+                                            name="vio-level"
+                                            id="lvl-2"
+                                            value="Level 2"
+                                        />
+                                        <label for="lvl-2"
+                                            >Level 2 (Warning / Notification to
+                                            PM)</label
+                                        >
+                                    </div>
+                                    <div>
+                                        <input
+                                            type="radio"
+                                            name="vio-level"
+                                            id="lvl-3"
+                                            value="Level 3"
+                                        />
+                                        <label
+                                            for="lvl-3"
+                                            style="
+                                                font-weight: bold;
+                                                color: #c8102e;
+                                            "
+                                            >Level 3 (Penalty /
+                                            Deduction)</label
+                                        >
+                                    </div>
+                                </div>
+
+                                <div
+                                    id="vio-penalty-div"
+                                    style="
+                                        display: none;
+                                        margin-top: 15px;
+                                        border-top: 1px dashed #ccc;
+                                        padding-top: 15px;
+                                    "
+                                >
+                                    <h4 style="color: #c8102e">
+                                        لائحة الجزاءات
+                                    </h4>
+
+                                    <div class="form-group">
+                                        <label>البند:</label>
+                                        <select id="vio-item-select">
+                                            <option>جاري التحميل...</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>النوع:</label>
+                                            <select id="vio-repeat-select">
+                                                <option value="First">
+                                                    أول مرة
+                                                </option>
+                                                <option value="Repeat">
+                                                    تكرار
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div
+                                            class="form-group"
+                                            id="vio-qty-group"
+                                            style="display: none"
+                                        >
+                                            <label>العدد (أفراد/تكرار):</label>
+                                            <input
+                                                type="number"
+                                                id="vio-qty-input"
+                                                value="1"
+                                                min="1"
+                                            />
+                                        </div>
+                                        <div class="form-group">
+                                            <button
+                                                type="button"
+                                                id="vio-add-btn"
+                                                class="btn btn-secondary"
+                                            >
+                                                <i class="fas fa-plus"></i>
+                                                إضافة
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        id="vio-list-container"
+                                        style="margin-bottom: 10px"
+                                    ></div>
+
+                                    <div
+                                        style="
+                                            background: #fff;
+                                            padding: 10px;
+                                            border: 1px solid #ddd;
+                                            border-radius: 5px;
+                                            display: flex;
+                                            justify-content: space-between;
+                                            align-items: center;
+                                        "
+                                    >
+                                        <strong>إجمالي الغرامة / الخصم:</strong>
+                                        <span
+                                            id="vio-total-display"
+                                            style="
+                                                color: #c8102e;
+                                                font-size: 1.3em;
+                                                font-weight: bold;
+                                            "
+                                            >0</span
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                id="vio-save-btn"
+                                class="btn"
+                                style="width: 100%; margin-top: 20px"
+                            >
+                                حفظ المخالفة
+                            </button>
+                        </div>
+                    </form>
+                </section>
+                <section id="MyNCRs" class="page-section" style="display: none">
+                    <h2>
+                        <i class="fas fa-tasks"></i> حالات عدم المطابقة المفتوحة
+                        (My NCRs)
+                    </h2>
+                    <div class="app-form">
+                        <button
+                            type="button"
+                            id="refresh-ncr-btn"
+                            class="btn btn-secondary"
+                            style="margin-bottom: 15px"
+                        >
+                            <i class="fas fa-sync"></i> تحديث القائمة
+                        </button>
+                        <div id="my-ncr-list" class="results-table-container">
+                            <p style="text-align: center">جاري التحميل...</p>
+                        </div>
+                    </div>
+                </section>
             </main>
         </div>
 

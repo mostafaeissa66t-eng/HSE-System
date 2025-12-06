@@ -51,6 +51,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const permitMsg = document.getElementById("permit-message");
   const obsMsg = document.getElementById("obs-message");
   const closePermitMsg = document.getElementById("close-permit-message");
+  const monNcrVioProject = document.getElementById("mon-ncrvio-project");
+  const monNcrVioFrom = document.getElementById("mon-ncrvio-from");
+  const monNcrVioTo = document.getElementById("mon-ncrvio-to");
+  const monNcrVioBtn = document.getElementById("mon-ncrvio-btn");
+  const monNcrVioTable = document.getElementById("mon-ncrvio-table");
 
   // Monitor Section Selectors
   const monitorProjectFilter = document.getElementById(
@@ -153,6 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
     MonitorHazards: "fas fa-search-location",
     NewNcrViolation: "fas fa-exclamation-triangle",
     MyNCRs: "fas fa-clipboard-check",
+    MonitorNcrViolations: "fas fa-folder-open",
     NewNearMiss: "fas fa-exclamation-triangle", // Example
   };
   const sectionNames = {
@@ -173,6 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
     MonitorHazards: "سجل المخاطر",
     NewNcrViolation: "تسجيل NCR / مخالفة",
     MyNCRs: "متابعة NCR", // (جديد)
+    MonitorNcrViolations: "سجل المخالفات و NCR",
     NewNearMiss: "Near Miss", // Example
   };
 
@@ -230,7 +237,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type: "group",
       title: "المخالفات و NCR",
       icon: "fas fa-exclamation-triangle",
-      children: ["NewNcrViolation", "MyNCRs"],
+      children: ["NewNcrViolation", "MyNCRs", "MonitorNcrViolations"],
     },
   ];
 
@@ -631,6 +638,8 @@ document.addEventListener("DOMContentLoaded", function () {
         initViolationPage(); // (مهم) تشغيل المخالفات <-- ده اللي هينشط الكود الرمادي
       }
       if (sectionId === "MyNCRs") loadMyOpenNCRs();
+      if (sectionId === "MonitorNcrViolations")
+        populateMonitorDropdowns(monNcrVioProject);
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -1710,7 +1719,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       });
     }
 
-    // (جديد) تحديث الرصيد المعروض
+    // (جديد) تحد)�ث الرصيد الم=�روض
     const itemId = ppeItemSelect.value;
     const type = ppeTransactionType.value;
     let location = "";
@@ -4128,5 +4137,76 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   if (vioType) vioType.addEventListener("change", toggleVioType);
   if (vioShowAllEmp)
     vioShowAllEmp.addEventListener("change", updateVioEmployees);
+
+  // =================================================================
+  // --- (جديد) بحث NCR والمخالفات ---
+  // =================================================================
+  async function searchNcrViolations() {
+    monNcrVioTable.innerHTML = "جاري البحث...";
+    const filters = {
+      project: monNcrVioProject.value,
+      fromDate: monNcrVioFrom.value,
+      toDate: monNcrVioTo.value,
+    };
+
+    try {
+      const r = await callApi("searchNcrViolations", {
+        filters: filters,
+        userInfo: currentUser,
+      });
+      renderNcrVioTable(r.data);
+    } catch (e) {
+      monNcrVioTable.innerHTML = `<p class="error-message">${e.message}</p>`;
+    }
+  }
+
+  function renderNcrVioTable(data) {
+    if (!data || data.length === 0) {
+      monNcrVioTable.innerHTML =
+        '<p style="text-align:center; padding:20px;">لا توجد نتائج.</p>';
+      return;
+    }
+
+    let html = `<table class="results-table">
+          <thead>
+              <tr>
+                  <th>النوع</th>
+                  <th>الكود</th>
+                  <th>التاريخ</th>
+                  <th>المشروع</th>
+                  <th style="width:35%;">الوصف</th>
+                  <th>الحالة</th>
+              </tr>
+          </thead>
+          <tbody>`;
+
+    data.forEach((row) => {
+      // تمييز النوع بألوان
+      const typeBadge =
+        row.type === "NCR"
+          ? '<span class="badge bg-warning" style="color:#856404; background:#fff3cd;">NCR</span>'
+          : '<span class="badge bg-danger" style="color:#fff; background:#dc3545;">Violation</span>';
+
+      // تنسيق التاريخ
+      let dateDisplay = row.date;
+      try {
+        const d = new Date(row.date);
+        dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      } catch (e) {}
+
+      html += `<tr>
+              <td>${typeBadge}</td>
+              <td><strong>${row.id}</strong></td>
+              <td style="white-space:nowrap;">${dateDisplay}</td>
+              <td>${row.project}</td>
+              <td class="desc-cell">${row.desc}</td>
+              <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
+          </tr>`;
+    });
+    html += `</tbody></table>`;
+    monNcrVioTable.innerHTML = html;
+  }
+
+  if (monNcrVioBtn) monNcrVioBtn.addEventListener("click", searchNcrViolations);
 });
 // --- END DOMContentLoaded ---

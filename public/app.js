@@ -151,6 +151,8 @@ document.addEventListener("DOMContentLoaded", function () {
     NewTraining: "fas fa-chalkboard-teacher",
     MonitorObservations: "fas fa-search",
     MonitorHazards: "fas fa-search-location",
+    NewNcrViolation: "fas fa-exclamation-triangle",
+    MyNCRs: "fas fa-clipboard-check",
     NewNearMiss: "fas fa-exclamation-triangle", // Example
   };
   const sectionNames = {
@@ -169,6 +171,8 @@ document.addEventListener("DOMContentLoaded", function () {
     NewTraining: "تسجيل تدريب", // (*** جديد ***) اسم القسم
     MonitorObservations: "سجل الملاحظات",
     MonitorHazards: "سجل المخاطر",
+    NewNcrViolation: "تسجيل NCR / مخالفة",
+    MyNCRs: "متابعة NCR", // (جديد)
     NewNearMiss: "Near Miss", // Example
   };
 
@@ -222,6 +226,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 8. أخرى (رابط مباشر)
     { type: "link", id: "NewNearMiss" },
+    {
+      type: "group",
+      title: "المخالفات و NCR",
+      icon: "fas fa-exclamation-triangle",
+      children: ["NewNcrViolation", "MyNCRs"],
+    },
   ];
 
   // --- === UTILITY FUNCTIONS (Defined FIRST!) === ---
@@ -616,6 +626,11 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "MonitorHazards")
         populateMonitorDropdowns(monHazProject);
       if (sectionId === "ContractorEvaluation") initContractorEvalPage();
+      if (sectionId === "NewNcrViolation") {
+        initNcrPage(); // تشغيل الـ NCR
+        initViolationPage(); // (مهم) تشغيل المخالفات <-- ده اللي هينشط الكود الرمادي
+      }
+      if (sectionId === "MyNCRs") loadMyOpenNCRs();
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -976,18 +991,46 @@ document.addEventListener("DOMContentLoaded", function () {
         (monitorProjectFilter.innerHTML += `<option value="${p}">${p}</option>`),
     );
   }
-  function buildResultsTable(permits) {
-    if (!monitorResultsTable) return;
-    if (!permits || !Array.isArray(permits) || permits.length === 0) {
-      monitorResultsTable.innerHTML = "<p>No results.</p>";
+  function renderMonitorTable(data, container) {
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
       return;
     }
-    let tbl = `<table class="results-table"><thead><tr><th>ID</th><th>Project</th><th>Date</th><th>Type</th><th>Issuer</th><th>Requester</th><th>Description</th><th>Status</th></tr></thead><tbody>`;
-    permits.forEach((p) => {
-      tbl += `<tr><td>${p.id || "-"}</td><td>${p.projectName || "-"}</td><td>${p.permitDate || "-"}</td><td>${p.permitType || "-"}</td><td>${p.issuer || "-"}</td><td>${p.requester || "-"}</td><td title="${p.description || ""}">${p.description || "-"}</td><td class="${p.status && p.status.toUpperCase() === "OPEN" ? "status-open" : "status-closed"}">${p.status || "-"}</td></tr>`;
+
+    let html = `<table class="results-table">
+          <thead>
+              <tr>
+                  <th>الكود</th>
+                  <th>التاريخ</th>
+                  <th>المصدر</th>
+                  <th>المشروع</th>
+                  <th style="width: 40%;">الوصف بالكامل</th>
+                  <th>الحالة</th>
+              </tr>
+          </thead>
+          <tbody>`;
+
+    data.forEach((row) => {
+      let dateDisplay = row.date;
+      try {
+        const d = new Date(row.date);
+        dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      } catch (e) {}
+
+      html += `<tr>
+              <td style="white-space:nowrap;"><strong>${row.id}</strong></td>
+              <td style="white-space:nowrap;">${dateDisplay}</td>
+              <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
+              <td>${row.project}</td>
+
+              <td class="desc-cell">${row.desc}</td>
+
+              <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
+          </tr>`;
     });
-    tbl += `</tbody></table>`;
-    monitorResultsTable.innerHTML = tbl;
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
   }
   async function performSearch() {
     if (!currentUser || !monitorProjectFilter /*...etc*/) return;
@@ -3006,34 +3049,27 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
                   <th>التاريخ</th>
                   <th>المصدر</th>
                   <th>المشروع</th>
-                  <th>الوصف بالكامل</th> <th>الحالة</th>
+                  <th>الوصف</th>
+                  <th>الحالة</th>
               </tr>
           </thead>
           <tbody>`;
 
     data.forEach((row) => {
-      // 1. إصلاح تنسيق التاريخ (إزالة التوقيت T...)
+      // تنسيق التاريخ
       let dateDisplay = row.date;
       try {
         const d = new Date(row.date);
-        // تنسيق يدوي: YYYY-MM-DD
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        dateDisplay = `${year}-${month}-${day}`;
-      } catch (e) {
-        // لو حصل خطأ، سيب التاريخ زي ما هو
-      }
+        dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      } catch (e) {}
 
       html += `<tr>
-              <td><strong>${row.id}</strong></td>
-
+              <td style="white-space:nowrap;"><strong>${row.id}</strong></td>
               <td style="white-space:nowrap;">${dateDisplay}</td>
-
               <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
               <td>${row.project}</td>
 
-              <td style="min-width:200px; white-space: pre-wrap;">${row.desc}</td>
+              <td class="desc-cell">${row.desc}</td>
 
               <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
           </tr>`;
@@ -3253,5 +3289,844 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     contEvalProject.addEventListener("change", updateContEvalContractors);
   if (contEvalLoadBtn)
     contEvalLoadBtn.addEventListener("click", loadContractorKPIs);
+  // =================================================================
+  // --- (جديد) وحدة NCR & Violations ---
+  // =================================================================
+
+  // Selectors
+  const ncrForm = document.getElementById("ncr-form");
+  const ncrTypeRadios = document.getElementsByName("report-type");
+  const ncrFieldsDiv = document.getElementById("ncr-fields-container");
+
+  // NCR Fields
+  const ncrDate = document.getElementById("ncr-date");
+  const ncrTime = document.getElementById("ncr-time");
+  const ncrIssuer = document.getElementById("ncr-issuer");
+  const ncrProject = document.getElementById("ncr-project");
+  const ncrObserverType = document.getElementById("ncr-observer-type");
+  const ncrEmpGroup = document.getElementById("ncr-emp-group");
+  const ncrContGroup = document.getElementById("ncr-cont-group");
+  const ncrObserverEmp = document.getElementById("ncr-observer-emp");
+  const ncrShowAllEmp = document.getElementById("ncr-show-all-emp");
+  const ncrObserverCompany = document.getElementById("ncr-observer-company");
+  const ncrObserverNid = document.getElementById("ncr-observer-nid");
+  const ncrNidSearchBtn = document.getElementById("ncr-nid-search-btn");
+  const ncrObserverName = document.getElementById("ncr-observer-name");
+  const ncrReportedTo = document.getElementById("ncr-reported-to");
+  const ncrMethod = document.getElementById("ncr-method");
+  const ncrDesc = document.getElementById("ncr-desc");
+  const ncrRoot = document.getElementById("ncr-root");
+  // Actions
+  const ncrActText = document.getElementById("ncr-act-text");
+  const ncrActResp = document.getElementById("ncr-act-resp");
+  const ncrActDate = document.getElementById("ncr-act-date");
+  const ncrAddActBtn = document.getElementById("ncr-add-act-btn");
+  const ncrActionsList = document.getElementById("ncr-actions-list");
+  const ncrSaveBtn = document.getElementById("ncr-save-btn");
+  const ncrSaveMsg = document.getElementById("ncr-save-msg");
+
+  let ncrActionsCart = [];
+  function setContainerState(container, isEnabled) {
+    if (!container) return;
+    const elements = container.querySelectorAll(
+      "input, select, textarea, button",
+    );
+    elements.forEach((el) => {
+      // لا نعطل أزرار الراديو الخاصة باختيار النوع
+      if (el.name !== "report-type" && el.name !== "vio-level") {
+        el.disabled = !isEnabled;
+      }
+    });
+  }
+  async function initNcrPage() {
+    console.log("بدء تشغيل صفحة NCR...");
+
+    // 1. الوقت والتاريخ
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-CA");
+    const timeStr = now.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    if (ncrDate) ncrDate.value = dateStr;
+    if (ncrTime) ncrTime.value = timeStr;
+    if (ncrIssuer) ncrIssuer.value = currentUser.username;
+
+    // 2. تحميل المشاريع
+    if (ncrProject && ncrProject.options.length <= 1) {
+      if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+        fillSelect(ncrProject, ppeLocations);
+      } else {
+        try {
+          const r = await callApi("getInventoryInitData", {
+            userInfo: currentUser,
+          });
+          if (r.status === "success") {
+            ppeLocations = r.locations;
+            ppeEmployees = r.employees;
+            ppeContractors = r.contractors;
+            fillSelect(ncrProject, r.locations);
+          }
+        } catch (e) {}
+      }
+    }
+
+    ncrActionsCart = [];
+    renderNcrActions();
+
+    // (هام) ضبط الحالة الأولية للفورم
+    toggleReportType();
+  }
+
+  function toggleReportType() {
+    const type = document.querySelector(
+      'input[name="report-type"]:checked',
+    ).value;
+
+    if (type === "NCR") {
+      ncrFieldsDiv.style.display = "block";
+      vioFieldsDiv.style.display = "none";
+
+      // تفعيل حقول NCR وتعطيل حقول Violation (لحل مشكلة الـ Submit)
+      setContainerState(ncrFieldsDiv, true);
+      setContainerState(vioFieldsDiv, false);
+
+      toggleNcrObserver(); // ضبط الحقول الفرعية للـ NCR
+    } else {
+      ncrFieldsDiv.style.display = "none";
+      vioFieldsDiv.style.display = "block";
+
+      // تفعيل حقول Violation وتعطيل حقول NCR
+      setContainerState(ncrFieldsDiv, false);
+      setContainerState(vioFieldsDiv, true);
+
+      // تهيئة صفحة المخالفات (التاريخ والوقت)
+      initViolationPage();
+    }
+  }
+
+  function toggleNcrObserver() {
+    const type = ncrObserverType.value;
+
+    if (type === "السويدي") {
+      ncrEmpGroup.style.display = "block";
+      ncrContGroup.style.display = "none";
+      setContainerState(ncrEmpGroup, true);
+      setContainerState(ncrContGroup, false);
+      updateNcrEmployees();
+    } else {
+      ncrEmpGroup.style.display = "none";
+      ncrContGroup.style.display = "block";
+      setContainerState(ncrEmpGroup, false);
+      setContainerState(ncrContGroup, true);
+      updateNcrContractors();
+    }
+  }
+
+  function updateNcrEmployees() {
+    const proj = ncrProject.value;
+    const showAll = ncrShowAllEmp.checked;
+    ncrObserverEmp.innerHTML = '<option value="">-- اختر --</option>';
+
+    if (!proj && !showAll) return;
+    if (typeof ppeEmployees === "undefined") return;
+
+    const list = showAll
+      ? ppeEmployees
+      : ppeEmployees.filter((e) => e.project === proj);
+    list.forEach((e) => {
+      const opt = new Option(`${e.name} (${showAll ? e.project : ""})`, e.id);
+      opt.dataset.name = e.name;
+      ncrObserverEmp.add(opt);
+    });
+  }
+
+  async function updateNcrContractors() {
+    const proj = ncrProject.value;
+    if (!proj) return;
+    ncrObserverCompany.innerHTML = "<option>جاري التحميل...</option>";
+    try {
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      fillSelect(ncrObserverCompany, r.contractors);
+    } catch (e) {}
+  }
+
+  async function searchNcrNid() {
+    const nid = ncrObserverNid.value;
+    if (!nid) return;
+    ncrObserverName.value = "بحث...";
+    ncrObserverName.disabled = true;
+    try {
+      const r = await callApi("getRecipientByNID", { nationalId: nid });
+      if (r.status === "found") {
+        ncrObserverName.value = r.name;
+        ncrObserverCompany.value = r.contractor;
+        ncrObserverName.disabled = true;
+      } else {
+        ncrObserverName.value = "";
+        ncrObserverName.disabled = false;
+        ncrObserverName.focus();
+      }
+    } catch (e) {
+      ncrObserverName.value = "";
+      ncrObserverName.disabled = false;
+    }
+  }
+
+  function addNcrAction() {
+    const txt = ncrActText.value;
+    const resp = ncrActResp.value;
+    const date = ncrActDate.value;
+    if (!txt || !resp || !date) {
+      alert("أكمل بيانات الإجراء");
+      return;
+    }
+
+    ncrActionsCart.push({ text: txt, resp: resp, date: date });
+    renderNcrActions();
+    ncrActText.value = "";
+    ncrActResp.value = "";
+    ncrActDate.value = "";
+  }
+
+  function renderNcrActions() {
+    if (ncrActionsList) {
+      ncrActionsList.innerHTML = ncrActionsCart.length
+        ? ncrActionsCart
+            .map(
+              (a, i) =>
+                `<div class="ppe-cart-item">
+                  <span>${a.text} <small>(${a.resp} - ${a.date})</small></span>
+                  <button type="button" class="btn-small btn-danger" onclick="remNcrAct(${i})">X</button>
+              </div>`,
+            )
+            .join("")
+        : '<p style="text-align:center; color:#777;">لا توجد إجراءات</p>';
+    }
+  }
+  window.remNcrAct = (i) => {
+    ncrActionsCart.splice(i, 1);
+    renderNcrActions();
+  };
+
+  if (ncrForm) {
+    ncrForm.addEventListener("submit", async (e) => {
+      e.preventDefault(); // منع تحديث الصفحة
+
+      // معرفة نوع التقرير المختار (NCR أم Violation)
+      const reportTypeElement = document.querySelector(
+        'input[name="report-type"]:checked',
+      );
+      const reportType = reportTypeElement ? reportTypeElement.value : "NCR";
+
+      // ============================================================
+      // --- الحالة 1: NCR (عدم مطابقة) ---
+      // ============================================================
+      if (reportType === "NCR") {
+        const data = {
+          project: ncrProject.value,
+          reportedTo: ncrReportedTo.value,
+          method: ncrMethod.value,
+          description: ncrDesc.value,
+          rootCauses: ncrRoot.value,
+          observer: { type: ncrObserverType.value },
+          actions: ncrActionsCart,
+        };
+
+        // 1. التحقق من الحقول الأساسية
+        if (
+          !data.project ||
+          !data.reportedTo ||
+          !data.method ||
+          !data.description ||
+          !data.rootCauses
+        ) {
+          showMessage(
+            ncrSaveMsg,
+            "الرجاء إكمال جميع الحقول الأساسية للـ NCR.",
+            false,
+          );
+          return;
+        }
+
+        // 2. تجهيز بيانات المُبلغ (Observer)
+        if (data.observer.type === "السويدي") {
+          const empId = ncrObserverEmp.value;
+          // البحث في مصفوفة الموظفين المحملة
+          const emp = ppeEmployees.find((x) => x.id == empId);
+          if (!emp) {
+            showMessage(
+              ncrSaveMsg,
+              "الرجاء اختيار اسم الموظف (المُبلغ).",
+              false,
+            );
+            return;
+          }
+          data.observer.id = emp.id;
+          data.observer.name = emp.name;
+          data.observer.company = "السويدي";
+        } else {
+          // مقاول
+          data.observer.id = ncrObserverNid.value;
+          data.observer.name = ncrObserverName.value;
+          data.observer.company = ncrObserverCompany.value;
+          // هل هو جديد؟ (لو الخانة مفتوحة يبقى جديد)
+          data.observer.isNew = !ncrObserverName.disabled;
+
+          if (
+            !data.observer.id ||
+            !data.observer.name ||
+            !data.observer.company
+          ) {
+            showMessage(
+              ncrSaveMsg,
+              "بيانات المقاول ناقصة (الرقم القومي، الاسم، الشركة).",
+              false,
+            );
+            return;
+          }
+        }
+
+        // 3. التحقق من الإجراءات
+        if (data.actions.length === 0) {
+          if (
+            !confirm("لم تضف أي إجراءات تصحيحية. هل تريد الحفظ بدون إجراءات؟")
+          )
+            return;
+        }
+
+        // 4. إرسال NCR
+        ncrSaveBtn.disabled = true;
+        ncrSaveBtn.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+        try {
+          const r = await callApi("saveNCR", {
+            ncrData: data,
+            userInfo: currentUser,
+          });
+          showMessage(ncrSaveMsg, r.message, true);
+
+          // إعادة تعيين الصفحة
+          ncrForm.reset();
+          initNcrPage();
+        } catch (err) {
+          showMessage(ncrSaveMsg, err.message, false);
+        } finally {
+          ncrSaveBtn.disabled = false;
+          ncrSaveBtn.innerHTML = "حفظ NCR"; // إعادة نص الزر
+        }
+      }
+      // ============================================================
+      // --- الحالة 2: Violation (مخالفة) ---
+      // ============================================================
+      else {
+        const levelEl = document.querySelector(
+          'input[name="vio-level"]:checked',
+        );
+        const level = levelEl ? levelEl.value : "Level 1";
+        const violatorType = vioType.value;
+
+        const data = {
+          project: vioProject.value,
+          desc: vioDesc.value,
+          hseStatement: vioHseStmt.value,
+          violatorStatement: vioViolatorStmt.value,
+          actionTaken: vioActionTaken.value,
+          level: level,
+          // بيانات الجزاءات (فقط لو Level 3)
+          totalValue:
+            level === "Level 3" ? parseFloat(vioTotalDisplay.textContent) : 0,
+          items: level === "Level 3" ? vioCart : [],
+          detailsText:
+            level === "Level 3"
+              ? vioCart.map((x) => x.appliedText).join(", ")
+              : "N/A",
+          violator: { type: violatorType },
+        };
+
+        // 1. التحقق من الحقول الأساسية
+        if (
+          !data.project ||
+          !data.desc ||
+          !data.actionTaken ||
+          !data.hseStatement
+        ) {
+          showMessage(
+            ncrSaveMsg,
+            "يرجى ملء البيانات الأساسية للمخالفة (المشروع، الوصف، الأقوال، الإجراء).",
+            false,
+          );
+          return;
+        }
+
+        // 2. تحديد بيانات المخالف
+        if (violatorType === "موظف") {
+          const empId = vioEmpSelect.value;
+          const emp = ppeEmployees.find((x) => x.id == empId);
+          if (!emp) {
+            showMessage(ncrSaveMsg, "الرجاء اختيار الموظف المخالف.", false);
+            return;
+          }
+
+          data.violator.id = emp.id;
+          data.violator.name = emp.name;
+          data.violator.company = "السويدي";
+        } else {
+          // مقاول
+          data.violator.company = vioContSelect.value;
+          if (!data.violator.company) {
+            showMessage(ncrSaveMsg, "الرجاء اختيار شركة المقاول.", false);
+            return;
+          }
+
+          // اسم العامل ورقم بطاقته (اختياري في المخالفة لو على الشركة، بس يفضل وجوده)
+          data.violator.name =
+            document.getElementById("vio-cont-worker-name").value ||
+            data.violator.company;
+          data.violator.id =
+            document.getElementById("vio-cont-nid").value || "N/A";
+          data.violator.isNew = false; // لا نسجل عمال مخالفين كجدد
+        }
+
+        // 3. إرسال Violation
+        ncrSaveBtn.disabled = true;
+        ncrSaveBtn.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+        try {
+          const r = await callApi("saveViolation", {
+            vioData: data,
+            userInfo: currentUser,
+          });
+          showMessage(ncrSaveMsg, r.message, true);
+
+          // إعادة تعيين الصفحة
+          ncrForm.reset();
+          initNcrPage(); // يعيد ضبط الصفحة والوقت
+          vioCart = [];
+          updateVioCartUI(); // تصفير سلة الجزاءات
+        } catch (err) {
+          showMessage(ncrSaveMsg, err.message, false);
+        } finally {
+          ncrSaveBtn.disabled = false;
+          ncrSaveBtn.innerHTML = "حفظ المخالفة"; // إعادة نص الزر حسب السياق
+        }
+      }
+    });
+  }
+
+  // Events
+  if (ncrProject)
+    ncrProject.addEventListener("change", () => {
+      updateNcrEmployees();
+      updateNcrContractors();
+    });
+  ncrTypeRadios.forEach((r) => r.addEventListener("change", toggleReportType));
+  if (ncrObserverType)
+    ncrObserverType.addEventListener("change", toggleNcrObserver);
+  if (ncrShowAllEmp)
+    ncrShowAllEmp.addEventListener("change", updateNcrEmployees);
+  if (ncrNidSearchBtn) ncrNidSearchBtn.addEventListener("click", searchNcrNid);
+  if (ncrAddActBtn) ncrAddActBtn.addEventListener("click", addNcrAction);
+  // =================================================================
+  // --- (جديد) وحدة متابعة NCR ---
+  // =================================================================
+  const myNcrList = document.getElementById("my-ncr-list");
+  const refreshNcrBtn = document.getElementById("refresh-ncr-btn");
+
+  async function loadMyOpenNCRs() {
+    if (!myNcrList) return;
+    myNcrList.innerHTML = '<div class="loader-small">جاري البحث...</div>';
+    try {
+      const r = await callApi("getUserOpenNCRs", { userInfo: currentUser });
+      if (r.status === "success") {
+        renderMyNcrTable(r.ncrs);
+      } else {
+        myNcrList.innerHTML = `<p class="error-message">${r.message}</p>`;
+      }
+    } catch (e) {
+      myNcrList.innerHTML = `<p class="error-message">${e.message}</p>`;
+    }
+  }
+
+  function renderMyNcrTable(data) {
+    if (!data || data.length === 0) {
+      myNcrList.innerHTML =
+        '<p style="text-align:center; padding:20px;">لا توجد حالات مفتوحة.</p>';
+      return;
+    }
+
+    let html = `<table class="results-table">
+          <thead><tr><th>الكود</th><th>التاريخ</th><th>المشروع</th><th>الوصف</th><th>إجراء</th></tr></thead>
+          <tbody>`;
+
+    data.forEach((row) => {
+      // تنسيق التاريخ
+      let dateDisplay = row.date;
+      try {
+        const d = new Date(row.date);
+        dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      } catch (e) {}
+
+      html += `<tr>
+              <td><strong>${row.id}</strong></td>
+              <td style="white-space:nowrap;">${dateDisplay}</td>
+              <td>${row.project}</td>
+              <td class="desc-cell">${row.desc}</td>
+              <td>
+                  <button class="btn-small btn-danger" onclick="handleCloseNCR('${row.id}')">
+                      إغلاق
+                  </button>
+              </td>
+          </tr>`;
+    });
+    html += `</tbody></table>`;
+    myNcrList.innerHTML = html;
+  }
+
+  window.handleCloseNCR = async function (id) {
+    const note = prompt("ملاحظات الإغلاق (Corrective Action Taken):");
+    if (note === null) return;
+    if (note.trim() === "") {
+      alert("يجب كتابة ملاحظة.");
+      return;
+    }
+
+    showLoader("جاري الإغلاق...");
+    try {
+      const r = await callApi("closeNCR", { ncrId: id, closingNote: note });
+      alert(r.message);
+      loadMyOpenNCRs();
+    } catch (e) {
+      alert("خطأ: " + e.message);
+    } finally {
+      hideLoader();
+    }
+  };
+
+  if (refreshNcrBtn) refreshNcrBtn.addEventListener("click", loadMyOpenNCRs);
+
+  // =================================================================
+  // --- (جديد) منطق المخالفات (Violation Logic) ---
+  // =================================================================
+
+  // Selectors
+  const vioFieldsDiv = document.getElementById("violation-fields-container"); // الـ Container
+  const vioDate = document.getElementById("vio-date");
+  const vioTime = document.getElementById("vio-time");
+  const vioIssuer = document.getElementById("vio-issuer");
+  const vioProject = document.getElementById("vio-project");
+  const vioType = document.getElementById("vio-type");
+  const vioEmpGroup = document.getElementById("vio-emp-group");
+  const vioContGroup = document.getElementById("vio-cont-group");
+  const vioEmpSelect = document.getElementById("vio-emp-select");
+  const vioShowAllEmp = document.getElementById("vio-show-all-emp");
+  const vioContSelect = document.getElementById("vio-cont-select");
+  const vioContWorker = document.getElementById("vio-cont-worker-name");
+  const vioContNid = document.getElementById("vio-cont-nid");
+  // Text Areas
+  const vioDesc = document.getElementById("vio-desc");
+  const vioHseStmt = document.getElementById("vio-hse-stmt");
+  const vioViolatorStmt = document.getElementById("vio-violator-stmt");
+  const vioActionTaken = document.getElementById("vio-action-taken");
+  // Level & Penalty
+  const vioLevelRadios = document.getElementsByName("vio-level");
+  const vioPenaltyDiv = document.getElementById("vio-penalty-div");
+  const vioItemSelect = document.getElementById("vio-item-select");
+  const vioRepeatSelect = document.getElementById("vio-repeat-select");
+  const vioQtyGroup = document.getElementById("vio-qty-group");
+  const vioQtyInput = document.getElementById("vio-qty-input");
+  const vioAddBtn = document.getElementById("vio-add-btn");
+  const vioListContainer = document.getElementById("vio-list-container");
+  const vioTotalDisplay = document.getElementById("vio-total-display");
+  const vioSaveBtn = document.getElementById("vio-save-btn");
+
+  let vioCart = [];
+  let penaltyList = []; // القائمة الخام
+
+  // =================================================================
+  // --- (ناقص) دالة تهيئة صفحة المخالفات ---
+  // =================================================================
+  function initViolationPage() {
+    // 1. التاريخ والوقت (تنسيق يدوي)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
+
+    const hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const strHours = String(hours % 12 || 12).padStart(2, "0");
+    const timeStr = `${strHours}:${minutes} ${ampm}`;
+
+    if (vioDate) vioDate.value = dateStr;
+    if (vioTime) vioTime.value = timeStr;
+    if (vioIssuer && currentUser) vioIssuer.value = currentUser.username;
+
+    // 2. المشاريع (إعادة استخدام المخزن)
+    if (vioProject && vioProject.options.length <= 1) {
+      if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+        const userProj = (currentUser.projects || "").toString();
+        const acc =
+          userProj === "ALL"
+            ? ppeLocations
+            : ppeLocations.filter((p) => userProj.includes(p));
+        fillSelect(vioProject, acc);
+      } else {
+        // تحميل احتياطي
+        callApi("getInventoryInitData", { userInfo: currentUser }).then((r) => {
+          if (r.status === "success") {
+            ppeLocations = r.locations;
+            ppeEmployees = r.employees;
+            ppeContractors = r.contractors;
+            const userProj = (currentUser.projects || "").toString();
+            const acc =
+              userProj === "ALL"
+                ? r.locations
+                : r.locations.filter((p) => userProj.includes(p));
+            fillSelect(vioProject, acc);
+          }
+        });
+      }
+    }
+
+    toggleVioType();
+    vioCart = [];
+    updateVioCartUI();
+  }
+
+  function toggleVioType() {
+    const type = vioType.value;
+
+    if (type === "موظف") {
+      vioEmpGroup.style.display = "block";
+      vioContGroup.style.display = "none";
+      setContainerState(vioEmpGroup, true);
+      setContainerState(vioContGroup, false);
+      updateVioEmployees();
+    } else {
+      vioEmpGroup.style.display = "none";
+      vioContGroup.style.display = "block";
+      setContainerState(vioEmpGroup, false);
+      setContainerState(vioContGroup, true);
+      updateVioContractors();
+    }
+    updateVioItemDropdown();
+  }
+
+  function updateVioEmployees() {
+    const proj = vioProject.value;
+    const showAll = vioShowAllEmp.checked;
+    vioEmpSelect.innerHTML = '<option value="">-- اختر --</option>';
+    if (!proj && !showAll) return;
+    if (typeof ppeEmployees === "undefined") return;
+    const list = showAll
+      ? ppeEmployees
+      : ppeEmployees.filter((e) => e.project === proj);
+    list.forEach((e) => {
+      const opt = new Option(e.name, e.id);
+      vioEmpSelect.add(opt);
+    });
+  }
+
+  async function updateVioContractors() {
+    const proj = vioProject.value;
+    if (!proj) return;
+    vioContSelect.innerHTML = "<option>جاري التحميل...</option>";
+    try {
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      fillSelect(vioContSelect, r.contractors);
+    } catch (e) {}
+  }
+
+  // --- منطق الجزاءات (The Penalty Logic) ---
+
+  // مراقبة الـ Radio Buttons
+  vioLevelRadios.forEach((r) => {
+    r.addEventListener("change", () => {
+      if (r.value === "Level 3") {
+        vioPenaltyDiv.style.display = "block";
+        loadPenaltyList();
+      } else {
+        vioPenaltyDiv.style.display = "none";
+        vioCart = [];
+        updateVioCartUI(); // تصفير السلة لو نزلنا لـ Level 2
+      }
+    });
+  });
+
+  async function loadPenaltyList() {
+    if (penaltyList.length > 0) return; // محملة مسبقاً
+    vioItemSelect.innerHTML = "<option>جاري التحميل...</option>";
+    try {
+      const r = await callApi("getPenaltyList", {});
+      if (r.status === "success") {
+        penaltyList = r.list;
+        updateVioItemDropdown();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function updateVioItemDropdown() {
+    const target = vioType.value; // موظف / مقاول
+    vioItemSelect.innerHTML = '<option value="">-- اختر المخالفة --</option>';
+
+    if (penaltyList.length > 0) {
+      // فلترة القائمة حسب الهدف (موظف ولا مقاول)
+      const filtered = penaltyList.filter((p) => p.target === target);
+      filtered.forEach((p, index) => {
+        // (مهم) نخزن الـ index الأصلي في القائمة الكاملة أو نستخدم الـ ID
+        // هنا هنخزن الـ index في المصفوفة المفلترة ونجيبها منها
+        const opt = document.createElement("option");
+        opt.text = p.desc;
+        opt.value = index; // index في المصفوفة المفلترة
+        // نخزن نوع الحساب (Fixed/Multiply) في الـ option
+        opt.dataset.calc = p.calcType;
+        vioItemSelect.add(opt);
+      });
+
+      // حفظ المصفوفة المفلترة الحالية لاستخدامها عند الإضافة
+      vioItemSelect.dataset.currentList = JSON.stringify(filtered);
+    }
+  }
+
+  // إظهار خانة العدد لو النوع Multiply
+  if (vioItemSelect) {
+    vioItemSelect.addEventListener("change", () => {
+      const opt = vioItemSelect.selectedOptions[0];
+      if (opt && opt.dataset.calc === "Multiply") {
+        vioQtyGroup.style.display = "block";
+      } else {
+        vioQtyGroup.style.display = "none";
+        vioQtyInput.value = 1;
+      }
+    });
+  }
+
+  // 4. إضافة بند للسلة (معدل)
+  // 4. إضافة بند للسلة (معدل لضمان الحساب)
+  if (vioAddBtn) {
+    vioAddBtn.addEventListener("click", () => {
+      const idx = vioItemSelect.value;
+      if (idx === "") return;
+
+      const currentList = JSON.parse(vioItemSelect.dataset.currentList);
+      const item = currentList[idx];
+
+      const type = vioRepeatSelect.value; // First / Repeat
+      let qty = parseFloat(vioQtyInput.value) || 1;
+      if (item.calcType === "Fixed") qty = 1;
+
+      let appliedText = "";
+      let unitValue = 0;
+      let category = "";
+
+      // جلب القيم (مع التأكد إنها أرقام)
+      if (type === "First") {
+        appliedText = item.firstTxt;
+        unitValue = Number(item.firstVal) || 0; // تحويل لرقم
+        category = item.firstCat;
+      } else {
+        appliedText = item.repTxt;
+        unitValue = Number(item.repVal) || 0; // تحويل لرقم
+        category = item.repCat;
+      }
+
+      // الحساب
+      const totalValue = unitValue * qty;
+
+      let finalText = `${item.desc} - ${appliedText}`;
+      if (qty > 1) finalText += ` (عدد: ${qty})`;
+
+      vioCart.push({
+        desc: item.desc,
+        type: type,
+        appliedText: finalText,
+        appliedValue: totalValue, // دي القيمة اللي هتتجمع
+        qty: qty,
+      });
+
+      updateVioCartUI();
+
+      // Reset
+      vioItemSelect.value = "";
+      vioQtyInput.value = 1;
+      if (vioQtyGroup) vioQtyGroup.style.display = "none";
+    });
+  }
+
+  // 5. تحديث واجهة السلة والحسابات (معدل لتمييز العملة/الأيام)
+  function updateVioCartUI() {
+    vioListContainer.innerHTML = "";
+    let total = 0;
+    let adminNotes = [];
+
+    // معرفة نوع المخالف (موظف ولا مقاول) عشان نحدد التمييز
+    const violatorType = document.getElementById("vio-type").value;
+    const unitLabel = violatorType === "موظف" ? "يوم" : "جم";
+
+    vioCart.forEach((item, i) => {
+      total += item.appliedValue;
+      adminNotes.push(item.appliedText);
+
+      // عرض القيمة (لو أكبر من صفر بنكتبها، لو صفر بنكتب إجراء إداري)
+      const valueDisplay =
+        item.appliedValue > 0
+          ? `${item.appliedValue} ${unitLabel}`
+          : "إجراء إداري";
+
+      const div = document.createElement("div");
+      div.className = "ppe-cart-item";
+      div.innerHTML = `
+              <div style="flex-grow:1;">
+                  <span style="font-weight:bold; display:block;">${item.desc}</span>
+                  <small style="color:#666;">${item.appliedText}</small>
+              </div>
+              <span style="font-weight:bold; color:#C8102E; white-space:nowrap; margin:0 10px;">${valueDisplay}</span>
+              <button type="button" class="btn-small btn-danger" onclick="remVioItem(${i})">X</button>
+          `;
+      vioListContainer.appendChild(div);
+    });
+
+    // عرض الإجمالي النهائي بالتمييز
+    vioTotalDisplay.textContent = `${total} ${unitLabel}`;
+
+    // تجميع النصوص للحفظ
+    if (typeof vioAdminTextDisplay !== "undefined" && vioAdminTextDisplay) {
+      vioAdminTextDisplay.value = adminNotes.join(" + ");
+    }
+  }
+  window.remVioItem = (i) => {
+    vioCart.splice(i, 1);
+    updateVioCartUI();
+  };
+
+  // حفظ المخالفة
+  if (ncrForm) {
+    // نستخدم نفس الفورم الكبير
+    // (تعديل) استمع للحدث داخل الـ Listener الموجود أصلاً في قسم NCR
+    // بما أنهم في فورم واحد، سنعدل دالة الـ submit في قسم NCR
+  }
+
+  // Events
+  if (vioProject)
+    vioProject.addEventListener("change", () => {
+      updateVioEmployees();
+      updateVioContractors();
+    });
+  if (vioType) vioType.addEventListener("change", toggleVioType);
+  if (vioShowAllEmp)
+    vioShowAllEmp.addEventListener("change", updateVioEmployees);
 });
 // --- END DOMContentLoaded ---

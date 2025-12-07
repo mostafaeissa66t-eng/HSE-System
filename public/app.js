@@ -167,7 +167,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewPermit: "تصريح جديد",
     ClosePermit: "إغلاق التصاريح",
     NewObservation: "تسجيل ملاحظة",
-    MyObservations: "متا=�عة ملاحظاتي",
+    MyObservations: "متابعة ملاحظاتي",
     NewHazard: "تسجيل خطر (Hazard)",
     MyHazards: "تقارير الخطر المفتوحة",
     MonitorPermits: "متابعة التصاريح",
@@ -2709,7 +2709,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         alert("خطأ: " + err.message);
       } finally {
         obsSaveBtn.disabled = false;
-        obsSaveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الم/�احظة';
+        obsSaveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الملاحظة';
       }
     });
   }

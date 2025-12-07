@@ -167,7 +167,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewPermit: "تصريح جديد",
     ClosePermit: "إغلاق التصاريح",
     NewObservation: "تسجيل ملاحظة",
-    MyObservations: "متابعة ملاحظاتي",
+    MyObservations: "متا=�عة ملاحظاتي",
     NewHazard: "تسجيل خطر (Hazard)",
     MyHazards: "تقارير الخطر المفتوحة",
     MonitorPermits: "متابعة التصاريح",
@@ -1087,7 +1087,83 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
     console.error("#monitor-search-btn not found.");
   }
+  // =================================================================
+  // --- (ناقصة) دالة رسم جدول نتائج البحث للتصاريح ---
+  // =================================================================
 
+  function buildResultsTable(data) {
+    const container = document.getElementById("monitor-results-table");
+    if (!container) return;
+
+    if (!data || data.length === 0) {
+      container.innerHTML =
+        '<p style="text-align:center; padding:20px; color:#666;">لا توجد تصاريح مطابقة للشروط.</p>';
+      return;
+    }
+
+    // بناء الجدول
+    let html = `
+        <table class="results-table" style="width:100%; font-size:0.9rem;">
+            <thead>
+                <tr>
+                    <th>رقم التصريح</th>
+                    <th>التاريخ</th>
+                    <th>المشروع</th>
+                    <th>النوع</th>
+                    <th style="width:30%;">الوصف</th>
+                    <th>المصدر</th>
+                    <th>الحالة</th>
+                    <th>عرض</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    data.forEach((row) => {
+      // 1. تعديل استقبال التاريخ: الـ Backend بيبعت التاريخ جاهز باسم permitDate
+      let dateDisplay = row.permitDate || "-";
+
+      // تنسيق لون الحالة
+      const status = String(row.status || "").trim();
+      let badgeClass = "bg-secondary";
+      let statusText = status;
+
+      // التعامل مع حالة الحروف الكبيرة والصغيرة (Open/OPEN)
+      if (status.toLowerCase() === "open") {
+        badgeClass = "bg-success"; // أخضر
+        statusText = "مفتوح";
+      } else if (
+        status.toLowerCase() === "closed" ||
+        status.toLowerCase() === "close"
+      ) {
+        badgeClass = "bg-danger"; // أحمر
+        statusText = "مغلق";
+      }
+
+      html += `
+                <tr>
+                    <td style="font-weight:bold;">${row.id}</td>
+
+                    <td style="white-space:nowrap;">${dateDisplay}</td>
+
+                    <td>${row.projectName || "-"}</td>
+
+                    <td>${row.permitType || "-"}</td>
+
+                    <td style="text-align:right; white-space: pre-wrap;">${row.description || "-"}</td>
+                    <td style="color:#0056b3; font-weight:bold;">${row.issuer || "-"}</td>
+                    <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                    <td>
+                        <button type="button" class="btn-small btn-secondary" onclick="alert('تفاصيل إضافية:\\nالطالب: ${row.requester || "غير محدد"}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+    });
+
+    html += "</tbody></table>";
+    container.innerHTML = html;
+  }
   // --- =================================== ---
   // --- KPI EVALUATION LOGIC (V2.1 Module) ---
   // --- =================================== ---
@@ -1327,47 +1403,48 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   /**
    * دالة بدء تشغيل صفحة المخزن (يتم استدعاؤها من showSection)
    */
+  /**
+   * دالة بدء تشغيل صفحة المخزن
+   */
   async function initPpePage() {
     console.log("بدء تشغيل صفحة المخزن...");
-    ppeForm.reset(); // ريسيت للفورم
-    updatePpeFormUI(); // إخفاء كل الحقول
-    ppeCart = []; // تفريغ السلة
-    updatePpeCartUI(); // تحديث عرض السلة
+    ppeForm.reset();
+    updatePpeFormUI();
+    ppeCart = [];
+    updatePpeCartUI();
 
-    // جلب البيانات الأولية (مرة واحدة لو مش موجودة)
-    // (*** تعديل ***) هنخليها تتحمل كل مرة عشان الرصيد يتحدث
-    // if (ppeLocations.length === 0) {
     try {
-      const data = await callApi("getInventoryInitData", {
-        userInfo: currentUser,
-      });
-      if (data.status === "success") {
-        ppeLocations = data.locations;
-        ppeEmployees = data.employees;
-        ppeContractors = data.contractors;
-        ppeItems = data.ppeItems;
-
-        // تعبئة القوائم المنسدلة
-        populateSelect(ppeSupplierDest, ppeLocations);
-        populateSelect(ppeTransferSource, ppeLocations);
-        populateSelect(ppeTransferDest, ppeLocations);
-        populateSelect(ppeRecipientLocation, ppeLocations);
-        populateSelect(ppeRecipientContractorCompany, ppeContractors);
-
-        // (*** تعديل ***) مش هنملى قايمة المهمات هنا
-        // populateSelect(ppeItemSelect, ppeItems, 'id', 'name');
-
-        // (*** تعديل ***) مش هنملى قايمة الموظفين هنا
-        // populateSelect(ppeRecipientEmployee, ppeEmployees, 'id', 'name');
+      // نستخدم البيانات المحملة مسبقاً إذا وجدت، أو نحملها
+      if (typeof ppeLocations === "undefined" || ppeLocations.length === 0) {
+        const data = await callApi("getInventoryInitData", {
+          userInfo: currentUser,
+        });
+        if (data.status === "success") {
+          ppeLocations = data.locations;
+          ppeEmployees = data.employees;
+          ppeContractors = data.contractors;
+          ppeItems = data.ppeItems;
+        }
       }
+
+      // (*** التعديل الهام ***) ملء جميع قوائم المخازن
+      // فلترة المشاريع المتاحة للمستخدم
+      const userProj = (currentUser.projects || "").toString();
+      const availableLocs =
+        userProj === "ALL"
+          ? ppeLocations
+          : ppeLocations.filter((p) => userProj.includes(p));
+
+      populateSelect(ppeRecipientLocation, availableLocs); // للصرف
+      populateSelect(ppeSupplierDest, availableLocs); // للتوريد
+      populateSelect(ppeTransferSource, availableLocs); // للتحويل من
+      populateSelect(ppeTransferDest, availableLocs); // للتحويل إلى
+
+      if (ppeContractors)
+        populateSelect(ppeRecipientContractorCompany, ppeContractors);
     } catch (e) {
-      showMessage(
-        ppeMainMessage,
-        `خطأ فادح في تحميل البيانات: ${e.message}`,
-        false,
-      );
+      showMessage(ppeMainMessage, `خطأ في تحميل البيانات: ${e.message}`, false);
     }
-    // }
   }
 
   /**
@@ -1495,7 +1572,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   async function updatePpeContractorDropdown() {
     const selectedProject = ppeRecipientLocation.value;
 
-    // لو مفيش مشروع أو النوع مش مقاول، مفيش داعي نحمل
+    // لو T�فيش مشروع أو النوع مش مقاول، مفيش داعي نحمل
     if (!selectedProject || ppeRecipientType.value !== "مقاول") {
       return;
     }
@@ -1640,10 +1717,10 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
     try {
       if (!itemId || !qty || qty <= 0) {
-        throw new Error("الرجاء اختيار مهمة وكمية صحيحة.");
+        throw new Error("الرجاء اختيار مهمة وكمr�ة صحيحة.");
       }
 
-      // (*** هذا هو المنطق الجديد للتحقق من الرصيد ***)
+      // (*** هذا هو المنطق الجديد  �لتحقق من الرصيد ***)
       // (التحقق من الرصيد مطلوب فقط في "الصرف" و "التحويل")
       if (type === "صرف" || type === "تحويل") {
         let sourceLocation = null;
@@ -1709,7 +1786,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     if (ppeCart.length === 0) {
       ppeCartContainer.innerHTML = "<p>لم يتم إضافة أي مهمات...</p>";
     } else {
-      ppeCartContainer.innerHTML = ""; // تفريغ
+      ppeCartContainer.innerHTML = ""; // ت �ريغ
       ppeCart.forEach((item, index) => {
         const itemDiv = document.createElement("div");
         itemDiv.className = "ppe-cart-item";
@@ -1761,8 +1838,12 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   /**
    * (جديد) دالة حفظ الحركة بالكامل
    */
+  /**
+   * دالة حفظ الحركة (معدلة لتقرأ الحقول الصحيحة حسب النوع)
+   */
   async function handlePpeSave(event) {
     event.preventDefault();
+
     ppeSaveBtn.disabled = true;
     ppeSaveBtn.innerHTML =
       '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
@@ -1770,80 +1851,108 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     showMessage(ppeSaveMessage, "", true);
 
     try {
-      const transactionData = {};
-      transactionData.transactionType = ppeTransactionType.value;
-      transactionData.notes = ppeNotes.value;
+      const type = ppeTransactionType.value; // القيمة من القائمة الجديدة
 
-      // 1. تجميع بيانات "السلة"
-      if (ppeCart.length === 0) {
+      const transactionData = {
+        transactionType: type,
+        notes: ppeNotes ? ppeNotes.value : "",
+        items: ppeCart,
+        locations: {},
+        recipient: {},
+        supplier: {},
+      };
+
+      // 1. التحقق من السلة
+      if (ppeCart.length === 0)
         throw new Error("يجب إضافة مهمة واحدة على الأقل.");
-      }
-      transactionData.items = ppeCart; // إرسال السلة بالكامل
 
-      // 2. تجميع بيانات "المواقع"
-      transactionData.locations = {};
-      if (transactionData.transactionType === "ص �ف") {
-        transactionData.locations.source = ppeRecipientLocation.value;
-      } else if (transactionData.transactionType === "مرتجع") {
-        transactionData.locations.destination = ppeRecipientLocation.value;
-      } else if (transactionData.transactionType === "تحويل") {
-        transactionData.locations.source = ppeTransferSource.value;
-        transactionData.locations.destination = ppeTransferDest.value;
-        if (
-          transactionData.locations.source ===
-          transactionData.locations.destination
-        ) {
-          throw new Error("لا يمكن التحويل إلى نفس المخزن.");
-        }
-      } else if (transactionData.transactionType === "توريد") {
-        transactionData.locations.destination = ppeSupplierDest.value;
-      }
+      // 2. تجميع البيانات حسب النوع
 
-      // 3. تجميع بيانات "المستلم"
-      transactionData.recipient = {};
-      if (
-        transactionData.transactionType === "صرف" ||
-        transactionData.transactionType === "مرتجع"
-      ) {
-        transactionData.recipient.type = ppeRecipientType.value;
-        if (transactionData.recipient.type === "موظف") {
+      // --- حالة: صرف أو مرتجع ---
+      if (type === "صرف" || type === "مرتجع") {
+        // (*** هنا كان الخطأ: لازم نقرأ من ppeRecipientLocation ***)
+        const loc = ppeRecipientLocation.value;
+
+        if (!loc)
+          throw new Error(
+            type === "صرف"
+              ? "يجب اختيار المخزن (الصرف من)."
+              : "يجب اختيار المخزن (الاستلام في).",
+          );
+
+        if (type === "صرف") transactionData.locations.source = loc;
+        else transactionData.locations.destination = loc;
+
+        // بيانات المستلم
+        const recType = ppeRecipientType.value;
+        transactionData.recipient.type = recType;
+
+        if (recType === "موظف") {
           const empId = ppeRecipientEmployee.value;
-          const selectedEmp = ppeEmployees.find((e) => e.id == empId);
-          if (!selectedEmp) throw new Error("الرجاء اختيار موظف صحيح.");
-          transactionData.recipient.id = selectedEmp.id;
-          transactionData.recipient.name = selectedEmp.name;
-          transactionData.recipient.company = selectedEmp.company; // (سويدي t�ثلاً)
-        } else if (transactionData.recipient.type === "مقاول") {
-          transactionData.recipient.id = ppeRecipientNid.value;
-          transactionData.recipient.name = ppeRecipientName.value;
-          transactionData.recipient.company =
-            ppeRecipientContractorCompany.value;
-          transactionData.recipient.isNew = !ppeRecipientName.disabled; // هل هو مستلم جديد؟
+          const empObj = ppeEmployees.find((e) => e.id == empId);
+          if (!empObj) throw new Error("يجب اختيار اسم الموظف.");
+
+          transactionData.recipient.id = empObj.id;
+          transactionData.recipient.name = empObj.name;
+          transactionData.recipient.company = empObj.company || "السويدي";
+        } else if (recType === "مقاول") {
+          const comp = ppeRecipientContractorCompany.value;
+          const nid = ppeRecipientNid.value;
+          const name = ppeRecipientName.value;
+
+          if (!comp || !nid || !name)
+            throw new Error(
+              "بيانات المقاول ناقصة (الشركة، الرقم القومي، الاسم).",
+            );
+
+          transactionData.recipient.id = nid;
+          transactionData.recipient.name = name;
+          transactionData.recipient.company = comp;
+          // هل الاسم كان مفتوح للكتابة؟ يبقى جديد
+          transactionData.recipient.isNew = !ppeRecipientName.disabled;
+        } else {
+          throw new Error("يجب اختيار نوع المستلم.");
         }
       }
 
-      // 4. تجميع بيانات "المورد"
-      transactionData.supplier = {};
-      if (transactionData.transactionType === "توريد") {
-        transactionData.supplier.name = ppeSupplierName.value;
-        // يمكنك إضافة تاريخ التوريد لو احتجت
+      // --- حالة: توريد ---
+      else if (type === "توريد") {
+        const loc = ppeSupplierDest.value;
+        const suppName = ppeSupplierName.value;
+
+        if (!loc) throw new Error("يجب اختيار المخزن المستلم للتوريد.");
+        if (!suppName) throw new Error("يجب كتابة اسم المورد.");
+
+        transactionData.locations.destination = loc;
+        transactionData.supplier.name = suppName;
       }
 
-      // --- التحقق من المدخلات ---
-      if (!validateTransaction(transactionData)) return; // (دالة التحقق بالأسفل)
+      // --- حالة: تحويل ---
+      else if (type === "تحويل") {
+        const src = ppeTransferSource.value;
+        const dst = ppeTransferDest.value;
 
-      // 5. إرسال الطلب
-      const response = await callApi("saveTransaction", {
-        transactionData: transactionData,
+        if (!src || !dst)
+          throw new Error("يجب اختيار المخزن المحول منه والمحول إليه.");
+        if (src === dst) throw new Error("لا يمكن التحويل لنفس المخزن.");
+
+        transactionData.locations.source = src;
+        transactionData.locations.destination = dst;
+      }
+
+      // 3. الإرسال
+      const response = await callApi("savePpeTransaction", {
+        trx: transactionData, // تأكد ان الاسم في السيرفر هو trx او transactionData
         userInfo: currentUser,
       });
 
-      // 6. النجاح
       showMessage(ppeSaveMessage, response.message, true);
-      ppeForm.reset();
-      updatePpeFormUI();
-      ppeCart = [];
-      updatePpeCartUI();
+
+      // تنظيف بعد النجاح
+      setTimeout(() => {
+        ppeSaveMessage.style.display = "none";
+        initPpePage(); // إعادة تهيئة الصفحة بالكامل
+      }, 2000);
     } catch (e) {
       showMessage(ppeMainMessage, e.message, false);
     } finally {
@@ -3268,7 +3377,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       });
 
       if (validationErr) {
-        alert("تأكد من صحة الدرجات (لا تتجاوز الحد الأقصى).");
+        alert("تأكد من صحة الدرجات (لا تتجاوز الحد الأقi�ى).");
         return;
       }
 
@@ -3419,7 +3528,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       setContainerState(ncrFieldsDiv, false);
       setContainerState(vioFieldsDiv, true);
 
-      // تهيئة صفحة المخالفات (التاريخ والوقت)
+      // تهS�ئة صفحة المخالفات (التاريخ والوقت)
       initViolationPage();
     }
   }

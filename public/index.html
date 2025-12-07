@@ -2384,6 +2384,107 @@
                         ></p>
                     </form>
                 </section>
+                <section
+                    id="ContractorAnalytics"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-chart-line"></i> تقرير أداء المقاولين
+                        (Analytics)
+                    </h2>
+
+                    <div class="app-form no-print">
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select id="ana-project">
+                                    <option value="ALL_ACCESSIBLE">
+                                        كل المشاريع
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>المقاول:</label>
+                                <select id="ana-contractor">
+                                    <option value="ALL">كل المقاولين</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>الشهر / التاريخ المرجعي:</label>
+                                <input type="month" id="ana-date" />
+                            </div>
+
+                            <div
+                                class="form-group checkbox-group"
+                                style="flex-wrap: wrap"
+                            >
+                                <div style="margin-left: 15px">
+                                    <input
+                                        type="checkbox"
+                                        id="ana-cumulative"
+                                        checked
+                                    />
+                                    <label for="ana-cumulative">تراكمي</label>
+                                </div>
+                                <div style="margin-left: 15px">
+                                    <input
+                                        type="checkbox"
+                                        id="ana-merge-proj"
+                                        checked
+                                    />
+                                    <label for="ana-merge-proj"
+                                        >دمج المشاريع</label
+                                    >
+                                </div>
+                                <div>
+                                    <input type="checkbox" id="ana-sort-kpi" />
+                                    <label for="ana-sort-kpi">ترتيب KPI</label>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                id="ana-search-btn"
+                                class="btn"
+                            >
+                                <i class="fas fa-search"></i> عرض النتائج
+                            </button>
+                        </div>
+
+                        <div style="margin: 15px 0; text-align: left">
+                            <button
+                                type="button"
+                                id="ana-print-btn"
+                                class="btn btn-secondary"
+                                style="background: #28a745"
+                            >
+                                <i class="fas fa-file-pdf"></i> تصدير تقرير
+                                (PDF)
+                            </button>
+                            <small
+                                style="
+                                    display: block;
+                                    color: #777;
+                                    margin-top: 5px;
+                                "
+                                >* استخدم المربعات (Checkboxes) في الجدول
+                                لاختيار الأعمدة التي ستظهر في التقرير.</small
+                            >
+                        </div>
+                    </div>
+
+                    <div
+                        id="ana-table-container"
+                        class="results-table-container"
+                    >
+                        <p style="text-align: center; padding: 20px">
+                            اضغط "عرض النتائج"...
+                        </p>
+                    </div>
+                </section>
             </main>
         </div>
 

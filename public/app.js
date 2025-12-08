@@ -160,6 +160,7 @@ document.addEventListener("DOMContentLoaded", function () {
     MyNCRs: "fas fa-clipboard-check",
     MonitorNcrViolations: "fas fa-folder-open",
     NewContractor: "fas fa-file-upload", // أيقونة رفع ملف
+    ContractorAnalytics: "fas fa-chart-pie",
     NewNearMiss: "fas fa-exclamation-triangle", // Example
   };
   const sectionNames = {
@@ -182,6 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {
     MyNCRs: "متابعة NCR", // (جديد)
     MonitorNcrViolations: "سجل المخالفات و NCR",
     NewContractor: "تسجيل مقاولين (اشتراطات)",
+    ContractorAnalytics: "تحليلات أداء المقاولين",
     NewNearMiss: "Near Miss", // Example
   };
 
@@ -236,7 +238,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type: "group",
       title: "إدارة المقاولين",
       icon: "fas fa-hard-hat", // أيقونة الخوذة (مناسبة للمقاولين)
-      children: ["NewContractor"],
+      children: ["NewContractor", "ContractorAnalytics"],
     },
     // 8. أخرى (رابط مباشر)
     { type: "link", id: "NewNearMiss" },
@@ -648,6 +650,12 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "MonitorNcrViolations")
         populateMonitorDropdowns(monNcrVioProject);
       if (sectionId === "NewContractor") initContractorPage();
+      if (sectionId === "ContractorAnalytics") {
+        // دي الدالة اللي كتبناها في الرد السابق
+        if (typeof initContractorAnalyticsPage === "function") {
+          initContractorAnalyticsPage();
+        }
+      }
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -836,7 +844,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      // 5. الإرسال للسيرفر
+      // 5. الإرسال للسيa�فر
       try {
         const r = await callApi("savePermit", {
           permitObject: d,
@@ -2586,7 +2594,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     const checkedRadio = document.querySelector(
       'input[name="obs-resp"]:checked',
     );
-    if (checkedRadio && checkedRadio.value === "مقاول") isCont = true;
+    if (checkedRadio && checkedRadio.value === "مD�اول") isCont = true;
 
     if (obsContractorDiv)
       obsContractorDiv.style.display = isCont ? "block" : "none";
@@ -4485,5 +4493,311 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   if (contProject) {
     contProject.addEventListener("change", updateContUploadContractors);
   }
+
+  // =================================================================
+  // (app.js) منطق صفحة تحليلات المقاولين
+  // =================================================================
+
+  // Selectors
+  const anaProject = document.getElementById("ana-project");
+  const anaContractor = document.getElementById("ana-contractor");
+  const anaMonth = document.getElementById("ana-month");
+  const anaCumulative = document.getElementById("ana-cumulative");
+  const anaSortKpi = document.getElementById("ana-sort-kpi");
+  const anaMergeProj = document.getElementById("ana-merge-proj");
+  const anaSearchBtn = document.getElementById("ana-search-btn");
+  const anaResultsContainer = document.getElementById("ana-results-container");
+  const anaPrintBtn = document.getElementById("ana-print-btn");
+
+  // =================================================================
+  // (app.js) إصلاح القائمة المنسدلة للمشاريع + رسم الجدول
+  // =================================================================
+
+  async function initContractorAnalyticsPage() {
+    console.log("Analytics Page Init...");
+
+    // 1. ضبط الشهر الحالي
+    if (anaMonth && !anaMonth.value) {
+      const d = new Date();
+      anaMonth.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}`;
+    }
+
+    // 2. تعبئة قائمة المشاريع (إصلاح المشكلة)
+    // نتأكد إن القائمة لسه فاضية (فيها خيار واحد بس)
+    if (anaProject && anaProject.options.length <= 1) {
+      anaProject.innerHTML =
+        '<option value="ALL_ACCESSIBLE">كل المشاريع</option>';
+
+      // محاولة استخدام البيانات المحملة مسبقاً
+      let projectsSource = [];
+      if (
+        initialData &&
+        initialData.projects &&
+        initialData.projects.length > 0
+      ) {
+        projectsSource = initialData.projects;
+      } else if (
+        typeof ppeLocations !== "undefined" &&
+        ppeLocations.length > 0
+      ) {
+        // لو initialData مش موجودة، نجرب ppeLocations
+        projectsSource = ppeLocations;
+      } else {
+        // لو مفيش حاجة خالص، نطلب البيانات من السيرفر
+        try {
+          const r = await callApi("getInventoryInitData", {
+            userInfo: currentUser,
+          });
+          if (r.status === "success") {
+            projectsSource = r.locations;
+            // تحديث المتغيرات العامة بالمرة
+            ppeLocations = r.locations;
+            initialData = { projects: r.locations };
+          }
+        } catch (e) {
+          console.error("Failed to load projects for analytics:", e);
+        }
+      }
+
+      // الملء الفعلي
+      if (projectsSource.length > 0) {
+        projectsSource.forEach((p) => anaProject.add(new Option(p, p)));
+      }
+    }
+  }
+
+  // جلب المقاولين عند تغيير المشروع
+  async function updateAnaContractors() {
+    const proj = anaProject.value;
+    anaContractor.innerHTML = '<option value="ALL">جاري التحميل...</option>';
+
+    if (proj === "ALL_ACCESSIBLE") {
+      anaContractor.innerHTML = '<option value="ALL">كل المقاولين</option>';
+      return;
+    }
+
+    try {
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      anaContractor.innerHTML = '<option value="ALL">كل المقاولين</option>';
+      if (r.contractors) {
+        r.contractors.forEach((c) => anaContractor.add(new Option(c, c)));
+      }
+    } catch (e) {
+      anaContractor.innerHTML = '<option value="ALL">خطأ في التحميل</option>';
+    }
+  }
+
+  // تنفيذ البحث
+  async function performAnaSearch() {
+    anaResultsContainer.innerHTML =
+      '<div class="loader-small">جاري حساب الإحصائيات...</div>';
+
+    const filters = {
+      project: anaProject.value,
+      contractor: anaContractor.value,
+      month: anaMonth.value,
+      isCumulative: anaCumulative.checked,
+      sortKpi: anaSortKpi.checked,
+      mergeProjects: anaMergeProj.checked,
+    };
+
+    try {
+      const r = await callApi("getContractorAnalytics", { filters: filters });
+      renderAnalyticsTable(r.data);
+    } catch (e) {
+      anaResultsContainer.innerHTML = `<p class="error-message">${e.message}</p>`;
+    }
+  }
+
+  // رسم الجدول (V4: PPE Details with Badges)
+  function renderAnalyticsTable(data) {
+    if (!data || data.length === 0) {
+      anaResultsContainer.innerHTML =
+        '<p style="text-align:center;">لا توجد بيانات لهذه الفترة.</p>';
+      return;
+    }
+
+    const isKpiView = document.getElementById("ana-sort-kpi").checked;
+    let html = "";
+
+    // ======================================================
+    // الوضع 1: عرض مختصر (KPI View)
+    // ======================================================
+    if (isKpiView) {
+      html = `
+        <table class="results-table" id="analytics-table">
+          <thead>
+              <tr>
+                  <th style="background:#333; color:#fff; width:50px;">#</th>
+                  <th>المقاول</th>
+                  <th>المشروع</th>
+                  <th>التقييم (KPI)</th>
+              </tr>
+          </thead>
+          <tbody>`;
+
+      data.forEach((row, index) => {
+        let scoreVal = parseFloat(row.kpi_score).toFixed(1);
+        let kpiClass = "bg-secondary";
+        let scoreText = "غير مقيم";
+
+        if (row.has_eval) {
+          if (row.kpi_score < 70) kpiClass = "bg-danger";
+          else if (row.kpi_score < 90) kpiClass = "bg-warning";
+          else kpiClass = "bg-success";
+          scoreText = `${scoreVal}%`;
+        } else {
+          scoreText = `0% <small>(غير مقيم)</small>`;
+        }
+
+        let rankIcon = `#${index + 1}`;
+        if (index === 0 && row.kpi_score > 0) rankIcon = "🥇";
+        if (index === 1 && row.kpi_score > 0) rankIcon = "🥈";
+        if (index === 2 && row.kpi_score > 0) rankIcon = "🥉";
+
+        html += `
+              <tr>
+                  <td style="text-align:center; font-weight:bold;">${rankIcon}</td>
+                  <td style="font-weight:bold;">${row.contractor}</td>
+                  <td>${row.project}</td>
+                  <td style="text-align:center;">
+                      <span class="badge ${kpiClass}" style="font-size:1em; padding:6px 10px;">
+                          ${scoreText}
+                      </span>
+                  </td>
+              </tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+    // ======================================================
+    // الوضع 2: العرض التفصيلي (Full View - with detailed PPE)
+    // ======================================================
+    else {
+      html = `
+        <table class="results-table" id="analytics-table" style="font-size:0.85rem;">
+          <thead>
+              <tr>
+                  <th class="col-0">المقاول</th>
+                  <th class="col-1">المشروع</th>
+                  <th class="col-2">تصاريح</th>
+                  <th class="col-3">تدريب</th>
+                  <th class="col-4">Induction</th>
+                  <th class="col-5">ملاحظات</th>
+                  <th class="col-6">Hazards</th>
+                  <th class="col-7" style="min-width:180px;">مهمات (PPE)</th>
+                  <th class="col-8">مخالفات</th>
+                  <th class="col-9">NCR</th>
+                  <th class="col-10">KPI %</th>
+                  <th class="col-11 no-print">ملف</th>
+              </tr>
+          </thead>
+          <tbody>`;
+
+      data.forEach((row) => {
+        let scoreVal = parseFloat(row.kpi_score).toFixed(1);
+        let kpiClass = "bg-secondary";
+        let scoreText = "0%";
+
+        if (row.has_eval) {
+          if (row.kpi_score < 70) kpiClass = "bg-danger";
+          else if (row.kpi_score < 90) kpiClass = "bg-warning";
+          else kpiClass = "bg-success";
+          scoreText = `${scoreVal}%`;
+        }
+
+        // عرض تفاصيل المهمات بشكل أنيق (Badges)
+        let ppeDisplay = "0";
+        if (row.ppe_details_text && row.ppe_details_text !== "0") {
+          // الفاصل هو " | "
+          const items = row.ppe_details_text.split(" | ");
+          ppeDisplay = items
+            .map((item) => {
+              const parts = item.split(": ");
+              // parts[0] = اسم المهمة، parts[1] = الكمية
+              return `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0;">
+                                <span>${parts[0]}</span>
+                                <span style="font-weight:bold; color:#0056b3;">${parts[1]}</span>
+                            </div>`;
+            })
+            .join("");
+        }
+
+        html += `
+              <tr>
+                  <td class="col-0" style="font-weight:bold;">${row.contractor}</td>
+                  <td class="col-1">${row.project}</td>
+                  <td class="col-2" style="text-align:center;">${row.permits}</td>
+                  <td class="col-3" style="text-align:center;">${row.training_regular}</td>
+                  <td class="col-4" style="text-align:center;">${row.training_induction}</td>
+                  <td class="col-5" style="text-align:center;">${row.observations}</td>
+                  <td class="col-6" style="text-align:center;">${row.hazards}</td>
+
+                  <td class="col-7">${ppeDisplay}</td>
+
+                  <td class="col-8" style="text-align:center; color:${row.violations > 0 ? "red" : "inherit"}; font-weight:${row.violations > 0 ? "bold" : "normal"};">${row.violations}</td>
+                  <td class="col-9" style="text-align:center; color:${row.ncr > 0 ? "red" : "inherit"}; font-weight:${row.ncr > 0 ? "bold" : "normal"};">${row.ncr}</td>
+
+                  <td class="col-10" style="text-align:center;">
+                      <span class="badge ${kpiClass}">
+                          ${scoreText}
+                      </span>
+                  </td>
+
+                  <td class="col-11 no-print">
+                      ${row.req_url ? `<a href="${row.req_url}" target="_blank" class="btn-small btn-secondary"><i class="fas fa-file-pdf"></i></a>` : "-"}
+                  </td>
+              </tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+
+    anaResultsContainer.innerHTML = html;
+  }
+
+  // دالة الطباعة (PDF)
+  function handlePrintPDF() {
+    // 1. معرفة الأعمدة المختارة
+    const checkboxes = document.querySelectorAll(
+      '.columns-selector input[type="checkbox"]',
+    );
+
+    // 2. إخفاء الأعمدة غير المختارة
+    checkboxes.forEach((chk) => {
+      const colClass = `col-${chk.dataset.col}`;
+      const cells = document.querySelectorAll(`.${colClass}`);
+      cells.forEach((cell) => {
+        if (chk.checked)
+          cell.style.display = ""; // إظهار
+        else cell.style.display = "none"; // إخفاء
+      });
+    });
+
+    // 3. تحديث تاريخ الطباعة
+    const printDateEl = document.getElementById("print-date-display");
+    if (printDateEl) {
+      printDateEl.textContent = `تقرير شهر: ${anaMonth.value} | تم الاستخراج في: ${new Date().toLocaleString("ar-EG")}`;
+    }
+
+    // 4. أمر الطباعة
+    window.print();
+
+    // 5. (اختياري) إعادة إظهار كل الأعمدة بعد الطباعة (عشان لو اليوزر كنسل متبقاش الصفحة بايظة)
+    // ممكن نعملها بـ setTimeout عشان تلحق تظهر في الطباعة الأول
+    setTimeout(() => {
+      checkboxes.forEach((chk) => {
+        const colClass = `col-${chk.dataset.col}`;
+        document
+          .querySelectorAll(`.${colClass}`)
+          .forEach((c) => (c.style.display = ""));
+      });
+    }, 1000);
+  }
+
+  // Events
+  if (anaProject) anaProject.addEventListener("change", updateAnaContractors);
+  if (anaSearchBtn) anaSearchBtn.addEventListener("click", performAnaSearch);
+  if (anaPrintBtn) anaPrintBtn.addEventListener("click", handlePrintPDF);
 });
 // --- END DOMContentLoaded ---

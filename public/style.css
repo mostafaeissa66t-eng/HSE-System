@@ -824,3 +824,98 @@ body {
         -webkit-print-color-adjust: exact; /* لطباعة لون الخلفية */
     }
 }
+/* style.css - Add this at the end */
+
+/* إخفاء عناصر الهيدر المخصصة للطباعة في الوضع العادي */
+.print-header-only {
+    display: none;
+}
+
+/* تنسيقات الطباعة (PDF) */
+/* ========================================= */
+/* --- Print Styles (تعديل اللوجو لليسار) --- */
+/* ========================================= */
+@media print {
+    /* 1. إعدادات الصفحة */
+    @page {
+        size: landscape;
+        margin: 5mm; 
+    }
+
+    /* 2. إخفاء العناصر غير الضرورية */
+    body * { 
+        visibility: hidden; 
+    }
+
+    #ContractorAnalytics, #ContractorAnalytics * {
+        visibility: visible;
+    }
+
+    #ContractorAnalytics {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: white !important;
+
+        /* تصغير المحتوى ليناسب الصفحة */
+        zoom: 65%; 
+        transform-origin: top center;
+    }
+
+    /* 4. تنسيق الهيدر (الحل هنا) */
+    .print-header-only {
+        display: flex !important;
+        /* هذا السطر سيعكس الترتيب: اللوجو سيذهب لليسار والعنوان لليمين */
+        flex-direction: row-reverse !important; 
+        align-items: center;
+        justify-content: space-between;
+        visibility: visible !important;
+        width: 100%;
+        border-bottom: 2px solid #C8102E;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    .print-header-only * {
+        visibility: visible !important;
+    }
+
+    /* 5. إخفاء الفلاتر */
+    .no-print, .app-form, button, .filter-controls, .mobile-header, #sidebar, .export-controls, #loader-overlay, h2 {
+        display: none !important;
+    }
+
+    /* 6. تنسيق الجدول */
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt; 
+        direction: rtl; 
+    }
+
+    .results-table th, .results-table td {
+        border: 1px solid #444;
+        padding: 2px 4px;
+        text-align: center;
+        vertical-align: middle;
+        white-space: normal;
+    }
+
+    .results-table th {
+        background-color: #eee !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact; 
+        font-weight: bold;
+    }
+
+    .results-table td span {
+        font-size: 8pt !important;
+    }
+
+    .col-11 {
+        display: none !important;
+    }
+}

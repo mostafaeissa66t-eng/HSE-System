@@ -2389,13 +2389,48 @@
                     class="page-section"
                     style="display: none"
                 >
+                    <div
+                        class="print-header-only"
+                        style="
+                            display: none;
+                            align-items: center;
+                            justify-content: space-between;
+                            border-bottom: 2px solid #c8102e;
+                            padding-bottom: 10px;
+                            margin-bottom: 20px;
+                        "
+                    >
+                        <img
+                            src="../turnkey.png"
+                            alt="Logo"
+                            style="max-height: 60px"
+                        />
+
+                        <div style="text-align: center; flex-grow: 1">
+                            <h1
+                                style="
+                                    color: #c8102e;
+                                    margin: 0;
+                                    font-size: 1.5rem;
+                                "
+                            >
+                                HSE Contractor Performance Report
+                            </h1>
+                            <p
+                                style="margin: 5px 0 0 0; font-size: 0.9rem"
+                                id="print-date-display"
+                            ></p>
+                        </div>
+                    </div>
                     <h2>
-                        <i class="fas fa-chart-line"></i> تقرير أداء المقاولين
-                        (Analytics)
+                        <i class="fas fa-chart-bar"></i> تقارير أداء المقاولين
                     </h2>
 
                     <div class="app-form no-print">
-                        <div class="filter-controls">
+                        <div
+                            class="filter-controls"
+                            style="align-items: flex-end; flex-wrap: wrap"
+                        >
                             <div class="form-group">
                                 <label>المشروع:</label>
                                 <select id="ana-project">
@@ -2413,35 +2448,69 @@
                             </div>
 
                             <div class="form-group">
-                                <label>الشهر / التاريخ المرجعي:</label>
-                                <input type="month" id="ana-date" />
+                                <label>شهر التقرير:</label>
+                                <input type="month" id="ana-month" />
                             </div>
 
                             <div
-                                class="form-group checkbox-group"
-                                style="flex-wrap: wrap"
+                                class="checkbox-group"
+                                style="
+                                    margin-right: 15px;
+                                    border: 1px solid #ccc;
+                                    padding: 5px;
+                                    border-radius: 5px;
+                                "
                             >
-                                <div style="margin-left: 15px">
+                                <div
+                                    style="
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 5px;
+                                        margin-bottom: 5px;
+                                    "
+                                >
                                     <input
                                         type="checkbox"
                                         id="ana-cumulative"
-                                        checked
                                     />
-                                    <label for="ana-cumulative">تراكمي</label>
+                                    <label
+                                        for="ana-cumulative"
+                                        style="margin: 0; font-size: 0.9em"
+                                        >تراكمي (من البداية)</label
+                                    >
                                 </div>
-                                <div style="margin-left: 15px">
+                                <div
+                                    style="
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 5px;
+                                        margin-bottom: 5px;
+                                    "
+                                >
+                                    <input type="checkbox" id="ana-sort-kpi" />
+                                    <label
+                                        for="ana-sort-kpi"
+                                        style="margin: 0; font-size: 0.9em"
+                                        >ترتيب حسب KPI</label
+                                    >
+                                </div>
+                                <div
+                                    style="
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 5px;
+                                    "
+                                >
                                     <input
                                         type="checkbox"
                                         id="ana-merge-proj"
                                         checked
                                     />
-                                    <label for="ana-merge-proj"
+                                    <label
+                                        for="ana-merge-proj"
+                                        style="margin: 0; font-size: 0.9em"
                                         >دمج المشاريع</label
                                     >
-                                </div>
-                                <div>
-                                    <input type="checkbox" id="ana-sort-kpi" />
-                                    <label for="ana-sort-kpi">ترتيب KPI</label>
                                 </div>
                             </div>
 
@@ -2450,38 +2519,142 @@
                                 id="ana-search-btn"
                                 class="btn"
                             >
-                                <i class="fas fa-search"></i> عرض النتائج
+                                <i class="fas fa-search"></i> عرض التقرير
                             </button>
                         </div>
 
-                        <div style="margin: 15px 0; text-align: left">
+                        <div
+                            class="export-controls"
+                            style="
+                                margin-top: 20px;
+                                padding: 10px;
+                                background: #f1f1f1;
+                                border-radius: 5px;
+                            "
+                        >
+                            <h4 style="margin-top: 0; color: #333">
+                                خيارات التصدير (PDF):
+                                <small style="font-weight: normal"
+                                    >حدد الأعمدة التي تريد طباعتها</small
+                                >
+                            </h4>
+                            <div
+                                class="columns-selector"
+                                style="
+                                    display: flex;
+                                    flex-wrap: wrap;
+                                    gap: 10px;
+                                    margin-bottom: 10px;
+                                "
+                            >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="0"
+                                    />
+                                    المقاول</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="1"
+                                    />
+                                    المشروع</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="2"
+                                    />
+                                    التصاريح</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="3"
+                                    />
+                                    تدريب (عادي)</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="4"
+                                    />
+                                    Induction</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="5"
+                                    />
+                                    الملاحظات</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="6"
+                                    />
+                                    Hazard Reports</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="7"
+                                    />
+                                    مهمات (PPE)</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="8"
+                                    />
+                                    مخالفات</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="9"
+                                    />
+                                    NCR</label
+                                >
+                                <label
+                                    ><input
+                                        type="checkbox"
+                                        checked
+                                        data-col="10"
+                                    />
+                                    KPI Score</label
+                                >
+                            </div>
                             <button
                                 type="button"
                                 id="ana-print-btn"
                                 class="btn btn-secondary"
-                                style="background: #28a745"
+                                style="background: #28a745; width: 100%"
                             >
-                                <i class="fas fa-file-pdf"></i> تصدير تقرير
-                                (PDF)
+                                <i class="fas fa-file-pdf"></i> تحميل PDF
+                                (طباعة)
                             </button>
-                            <small
-                                style="
-                                    display: block;
-                                    color: #777;
-                                    margin-top: 5px;
-                                "
-                                >* استخدم المربعات (Checkboxes) في الجدول
-                                لاختيار الأعمدة التي ستظهر في التقرير.</small
-                            >
                         </div>
                     </div>
 
                     <div
-                        id="ana-table-container"
+                        id="ana-results-container"
                         class="results-table-container"
+                        style="margin-top: 20px"
                     >
-                        <p style="text-align: center; padding: 20px">
-                            اضغط "عرض النتائج"...
+                        <p style="text-align: center; color: #666">
+                            اضغط "عرض التقرير" لجلب البيانات...
                         </p>
                     </div>
                 </section>

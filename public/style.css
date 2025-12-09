@@ -831,26 +831,98 @@ body {
     display: none;
 }
 
-/* تنسيقات الطباعة (PDF) */
-/* ========================================= */
-/* --- Print Styles (تعديل اللوجو لليسار) --- */
-/* ========================================= */
-@media print {
-    /* 1. إعدادات الصفحة */
-    @page {
-        size: landscape;
-        margin: 5mm; 
-    }
+/* قائمة البحث المنسدلة */
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 0 0 5px 5px;
+}
+.search-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background 0.2s;
+}
+.search-item:hover {
+    background-color: #f1f1f1;
+}
+.search-item strong { color: var(--primary-color); }
+.search-item small { color: #666; float: left; }
 
-    /* 2. إخفاء العناصر غير الضرورية */
-    body * { 
-        visibility: hidden; 
-    }
+/* كارت الموظف */
+.emp-profile-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.emp-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    flex-grow: 1;
+}
+.emp-info-grid div {
+    font-size: 0.95rem;
+    color: #333;
+}
+.emp-info-grid strong {
+    color: var(--secondary-color);
+    margin-left: 5px;
+}
 
+/* عداد KPI */
+.emp-kpi-box {
+    text-align: center;
+    margin-right: 20px;
+    border-right: 1px solid #eee;
+    padding-right: 20px;
+    min-width: 120px;
+}
+.kpi-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: 5px solid #eee; /* Default */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #333;
+}
+.section-title {
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    border-bottom: 2px solid #eee;
+    padding-bottom: 5px;
+}
+.divider { margin: 20px 0; border: 0; border-top: 1px dashed #ccc; }
+
+
+    /* ---------------------------------------------------- */
+    /* حالة 1: طباعة تقرير المقاولين (لو هو اللي مفتوح) */
+    /* ---------------------------------------------------- */
     #ContractorAnalytics, #ContractorAnalytics * {
         visibility: visible;
     }
-
     #ContractorAnalytics {
         position: absolute;
         left: 0;
@@ -859,63 +931,125 @@ body {
         margin: 0;
         padding: 0;
         background: white !important;
-
-        /* تصغير المحتوى ليناسب الصفحة */
-        zoom: 65%; 
+        zoom: 65%; /* تصغير الجدول الكبير */
         transform-origin: top center;
     }
 
-    /* 4. تنسيق الهيدر (الحل هنا) */
-    .print-header-only {
-        display: flex !important;
-        /* هذا السطر سيعكس الترتيب: اللوجو سيذهب لليسار والعنوان لليمين */
-        flex-direction: row-reverse !important; 
-        align-items: center;
-        justify-content: space-between;
-        visibility: visible !important;
-        width: 100%;
-        border-bottom: 2px solid #C8102E;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
+    /* ========================================= */
+    /* --- Print Styles (تعديل الهوامش) --- */
+    /* ========================================= */
+    @media print {
+        /* 1. إعدادات الصفحة: زيادة الهوامش */
+        @page {
+            size: landscape; /* الوضع الأفقي أفضل للجداول */
+            margin: 15mm; /* (تم التعديل) زيادة الهامش لـ 1.5 سم عشان الكلام ميكونش لازق */
+        }
+
+        /* 2. إخفاء كل عناصر الموقع بشكل افتراضي */
+        body * { 
+            visibility: hidden; 
+        }
+
+        /* ---------------------------------------------------- */
+        /* حالة 1: طباعة تقرير المقاولين */
+        /* ---------------------------------------------------- */
+        #ContractorAnalytics, #ContractorAnalytics * {
+            visibility: visible;
+        }
+        #ContractorAnalytics {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: white !important;
+            zoom: 65%;
+            transform-origin: top center;
+        }
+
+        /* ---------------------------------------------------- */
+        /* حالة 2: طباعة تقرير الموظفين */
+        /* ---------------------------------------------------- */
+        #EmployeeReports, #EmployeeReports * {
+            visibility: visible;
+        }
+        #EmployeeReports {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+
+            /* (هام) إضافة هوامش داخلية للمحتوى نفسه */
+            padding: 0 20px; 
+
+            background: white !important;
+            zoom: 80%; /* تصغير مناسب */
+            box-sizing: border-box; /* لضمان حساب الهوامش بدقة */
+        }
+
+        /* ---------------------------------------------------- */
+        /* تنسيقات عامة */
+        /* ---------------------------------------------------- */
+
+        /* الهيدر (اللوجو والعنوان) */
+        .print-header-only {
+            display: flex !important;
+            flex-direction: row-reverse !important; 
+            align-items: center;
+            justify-content: space-between;
+            visibility: visible !important;
+            width: 100%;
+            border-bottom: 2px solid #C8102E;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .print-header-only * {
+            visibility: visible !important;
+        }
+
+        /* إخفاء الفلاتر */
+        .no-print, .app-form, button, .filter-controls, .mobile-header, #sidebar, .export-controls, #loader-overlay, h2, .search-dropdown {
+            display: none !important;
+        }
+
+        /* تنسيق الجداول */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10pt; 
+            direction: rtl; 
+            margin-bottom: 20px;
+            page-break-inside: auto;
+        }
+        .results-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        .results-table th, .results-table td {
+            border: 1px solid #444;
+            padding: 6px 8px; /* زيادة بسيطة في راحة الكلام داخل الجدول */
+            text-align: center;
+            vertical-align: middle;
+            white-space: normal;
+        }
+
+        .results-table th {
+            background-color: #eee !important;
+            color: #000 !important;
+            -webkit-print-color-adjust: exact; 
+            font-weight: bold;
+        }
+
+        /* كارت الموظف */
+        .emp-profile-card {
+            border: 1px solid #333;
+            box-shadow: none;
+            margin-bottom: 25px;
+            padding: 20px; /* توسيع حواف الكارت */
+        }
     }
 
-    .print-header-only * {
-        visibility: visible !important;
-    }
-
-    /* 5. إخفاء الفلاتر */
-    .no-print, .app-form, button, .filter-controls, .mobile-header, #sidebar, .export-controls, #loader-overlay, h2 {
-        display: none !important;
-    }
-
-    /* 6. تنسيق الجدول */
-    .results-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 9pt; 
-        direction: rtl; 
-    }
-
-    .results-table th, .results-table td {
-        border: 1px solid #444;
-        padding: 2px 4px;
-        text-align: center;
-        vertical-align: middle;
-        white-space: normal;
-    }
-
-    .results-table th {
-        background-color: #eee !important;
-        color: #000 !important;
-        -webkit-print-color-adjust: exact; 
-        font-weight: bold;
-    }
-
-    .results-table td span {
-        font-size: 8pt !important;
-    }
-
-    .col-11 {
-        display: none !important;
-    }
-}
+    

@@ -776,60 +776,7 @@ body {
     }
 }
 
-/* ========================================= */
-/* --- Print Styles (تنسيقات الطباعة) --- */
-/* ========================================= */
-@media print {
-    /* إخفاء كل عناصر الموقع ما عدا التقرير */
-    body * { visibility: hidden; }
 
-    /* إظهار قسم التقرير فقط */
-    #ContractorAnalytics, #ContractorAnalytics * {
-        visibility: visible;
-    }
-
-    #ContractorAnalytics {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        background: white;
-    }
-
-    /* إخفاء الأزرار والفلاتر داخل التقرير */
-    .no-print, .filter-controls, button, .col-toggle {
-        display: none !important;
-    }
-
-    /* إخفاء الأعمدة التي لم يختارها المستخدم */
-    .hide-in-print {
-        display: none !important;
-    }
-
-    /* تنسيق الجدول للطباعة */
-    .results-table {
-        width: 100%;
-        border: 1px solid #000;
-        font-size: 10pt; /* تصغير الخط قليلاً */
-    }
-    .results-table th, .results-table td {
-        border: 1px solid #000;
-        padding: 5px;
-        color: #000;
-    }
-    .results-table th {
-        background-color: #f0f0f0 !important;
-        -webkit-print-color-adjust: exact; /* لطباعة لون الخلفية */
-    }
-}
-/* style.css - Add this at the end */
-
-/* إخفاء عناصر الهيدر المخصصة للطباعة في الوضع العادي */
-.print-header-only {
-    display: none;
-}
 
 /* قائمة البحث المنسدلة */
 .search-dropdown {
@@ -914,11 +861,25 @@ body {
     border-bottom: 2px solid #eee;
     padding-bottom: 5px;
 }
-.divider { margin: 20px 0; border: 0; border-top: 1px dashed #ccc; }
 
+/* ========================================= */
+/* --- Print Styles (تنسيقات الطباعة الشاملة) --- */
+/* ========================================= */
+@media print {
+    /* 1. إعدادات الصفحة العامة: هوامش ضيقة جداً */
+    /* نستخدم هوامش ضيقة عشان جدول المقاولين العريض، وهنعوضها في تقرير الموظف */
+    @page {
+        size: landscape; 
+        margin: 5mm; 
+    }
+
+    /* 2. إخفاء كل عناصر الموقع */
+    body * { 
+        visibility: hidden; 
+    }
 
     /* ---------------------------------------------------- */
-    /* حالة 1: طباعة تقرير المقاولين (لو هو اللي مفتوح) */
+    /* الحالة 1: طباعة تقرير المقاولين (الجدول العريض) */
     /* ---------------------------------------------------- */
     #ContractorAnalytics, #ContractorAnalytics * {
         visibility: visible;
@@ -931,125 +892,118 @@ body {
         margin: 0;
         padding: 0;
         background: white !important;
-        zoom: 65%; /* تصغير الجدول الكبير */
-        transform-origin: top center;
+
+        /* (هام) تصغير قوي للجدول لكي يدخل في الصفحة */
+        zoom: 55%; 
+        /* احتياطي للمتصفحات التي لا تدعم zoom */
+        min-width: 100%;
     }
 
-    /* ========================================= */
-    /* --- Print Styles (تعديل الهوامش) --- */
-    /* ========================================= */
-    @media print {
-        /* 1. إعدادات الصفحة: زيادة الهوامش */
-        @page {
-            size: landscape; /* الوضع الأفقي أفضل للجداول */
-            margin: 15mm; /* (تم التعديل) زيادة الهامش لـ 1.5 سم عشان الكلام ميكونش لازق */
-        }
+    /* ---------------------------------------------------- */
+    /* الحالة 2: طباعة تقرير الموظفين (وثيقة رسمية) */
+    /* ---------------------------------------------------- */
+    #EmployeeReports, #EmployeeReports * {
+        visibility: visible;
+    }
+    #EmployeeReports {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
 
-        /* 2. إخفاء كل عناصر الموقع بشكل افتراضي */
-        body * { 
-            visibility: hidden; 
-        }
+        /* (هام) إضافة حواشي داخلية لتعويض هوامش الصفحة الضيقة */
+        /* هذا سيجعل الكلام بعيداً عن الحافة */
+        padding: 10mm 15mm; 
 
-        /* ---------------------------------------------------- */
-        /* حالة 1: طباعة تقرير المقاولين */
-        /* ---------------------------------------------------- */
-        #ContractorAnalytics, #ContractorAnalytics * {
-            visibility: visible;
-        }
-        #ContractorAnalytics {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            background: white !important;
-            zoom: 65%;
-            transform-origin: top center;
-        }
-
-        /* ---------------------------------------------------- */
-        /* حالة 2: طباعة تقرير الموظفين */
-        /* ---------------------------------------------------- */
-        #EmployeeReports, #EmployeeReports * {
-            visibility: visible;
-        }
-        #EmployeeReports {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-
-            /* (هام) إضافة هوامش داخلية للمحتوى نفسه */
-            padding: 0 20px; 
-
-            background: white !important;
-            zoom: 80%; /* تصغير مناسب */
-            box-sizing: border-box; /* لضمان حساب الهوامش بدقة */
-        }
-
-        /* ---------------------------------------------------- */
-        /* تنسيقات عامة */
-        /* ---------------------------------------------------- */
-
-        /* الهيدر (اللوجو والعنوان) */
-        .print-header-only {
-            display: flex !important;
-            flex-direction: row-reverse !important; 
-            align-items: center;
-            justify-content: space-between;
-            visibility: visible !important;
-            width: 100%;
-            border-bottom: 2px solid #C8102E;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-        .print-header-only * {
-            visibility: visible !important;
-        }
-
-        /* إخفاء الفلاتر */
-        .no-print, .app-form, button, .filter-controls, .mobile-header, #sidebar, .export-controls, #loader-overlay, h2, .search-dropdown {
-            display: none !important;
-        }
-
-        /* تنسيق الجداول */
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10pt; 
-            direction: rtl; 
-            margin-bottom: 20px;
-            page-break-inside: auto;
-        }
-        .results-table tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-        }
-
-        .results-table th, .results-table td {
-            border: 1px solid #444;
-            padding: 6px 8px; /* زيادة بسيطة في راحة الكلام داخل الجدول */
-            text-align: center;
-            vertical-align: middle;
-            white-space: normal;
-        }
-
-        .results-table th {
-            background-color: #eee !important;
-            color: #000 !important;
-            -webkit-print-color-adjust: exact; 
-            font-weight: bold;
-        }
-
-        /* كارت الموظف */
-        .emp-profile-card {
-            border: 1px solid #333;
-            box-shadow: none;
-            margin-bottom: 25px;
-            padding: 20px; /* توسيع حواف الكارت */
-        }
+        background: white !important;
+        /* تصغير بسيط جداً ليناسب الشاشة */
+        zoom: 85%; 
+        box-sizing: border-box; 
     }
 
-    
+    /* ---------------------------------------------------- */
+    /* تنسيقات الهيدر (اللوجو والعنوان) */
+    /* ---------------------------------------------------- */
+    .print-header-only {
+        display: flex !important;
+        /* عكس الترتيب ليظهر اللوجو يسار والعنوان يمين في اللغة العربية */
+        flex-direction: row-reverse !important; 
+        align-items: center;
+        justify-content: space-between;
+        visibility: visible !important;
+        width: 100%;
+        border-bottom: 2px solid #C8102E;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    .print-header-only * {
+        visibility: visible !important;
+    }
+
+    /* ضبط حجم اللوجو في الطباعة */
+    .print-header-only img {
+        max-height: 70px !important;
+    }
+
+    /* ---------------------------------------------------- */
+    /* إخفاء العناصر غير المرغوبة */
+    /* ---------------------------------------------------- */
+    .no-print, .app-form, button, .filter-controls, .mobile-header, #sidebar, .export-controls, #loader-overlay, h2, .search-dropdown {
+        display: none !important;
+    }
+
+    /* ---------------------------------------------------- */
+    /* تنسيق الجداول (للتقريرين) */
+    /* ---------------------------------------------------- */
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10pt; 
+        direction: rtl; 
+        margin-bottom: 20px;
+        background-color: #fff !important;
+    }
+
+    .results-table th, .results-table td {
+        border: 1px solid #444;
+        padding: 4px 6px;
+        text-align: center;
+        vertical-align: middle;
+        white-space: normal; /* السماح بنزول السطر */
+    }
+
+    .results-table th {
+        background-color: #eee !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact; 
+        font-weight: bold;
+    }
+
+    /* تصغير النصوص الطويلة جداً داخل الخلايا */
+    .results-table td span {
+        font-size: 9pt !important;
+    }
+
+    /* إخفاء عمود الملفات أو الإجراءات في الطباعة */
+    .col-11 {
+        display: none !important;
+    }
+
+    /* ---------------------------------------------------- */
+    /* تنسيق كارت الموظف (البيانات الشخصية) */
+    /* ---------------------------------------------------- */
+    .emp-profile-card {
+        border: 1px solid #000;
+        box-shadow: none;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #fff !important;
+    }
+
+    .kpi-circle {
+        border: 4px solid #eee !important;
+        -webkit-print-color-adjust: exact;
+    }
+}

@@ -171,11 +171,11 @@ document.addEventListener("DOMContentLoaded", function () {
     MyObservations: "متابعة ملاحظاتي",
     NewHazard: "تسجيل خطر (Hazard)",
     MyHazards: "تقارير الخطر المفتوحة",
-    MonitorPermits: "متابعة التصاريح",
+    MonitorPermits: "سجل التصاريح",
     KpiEvaluation: "تقييم الموظفين",
     ContractorEvaluation: "تقييم المقاولين", // (جديد)
     PpeTransactions: "حركات المخزن", // (جديد)
-    ProjectStockReport: "أرصدة المخازن", // (جديد)
+    ProjectStockReport: "سجل أرصدة المخازن", // (جديد)
     NewTraining: "تسجيل تدريب", // (*** جديد ***) اسم القسم
     MonitorObservations: "سجل الملاحظات",
     MonitorHazards: "سجل المخاطر",
@@ -1099,7 +1099,7 @@ document.addEventListener("DOMContentLoaded", function () {
     console.error("#monitor-search-btn not found.");
   }
   // =================================================================
-  // --- (ناقصة) دالة رسم جدول نتائج البحث للتصاريح ---
+  // --- دالة رسم جدول نتائج البحث للتصاريح (Updated Colors) ---
   // =================================================================
 
   function buildResultsTable(data) {
@@ -1130,23 +1130,23 @@ document.addEventListener("DOMContentLoaded", function () {
             <tbody>`;
 
     data.forEach((row) => {
-      // 1. تعديل استقبال التاريخ: الـ Backend بيبعت التاريخ جاهز باسم permitDate
       let dateDisplay = row.permitDate || "-";
 
-      // تنسيق لون الحالة
+      // تنسيق لون الحالة (التعديل هنا)
       const status = String(row.status || "").trim();
       let badgeClass = "bg-secondary";
       let statusText = status;
 
-      // التعامل مع حالة الحروف الكبيرة والصغيرة (Open/OPEN)
       if (status.toLowerCase() === "open") {
-        badgeClass = "bg-success"; // أخضر
+        // (*** تعديل: المفتوح أصبح أحمر ***)
+        badgeClass = "bg-danger";
         statusText = "مفتوح";
       } else if (
         status.toLowerCase() === "closed" ||
         status.toLowerCase() === "close"
       ) {
-        badgeClass = "bg-danger"; // أحمر
+        // (*** تعديل: المغلق أصبح أخضر ***)
+        badgeClass = "bg-success";
         statusText = "مغلق";
       }
 

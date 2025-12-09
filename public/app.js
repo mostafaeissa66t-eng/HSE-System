@@ -1016,6 +1016,8 @@ document.addEventListener("DOMContentLoaded", function () {
         (monitorProjectFilter.innerHTML += `<option value="${p}">${p}</option>`),
     );
   }
+  // تحديث جدول المتابعة (Monitor Observations Table)
+  // 1. تحديث جدول المتابعة (Monitor Observations Table) - تأكيد وجود المصدر
   function renderMonitorTable(data, container) {
     if (!data || data.length === 0) {
       container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
@@ -1027,9 +1029,9 @@ document.addEventListener("DOMContentLoaded", function () {
               <tr>
                   <th>الكود</th>
                   <th>التاريخ</th>
-                  <th>المصدر</th>
+                  <th>المسجل</th>
                   <th>المشروع</th>
-                  <th style="width: 40%;">الوصف بالكامل</th>
+                  <th>مصدر الملاحظة</th> <th>الوصف</th>
                   <th>الحالة</th>
               </tr>
           </thead>
@@ -1039,7 +1041,9 @@ document.addEventListener("DOMContentLoaded", function () {
       let dateDisplay = row.date;
       try {
         const d = new Date(row.date);
-        dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        if (!isNaN(d.getTime())) {
+          dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        }
       } catch (e) {}
 
       html += `<tr>
@@ -1048,8 +1052,7 @@ document.addEventListener("DOMContentLoaded", function () {
               <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
               <td>${row.project}</td>
 
-              <td class="desc-cell">${row.desc}</td>
-
+              <td style="font-weight:bold;">${row.source || "-"}</td> <td class="desc-cell">${row.desc}</td>
               <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
           </tr>`;
     });
@@ -1616,23 +1619,46 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   /**
    * (جديد) الدالة الذكية لفلترة قايمة المهمات حسب نوع الحركة والمخزن
    */
+  /**
+   * (تحديث) الدالة الذكية لفلترة قايمة المهمات
+   * تعالج مشكلة التعليق وتظهر حالة التحميل بوضوح
+   */
   async function refreshPpeItemsDropdown() {
     const type = ppeTransactionType.value;
     let sourceLocation = null;
 
+    // تحديد المخزن المصدر بناءً على العملية
     if (type === "صرف") {
       sourceLocation = ppeRecipientLocation.value;
     } else if (type === "تحويل") {
       sourceLocation = ppeTransferSource.value;
     }
 
-    // --- (ده المنطق اللي إنت طلبته بالظبط) ---
+    // تنظيف القائمة فوراً قبل أي حاجة
+    ppeItemSelect.innerHTML = '<option value="">-- اختر --</option>';
+    ppeItemSelect.disabled = true;
 
-    // (الحالة 1: مرتجع أو توريد) - اعرض كل حاجة
+    // (الحالة 1: مرتجع أو توريد) - اعرض كل حاجة من القائمة المحملة مسبقاً
     if (type === "مرتجع" || type === "توريد") {
-      console.log("الوضع: مرتجع/توريد. عرض كل المهمات...");
-      populateSelect(ppeItemSelect, ppeItems, "id", "name");
-      ppeItemSelect.disabled = false;
+      if (ppeItems && ppeItems.length > 0) {
+        populateSelect(ppeItemSelect, ppeItems, "id", "name");
+        ppeItemSelect.disabled = false;
+      } else {
+        ppeItemSelect.innerHTML =
+          '<option value="">جاري تحميل القائمة الرئيسية...</option>';
+        // محاولة إعادة تحميل البيانات لو مش موجودة
+        try {
+          const r = await callApi("getInventoryInitData", {
+            userInfo: currentUser,
+          });
+          ppeItems = r.ppeItems; // تحديث المتغير العام
+          populateSelect(ppeItemSelect, ppeItems, "id", "name");
+          ppeItemSelect.disabled = false;
+        } catch (e) {
+          ppeItemSelect.innerHTML =
+            '<option value="">فشل تحميل المهمات</option>';
+        }
+      }
       return;
     }
 
@@ -1640,38 +1666,44 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     if (!sourceLocation) {
       ppeItemSelect.innerHTML =
         '<option value="">-- اختر المخزن أولاً --</option>';
-      ppeItemSelect.disabled = true;
       return;
     }
 
-    // (الحالة 3: صرف/تحويل + اختار مخزن) - نادي الـ API
+    // (الحالة 3: صرف/تحويل + تم اختيار مخزن) -> هنا المشكلة كانت بتحصل
     ppeItemSelect.innerHTML =
-      '<option value="">جاري تحميل المهمات المتاحة...</option>';
-    ppeItemSelect.disabled = true;
+      '<option value="">⏳ جاري جلب الرصيد من المخزن...</option>';
 
     try {
       const response = await callApi("getAvailableItemsForLocation", {
         locationName: sourceLocation,
       });
-      const availableIds = response.availableItemIds; // ['HEL-01', 'SHO-02']
+      const availableIds = response.availableItemIds;
 
-      if (availableIds.length === 0) {
-        ppeItemSelect.innerHTML =
-          '<option value="">-- المخزن ده فاضي --</option>';
+      if (!availableIds || availableIds.length === 0) {
+        ppeItemSelect.innerHTML = '<option value="">🚫 المخزن فارغ</option>';
         return;
       }
 
-      // فلترة القايمة الرئيسية بناءً على الأكواد المتاحة
+      // فلترة القايمة الرئيسية
       const availableItems = ppeItems.filter((item) =>
         availableIds.includes(item.id),
       );
 
+      // تعبئة القائمة
       populateSelect(ppeItemSelect, availableItems, "id", "name");
+
+      // (إضافة) عرض عدد الأصناف المتاحة في أول خيار كنوع من التأكيد
+      ppeItemSelect.options[0].text = `-- اختر المهمة (${availableItems.length} صنف متاح) --`;
+
       ppeItemSelect.disabled = false;
     } catch (e) {
-      showMessage(ppeMainMessage, e.message, false);
-      ppeItemSelect.innerHTML =
-        '<option value="">-- خطأ في التحميل --</option>';
+      console.error(e);
+      ppeItemSelect.innerHTML = '<option value="">⚠️ خi�أ في الاتصال</option>';
+      showMessage(
+        ppeMainMessage,
+        "فشل جلب محتويات المخزن. حاول تغيير المشروع واختياره مرة أخرى.",
+        false,
+      );
     }
   }
 
@@ -1725,7 +1757,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
     try {
       if (!itemId || !qty || qty <= 0) {
-        throw new Error("الرجاء اختيار مهمة وكمr�ة صحيحة.");
+        throw new Error("الرجاء اختيار مهمة وكمية صحيحة.");
       }
 
       // (*** هذا هو المنطق الجديد  �لتحقق من الرصيد ***)
@@ -2587,19 +2619,27 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       document.getElementById("resp-elsewedy").checked = true;
     if (typeof toggleObsContractor === "function") toggleObsContractor();
   }
-  // إظهار/إخفاء المقاول حسب الراديو
+  // إظهار/إخفاl� المقاول حسب الراديو
+  // إظهار/إخفاء المقاول (تم تصحيح الخطأ الإملائي)
   function toggleObsContractor() {
     let isCont = false;
-    // التأكد من العنصر المختار
+
+    // البحث عن الراديو المختار
     const checkedRadio = document.querySelector(
       'input[name="obs-resp"]:checked',
     );
-    if (checkedRadio && checkedRadio.value === "مD�اول") isCont = true;
 
-    if (obsContractorDiv)
+    // (تصحيح هام): الكلمة كانت مكتوبة خطأ "مDاول"
+    if (checkedRadio && checkedRadio.value === "مقاول") {
+      isCont = true;
+    }
+
+    // إظهار أو إخفاء القائمة
+    if (obsContractorDiv) {
       obsContractorDiv.style.display = isCont ? "block" : "none";
+    }
 
-    // تحميل المقاولين فقط لو اخترنا مقاول واخترنا مشروع
+    // لو اخترنا مقاول، لازم نحمل القائمة بناءً على المشروع المختار حالياً
     if (isCont) {
       const currentProj = obsProject.value;
       if (currentProj) {
@@ -2607,7 +2647,12 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       } else {
         obsContractorSelect.innerHTML =
           '<option value="">-- اختر المشروع أولاً --</option>';
+        obsContractorSelect.disabled = true;
       }
+    } else {
+      // لو رجعنا للسويدي، نريست القائمة
+      obsContractorSelect.innerHTML = '<option value="">-- اختر --</option>';
+      obsContractorSelect.value = "";
     }
   }
 
@@ -2678,6 +2723,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       const data = {
         project: obsProject.value,
         locationDetail: document.getElementById("obs-location-detail").value,
+        source: document.getElementById("obs-source").value,
         type: document.getElementById("obs-type").value,
         hazard: obsHazard.value,
         description: document.getElementById("obs-desc").value,
@@ -2759,6 +2805,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     }
   }
 
+  // 2. تحديث جدول "ملاحظاتي" (My Observations Table) - إضافة التاريخ والمصدر
   function renderMyObsTable(obsArray) {
     if (obsArray.length === 0) {
       myObsList.innerHTML =
@@ -2768,40 +2815,46 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
     let html = `
       <table class="results-table">
-          <thead>
-              <tr>
-                  <th>الكود</th>
-                  <th>المشروع</th>
-                  <th>الوصف</th>
-                  <th>إجراء</th>
-              </tr>
-          </thead>
-          <tbody>`;
+        <thead>
+            <tr>
+                <th>الكود</th>
+                <th>التاريخ</th> <th>المشروع</th>
+                <th>مصدر الملاحظة</th>
+                <th>الوصف</th>
+                <th>إجراء</th>
+            </tr>
+        </thead>
+        <tbody>`;
 
     obsArray.forEach((obs) => {
-      // تنسيق التاريخ للعرض فقط
       let dateDisplay = obs.date;
       try {
-        dateDisplay = new Date(obs.date).toLocaleDateString();
+        // محاولة تنسيق التاريخ
+        const d = new Date(obs.date);
+        if (!isNaN(d.getTime())) {
+          dateDisplay = d.toLocaleDateString("en-GB"); // DD/MM/YYYY
+        }
       } catch (e) {}
 
       html += `
-          <tr>
-              <td><strong>${obs.id}</strong><br><small>${dateDisplay}</small></td>
-              <td>${obs.project}<br><small style="color:#666;">${obs.type}</small></td>
-              <td title="${obs.desc}">${obs.desc.substring(0, 50)}${obs.desc.length > 50 ? "..." : ""}</td>
-              <td>
-                  <button class="btn-small btn-danger" onclick="handleCloseObs('${obs.id}')">
-                      إغلاق
-                  </button>
-              </td>
-          </tr>`;
+        <tr>
+            <td style="font-weight:bold;">${obs.id}</td>
+            <td>${dateDisplay}</td> <td>${obs.project}<br><small style="color:#666;">${obs.type}</small></td>
+
+            <td style="color:#0056b3;">${obs.source || "-"}</td>
+
+            <td title="${obs.desc}">${obs.desc.substring(0, 50)}${obs.desc.length > 50 ? "..." : ""}</td>
+            <td>
+                <button class="btn-small btn-danger" onclick="handleCloseObs('${obs.id}')">
+                    إغلاق
+                </button>
+            </td>
+        </tr>`;
     });
 
     html += `</tbody></table>`;
     myObsList.innerHTML = html;
   }
-
   // دالة الإغلاق (Global عشان تتقري من الـ HTML)
   window.handleCloseObs = async function (obsId) {
     const note = prompt("الرجاء إدخال ملاحظات الإغلاق (أو ما تم تنفيذه):");
@@ -3169,7 +3222,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   }
 
   // دالة عامة لرسم الجدول (لأنهم شبه بعض)
-  // دالة عامة لرسم الجدول (معدلة: تاريخ مضبوط + وصف كامل)
+  // 1. تحديث جدول المتابعة (Monitor Observations Table) - تأكيد وجود المصدر
   function renderMonitorTable(data, container) {
     if (!data || data.length === 0) {
       container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
@@ -3181,8 +3234,9 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
               <tr>
                   <th>الكود</th>
                   <th>التاريخ</th>
-                  <th>المصدر</th>
+                  <th>المسجل</th>
                   <th>المشروع</th>
+                  <th>مصدر الملاحظة</th>
                   <th>الوصف</th>
                   <th>الحالة</th>
               </tr>
@@ -3190,11 +3244,12 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
           <tbody>`;
 
     data.forEach((row) => {
-      // تنسيق التاريخ
       let dateDisplay = row.date;
       try {
         const d = new Date(row.date);
-        dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        if (!isNaN(d.getTime())) {
+          dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        }
       } catch (e) {}
 
       html += `<tr>
@@ -3203,8 +3258,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
               <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
               <td>${row.project}</td>
 
-              <td class="desc-cell">${row.desc}</td>
-
+              <td style="font-weight:bold;">${row.source || "-"}</td> <td class="desc-cell">${row.desc}</td>
               <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
           </tr>`;
     });
@@ -3473,7 +3527,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     });
   }
   async function initNcrPage() {
-    console.log("بدء تشغيل صفحة NCR...");
+    console.log("بدء تشغي؄ صفحة NCR...");
 
     // 1. الوقت والتاريخ
     const now = new Date();

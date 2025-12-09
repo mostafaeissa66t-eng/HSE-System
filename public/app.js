@@ -161,6 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
     MonitorNcrViolations: "fas fa-folder-open",
     NewContractor: "fas fa-file-upload", // أيقونة رفع ملف
     ContractorAnalytics: "fas fa-chart-pie",
+    EmployeeReports: "fas fa-id-card", // (جديد)
     NewNearMiss: "fas fa-exclamation-triangle", // Example
   };
   const sectionNames = {
@@ -184,6 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {
     MonitorNcrViolations: "سجل المخالفات و NCR",
     NewContractor: "تسجيل مقاولين (اشتراطات)",
     ContractorAnalytics: "تحليلات أداء المقاولين",
+    EmployeeReports: "تقارير الموظفين", // (جديد)
     NewNearMiss: "Near Miss", // Example
   };
 
@@ -247,6 +249,12 @@ document.addEventListener("DOMContentLoaded", function () {
       title: "المخالفات و NCR",
       icon: "fas fa-exclamation-triangle",
       children: ["NewNcrViolation", "MyNCRs", "MonitorNcrViolations"],
+    },
+    {
+      type: "group",
+      title: "إدارة الموظفين",
+      icon: "fas fa-users",
+      children: ["EmployeeReports"], // "EmployeeReports" هو id السكشن
     },
   ];
 
@@ -612,7 +620,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "NewPermit") resetPermitForm();
       if (sectionId === "NewObservation") {
         // resetObservationForm(); // <-- امسح القديمة دي لو موجودة
-        initObservationPage(); // <-- واستخدم الجديدة دي
+        initObservationPage(); // <-- واستe�دم الجديدة دي
       }
       if (sectionId === "MyObservations") loadMyOpenObservations();
       if (sectionId === "ClosePermit") loadOpenPermits();
@@ -656,6 +664,7 @@ document.addEventListener("DOMContentLoaded", function () {
           initContractorAnalyticsPage();
         }
       }
+      if (sectionId === "EmployeeReports") initEmployeeReports();
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -1212,7 +1221,7 @@ document.addEventListener("DOMContentLoaded", function () {
           '<option value="">-- اختر موظفاً --</option>';
         if (response.employees.length === 0) {
           kpiEmployeeSelect.innerHTML =
-            '<option value="">لا يوجد موo�فين</option>';
+            '<option value="">لا يوجد موظفين</option>';
           showMessage(
             kpiMessageArea,
             "لا يوجد موظفين مسجلين تحت إدارتك.",
@@ -1692,13 +1701,13 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       // تعبئة القائمة
       populateSelect(ppeItemSelect, availableItems, "id", "name");
 
-      // (إضافة) عرض عدد الأصناف المتاحة في أول خيار كنوع من التأكيد
+      // (إضافة) عرض عدد الأصناف المتاحة في أول خي-�ر كنوع من التأكيد
       ppeItemSelect.options[0].text = `-- اختر المهمة (${availableItems.length} صنف متاح) --`;
 
       ppeItemSelect.disabled = false;
     } catch (e) {
       console.error(e);
-      ppeItemSelect.innerHTML = '<option value="">⚠️ خi�أ في الاتصال</option>';
+      ppeItemSelect.innerHTML = '<option value="">⚠️ خطاء فى الاتصال</option>';
       showMessage(
         ppeMainMessage,
         "فشل جلب محتويات المخزن. حاول تغيير المشروع واختياره مرة أخرى.",
@@ -3272,7 +3281,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   if (monHazBtn) monHazBtn.addEventListener("click", searchHazards);
 
   // =================================================================
-  // --- (جديد) وحدة تقييم المقاولين ---
+  // --- (جديد) وحدة تقييم المقاوليi� ---
   // =================================================================
 
   const contEvalProject = document.getElementById("cont-eval-project");
@@ -3439,7 +3448,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       });
 
       if (validationErr) {
-        alert("تأكد من صحة الدرجات (لا تتجاوز الحد الأقi�ى).");
+        alert("تأكد من صحة الدرجات (لا تتجاوز الحد الأقصى).");
         return;
       }
 
@@ -4405,7 +4414,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
   function initContractorPage() {
     const now = new Date();
-    // تنسيق التاريخ والوقت
+    //
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
@@ -4853,5 +4862,166 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   if (anaProject) anaProject.addEventListener("change", updateAnaContractors);
   if (anaSearchBtn) anaSearchBtn.addEventListener("click", performAnaSearch);
   if (anaPrintBtn) anaPrintBtn.addEventListener("click", handlePrintPDF);
+
+  // =================================================================
+  // --- منطق تقارير الموظفين (Employee Reports) ---
+  // =================================================================
+
+  const empSearchInput = document.getElementById("emp-search-input");
+  const empSearchResults = document.getElementById("emp-search-results");
+  const empReportContainer = document.getElementById("emp-report-container");
+  const empPrintBtn = document.getElementById("emp-print-btn");
+
+  let allEmployeesCache = []; // لتخزين القائمة محلياً
+
+  // دالة التهيئة (تستدعى من showSection)
+  function initEmployeeReports() {
+    // تحميل القائمة لو مش موجودة
+    if (allEmployeesCache.length === 0) {
+      callApi("getAllEmployeesForSearch", {}).then((r) => {
+        if (r.status === "success") allEmployeesCache = r.list;
+      });
+    }
+    // تصفير البحث
+    if (empSearchInput) empSearchInput.value = "";
+    if (empReportContainer) empReportContainer.style.display = "none";
+    if (empPrintBtn) empPrintBtn.style.display = "none";
+  }
+
+  // حدث البحث (Live Search)
+  if (empSearchInput) {
+    empSearchInput.addEventListener("input", function () {
+      const val = this.value.toLowerCase().trim();
+      empSearchResults.innerHTML = "";
+
+      if (val.length < 1) {
+        empSearchResults.style.display = "none";
+        return;
+      }
+
+      const filtered = allEmployeesCache.filter(
+        (e) =>
+          (e.name && e.name.toLowerCase().includes(val)) ||
+          (e.id && String(e.id).includes(val)),
+      );
+
+      if (filtered.length > 0) {
+        empSearchResults.style.display = "block";
+        filtered.forEach((e) => {
+          const div = document.createElement("div");
+          div.className = "search-item";
+          div.innerHTML = `<strong>${e.name}</strong> <small>(${e.project}) - ID: ${e.id}</small>`;
+          div.addEventListener("click", () => {
+            empSearchInput.value = e.name;
+            empSearchResults.style.display = "none";
+            loadEmployeeReport(e.id);
+          });
+          empSearchResults.appendChild(div);
+        });
+      } else {
+        empSearchResults.style.display = "none";
+      }
+    });
+  }
+
+  // دالة تحميل التقرير
+  async function loadEmployeeReport(empId) {
+    showLoader("جاري جلب ملف الموظف...");
+    try {
+      const r = await callApi("getEmployeeFullReport", { empId: empId });
+      if (r.status === "success") {
+        renderEmployeeData(r);
+      } else {
+        alert(r.message);
+      }
+    } catch (e) {
+      alert("خطأ: " + e.message);
+    } finally {
+      hideLoader();
+    }
+  }
+
+  // دالة عرض البيانات
+  function renderEmployeeData(data) {
+    const info = data.info;
+
+    // 1. البيانات الأساسية
+    document.getElementById("r-emp-name").textContent = info.name;
+    document.getElementById("r-emp-id").textContent = info.id;
+    document.getElementById("r-emp-job").textContent = info.job;
+    document.getElementById("r-emp-dept").textContent = info.dept;
+    document.getElementById("r-emp-type").textContent = info.type;
+    document.getElementById("r-emp-proj").textContent = info.proj;
+    document.getElementById("r-emp-join").textContent = info.join;
+
+    // 2. KPI
+    const kpiVal = parseFloat(data.kpi);
+    const kpiEl = document.getElementById("r-emp-kpi-val");
+    const kpiCircle = document.getElementById("r-emp-kpi-circle");
+    kpiEl.textContent = kpiVal + "%";
+
+    if (kpiVal >= 90)
+      kpiCircle.style.borderColor = "#28a745"; // Green
+    else if (kpiVal >= 70)
+      kpiCircle.style.borderColor = "#ffc107"; // Yellow
+    else kpiCircle.style.borderColor = "#dc3545"; // Red
+
+    // 3. الجداول (دالة مساعدة صغيرة للرسم)
+    drawSimpleTable(
+      "r-training-table",
+      ["التاريخ", "الموضوع", "المشروع"],
+      data.training,
+      ["date", "topic", "project"],
+    );
+    drawSimpleTable(
+      "r-ppe-table",
+      ["التاريخ", "الصنف", "الكمية", "المشروع"],
+      data.ppe,
+      ["date", "item", "qty", "project"],
+    );
+    drawSimpleTable(
+      "r-violations-table",
+      ["التاريخ", "الوصف", "الجزاء", "المشروع"],
+      data.violations,
+      ["date", "desc", "penalty", "project"],
+    );
+
+    // إظهار المحتوى
+    empReportContainer.style.display = "block";
+    empPrintBtn.style.display = "block";
+  }
+
+  function drawSimpleTable(containerId, headers, data, keys) {
+    const cont = document.getElementById(containerId);
+    if (data.length === 0) {
+      cont.innerHTML = `<p style="color:#777; text-align:center; padding:10px;">لا توجد بيانات.</p>`;
+      return;
+    }
+    let html = `<table class="results-table" style="width:100%"><thead><tr>`;
+    headers.forEach((h) => (html += `<th>${h}</th>`));
+    html += `</tr></thead><tbody>`;
+
+    data.forEach((row) => {
+      html += `<tr>`;
+      keys.forEach((k) => (html += `<td>${row[k] || "-"}</td>`));
+      html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+    cont.innerHTML = html;
+  }
+
+  // الطباعة
+  if (empPrintBtn) {
+    empPrintBtn.addEventListener("click", () => {
+      const d = new Date();
+      document.getElementById("emp-print-date").textContent =
+        "تاريخ التقرير: " + d.toLocaleDateString("ar-EG");
+      window.print();
+    });
+  }
+
+  // (مهم) أضف استدعاء initEmployeeReports في دالة showSection
+  // ابحث عن showSection وعدل الشرط:
+  // if (sectionId === "EmployeeReports") initEmployeeReports();
 });
 // --- END DOMContentLoaded ---

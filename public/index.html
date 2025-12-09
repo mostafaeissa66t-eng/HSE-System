@@ -2684,6 +2684,149 @@
                         </p>
                     </div>
                 </section>
+                <section
+                    id="EmployeeReports"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <div
+                        class="print-header-only"
+                        style="
+                            display: none;
+                            flex-direction: row-reverse !important;
+                            align-items: center;
+                            justify-content: space-between;
+                            border-bottom: 2px solid #c8102e;
+                            padding-bottom: 10px;
+                            margin-bottom: 20px;
+                        "
+                    >
+                        <img
+                            src="../turnkey.png"
+                            alt="Logo"
+                            style="max-height: 60px"
+                        />
+                        <div style="text-align: center; flex-grow: 1">
+                            <h1
+                                style="
+                                    color: #c8102e;
+                                    margin: 0;
+                                    font-size: 1.5rem;
+                                "
+                            >
+                                تقرير سجل الموظف
+                            </h1>
+                            <p
+                                style="margin: 5px 0 0 0; font-size: 0.9rem"
+                                id="emp-print-date"
+                            ></p>
+                        </div>
+                    </div>
+
+                    <h2 class="no-print">
+                        <i class="fas fa-id-card"></i> ملف الموظف الشامل
+                    </h2>
+
+                    <div class="app-form no-print">
+                        <div class="form-group" style="position: relative">
+                            <label>ابحث باسم الموظف أو الكود:</label>
+                            <input
+                                type="text"
+                                id="emp-search-input"
+                                placeholder="اكتب للبحث..."
+                                autocomplete="off"
+                            />
+                            <div
+                                id="emp-search-results"
+                                class="search-dropdown"
+                                style="display: none"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <div
+                        id="emp-report-container"
+                        style="display: none; margin-top: 20px"
+                    >
+                        <div class="emp-profile-card">
+                            <div class="emp-info-grid">
+                                <div>
+                                    <strong>الاسم:</strong>
+                                    <span id="r-emp-name">-</span>
+                                </div>
+                                <div>
+                                    <strong>الكود:</strong>
+                                    <span id="r-emp-id">-</span>
+                                </div>
+                                <div>
+                                    <strong>الوظيفة:</strong>
+                                    <span id="r-emp-job">-</span>
+                                </div>
+                                <div>
+                                    <strong>القسم:</strong>
+                                    <span id="r-emp-dept">-</span>
+                                </div>
+                                <div>
+                                    <strong>الشركة/التعيين:</strong>
+                                    <span id="r-emp-type">-</span>
+                                </div>
+                                <div>
+                                    <strong>المشروع الحالي:</strong>
+                                    <span id="r-emp-proj">-</span>
+                                </div>
+                                <div>
+                                    <strong>تاريخ التعيين:</strong>
+                                    <span id="r-emp-join">-</span>
+                                </div>
+                            </div>
+
+                            <div class="emp-kpi-box">
+                                <div class="kpi-circle" id="r-emp-kpi-circle">
+                                    <span id="r-emp-kpi-val">0%</span>
+                                </div>
+                                <p>متوسط الأداء (KPI)</p>
+                            </div>
+                        </div>
+
+                        <hr class="divider" />
+
+                        <h3 class="section-title">
+                            <i class="fas fa-chalkboard-teacher"></i> سجل
+                            التدريب
+                        </h3>
+                        <div id="r-training-table" class="report-table-wrapper">
+                            لا يوجد سجلات تدريب.
+                        </div>
+
+                        <h3 class="section-title">
+                            <i class="fas fa-hard-hat"></i> سجل العهدة والمهمات
+                            (PPE)
+                        </h3>
+                        <div id="r-ppe-table" class="report-table-wrapper">
+                            لا يوجد سجلات استلام.
+                        </div>
+
+                        <h3 class="section-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            المخالفات والجزاءات
+                        </h3>
+                        <div
+                            id="r-violations-table"
+                            class="report-table-wrapper"
+                        >
+                            لا يوجد مخالفات مسجلة.
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="emp-print-btn"
+                        class="btn no-print"
+                        style="margin-top: 20px; width: 100%; display: none"
+                    >
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </section>
             </main>
         </div>
 

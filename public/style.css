@@ -645,39 +645,64 @@ body {
 /* --- (إضافة) تحسين جدول التصاريح والمتابعة --- */
 /* ========================================= */
 
-/* 1. تنسيق فلاتر البحث (سطر واحد متناسق) */
-.filter-controls {
-    display: flex;
+.filter-controls { 
+    background-color: #fdfdfd; 
+    padding: 15px 20px; 
+    border: 1px solid var(--medium-gray); 
+    border-radius: 6px; 
+    margin-bottom: 20px; 
+
+    /* المحاذاة العامة */
+    display: flex; 
+    align-items: flex-end; 
+    gap: 15px; 
+
+    /* (هام) السماح بالالتفاف لضمان عدم خروج العناصر */
+    flex-wrap: wrap !important; 
+}
+
+/* ضبط العناصر لتأخذ مساحتها الطبيعية */
+.filter-controls .form-group { 
+    margin-bottom: 0; 
+    min-width: 150px; 
+    flex: 1 1 auto; /* مرونة في الحجم */
+}
+
+/* تنسيق مجموعة التاريخ (من - إلى) لتبقى متماسكة */
+.filter-controls .form-row { 
+    display: flex; 
+    gap: 10px; 
+    flex: 2 1 auto; /* مرونة أكبر */
+    width: auto; 
+    margin: 0; 
+    /* إجبار التاريخين يبقوا جمب بعض */
+    flex-wrap: nowrap !important; 
     align-items: flex-end;
-    gap: 15px;
-    flex-wrap: nowrap; /* منع النزول لسطر جديد */
 }
 
-.filter-controls .form-group {
-    margin-bottom: 0;
-    min-width: 150px;
-    flex: 1;
-}
-
-/* تنسيق مجموعة التاريخ */
-.filter-controls .form-row {
-    display: flex;
-    gap: 10px;
-    flex: 2;
-    width: auto;
-    margin: 0;
-    flex-wrap: nowrap !important;
-    align-items: flex-end;
-}
-.filter-controls .form-row .form-group {
-    min-width: 120px;
-}
-
-.filter-controls .btn {
-    height: 42px;
-    margin-top: 0;
-    min-width: 100px;
+/* ضبط مربعات الاختيار (دمج المشاريع وغيرها) */
+.filter-controls .checkbox-group {
+    display: flex; 
+    align-items: center; 
+    height: 42px; 
+    background: #fff; 
+    border: 1px solid var(--medium-gray); 
+    border-radius: 5px; 
+    padding: 0 15px; 
+    margin-bottom: 0; 
+    white-space: nowrap; 
     flex-shrink: 0;
+
+    /* (إضافة) أقصى عرض لضمان عدم التمدد الزائد */
+    max-width: 100%;
+}
+
+/* ضبط الزر */
+.filter-controls .btn { 
+    height: 42px; 
+    margin-top: 0; 
+    min-width: 100px; 
+    flex-shrink: 0; 
 }
 
 /* 2. إصلاح كروت "إغلاق التصاريح" */
@@ -860,6 +885,143 @@ body {
     color: var(--primary-color);
     border-bottom: 2px solid #eee;
     padding-bottom: 5px;
+}
+
+/* ========================================= */
+/* --- Mobile Responsive Fixes (Employee Report) --- */
+/* ========================================= */
+@media (max-width: 768px) {
+
+    /* 1. تعديل كارت الموظف ليظهر عمودياً */
+    .emp-profile-card {
+        flex-direction: column-reverse; /* يعكس الترتيب: الـ KPI فوق والبيانات تحت */
+        align-items: center;
+        text-align: center;
+        gap: 20px;
+        padding: 15px;
+    }
+
+    /* 2. تعديل شبكة البيانات لتكون عمود واحد */
+    .emp-info-grid {
+        grid-template-columns: 1fr; /* عمود واحد */
+        width: 100%;
+        text-align: right; /* الحفاظ على محاذاة النص لليمين */
+        gap: 10px;
+    }
+
+    /* 3. تعديل صندوق الـ KPI */
+    .emp-kpi-box {
+        margin-right: 0;
+        padding-right: 0;
+        border-right: none; /* إزالة الخط الجانبي */
+        border-bottom: 1px solid #eee; /* إضافة خط سفلي */
+        padding-bottom: 20px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* 4. إجبار جداول التقرير على السكرول الأفقي */
+    /* (مهم جداً عشان الجدول ميبوظش الصفحة) */
+    .report-table-wrapper {
+        display: block;
+        width: 100%;
+        overflow-x: auto; /* يسمح بالسكرول */
+        -webkit-overflow-scrolling: touch; /* نعومة السكرول في الآيفون */
+        margin-bottom: 15px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+    }
+
+    /* ضمان أن الجدول داخل السكرول محتفظ بعرضه */
+    .report-table-wrapper table {
+        min-width: 600px; /* أقل عرض للجدول عشان الكلام ميتعصرش */
+    }
+}
+
+/* ========================================= */
+/* --- إصلاحات الموبايل (Mobile Fixes - Final) --- */
+/* ========================================= */
+@media (max-width: 768px) {
+
+    /* 1. الحاوية الرئيسية للفلاتر: تحويلها لعمود */
+    .filter-controls {
+        display: flex !important;
+        flex-direction: column !important; /* رص العناصر فوق بعض */
+        align-items: stretch !important;   /* تمديد العناصر لعرض الشاشة */
+        height: auto !important;           /* السماح بزيادة الطول */
+        gap: 10px !important;
+        flex-wrap: nowrap !important;
+        padding: 15px 10px !important;     /* تقليل الحواف الجانبية */
+    }
+
+    /* 2. إجبار كل عنصر داخل الفلاتر أن يأخذ السطر كاملاً */
+    .filter-controls > * {
+        width: 100% !important;
+        margin: 0 0 10px 0 !important; /* مسافة سفلية */
+        flex: none !important;
+        max-width: 100% !important;
+    }
+
+    /* 3. إصلاح خاص لمربعات الاختيار (Checkboxes) التي تخرج عن الإطار */
+    /* نستهدف أي ديف داخلي أو كلاس checkbox-group */
+    .filter-controls .checkbox-group,
+    .filter-controls div[style*="display: flex"] {
+        display: flex !important;
+        flex-wrap: wrap !important; /* السماح بنزول الكلام لسطر جديد */
+        white-space: normal !important; /* السماح بكسر السطر */
+        height: auto !important;        /* ارتفاع تلقائي */
+        min-height: 45px !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        border: 1px solid #dee2e6 !important; /* إضافة حدود لتمييزها */
+        border-radius: 5px !important;
+        background-color: #fff !important;
+        padding: 5px 10px !important;
+    }
+
+    /* 4. إصلاح النصوص داخل التشيك بوكس */
+    .filter-controls label {
+        font-size: 0.9rem !important;
+        margin: 0 !important;
+        display: inline-block !important;
+    }
+
+    /* 5. مجموعة التاريخ (من - إلى) نجعلها في سطر واحد مقسوم */
+    .filter-controls .form-row {
+        display: flex !important;
+        flex-direction: row !important; 
+        gap: 10px !important;
+        width: 100% !important;
+    }
+    .filter-controls .form-row .form-group {
+        width: 50% !important; /* كل تاريخ ياخد نص الشاشة */
+        margin: 0 !important;
+    }
+
+    /* 6. زر العرض */
+    #ana-search-btn {
+        width: 100% !important;
+        margin-top: 5px !important;
+    }
+
+    /* 7. إصلاح خيارات PDF (التي في الأسفل) */
+    .export-controls .columns-selector {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    .export-controls .columns-selector label {
+        width: 48% !important; /* زرارين جمب بعض */
+        font-size: 0.8rem !important;
+        margin: 0 !important;
+        display: flex;
+        align-items: center;
+        background: #fff;
+        padding: 5px;
+        border: 1px solid #eee;
+    }
 }
 
 /* ========================================= */

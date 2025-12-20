@@ -2827,6 +2827,715 @@
                         <i class="fas fa-print"></i> طباعة التقرير
                     </button>
                 </section>
+                <section
+                    id="AccidentReport"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-car-crash"></i> تقرير حادث جديد
+                        (Accident Report)
+                    </h2>
+
+                    <form id="accident-form" class="app-form">
+                        <div class="card">
+                            <h3>
+                                <i class="fas fa-info-circle"></i> البيانات
+                                الأساسية
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>اسم المبلغ (Reporter):</label>
+                                    <input
+                                        type="text"
+                                        id="acc-reporter"
+                                        readonly
+                                        style="background: #eee"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>تاريخ الحادث:</label>
+                                    <input type="date" id="acc-date" required />
+                                </div>
+                                <div class="form-group">
+                                    <label>وقت الحادث:</label>
+                                    <input type="time" id="acc-time" required />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select
+                                    id="acc-project"
+                                    required
+                                    onchange="loadProjectDataForAccident()"
+                                >
+                                    <option value="">اختر المشروع...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3><i class="fas fa-tags"></i> تصنيف الحادث</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>نوع الحادث:</label>
+                                    <select
+                                        id="acc-class"
+                                        required
+                                        onchange="toggleInjuryCount()"
+                                    >
+                                        <option value="">
+                                            اختر التصنيف...
+                                        </option>
+                                        <option value="Property Damage">
+                                            Property Damage
+                                        </option>
+                                        <option value="Environmental Incident">
+                                            Environmental Incident
+                                        </option>
+                                        <option value="First Aid Injury">
+                                            First Aid Injury
+                                        </option>
+                                        <option value="Medical Treatment">
+                                            Medical Treatment
+                                        </option>
+                                        <option value="LTI">LTI</option>
+                                        <option value="Fatality">
+                                            Fatality
+                                        </option>
+                                        <option value="Nearmiss">
+                                            Nearmiss
+                                        </option>
+                                    </select>
+                                </div>
+                                <div
+                                    class="form-group"
+                                    id="acc-injuries-count-group"
+                                    style="display: none"
+                                >
+                                    <label>عدد المصابين:</label>
+                                    <input
+                                        type="number"
+                                        id="acc-injuries-count"
+                                        min="1"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3><i class="fas fa-pen"></i> تفاصيل الحادث</h3>
+                            <div class="form-group">
+                                <label
+                                    >الروتين اليومي لهذا العمل (Routine
+                                    Activity):</label
+                                >
+                                <textarea id="acc-routine" rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>ماذا حدث؟ (What Happened):</label>
+                                <textarea
+                                    id="acc-what-happened"
+                                    rows="3"
+                                    required
+                                ></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label
+                                    >متى ولمن تم الإبلاغ؟ (Notification):</label
+                                >
+                                <input type="text" id="acc-notification" />
+                            </div>
+                            <div class="form-group">
+                                <label>وصف الإصابات / الأضرار:</label>
+                                <textarea
+                                    id="acc-damage-desc"
+                                    rows="2"
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>
+                                <i class="fas fa-user-injured"></i> الشخص المعني
+                                بالحادث (Victim / Primary)
+                            </h3>
+
+                            <div class="form-group">
+                                <label>النوع:</label>
+                                <select
+                                    id="acc-vic-type"
+                                    onchange="updatePersonInputs('acc-vic')"
+                                >
+                                    <option value="">اختر...</option>
+                                    <option value="Employee">
+                                        موظف (Employee)
+                                    </option>
+                                    <option value="Contractor">
+                                        مقاول (Contractor)
+                                    </option>
+                                    <option value="Visitor">
+                                        زائر/عامة (Visitor/Public)
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div
+                                class="form-group vic-input-group"
+                                id="acc-vic-emp-group"
+                                style="display: none"
+                            >
+                                <label>اسم الموظف:</label>
+                                <select
+                                    id="acc-vic-emp-select"
+                                    class="searchable-select"
+                                >
+                                    <option value="">اختر الموظف...</option>
+                                </select>
+                                <div class="checkbox-group">
+                                    <input
+                                        type="checkbox"
+                                        id="acc-vic-emp-all"
+                                        onchange="toggleAllEmployees('acc-vic')"
+                                    />
+                                    <label
+                                        for="acc-vic-emp-all"
+                                        style="font-weight: normal"
+                                        >عرض كل موظفي الشركة</label
+                                    >
+                                </div>
+                            </div>
+
+                            <div
+                                class="form-group vic-input-group"
+                                id="acc-vic-cont-group"
+                                style="display: none"
+                            >
+                                <label>اسم المقاول (الشركة):</label>
+                                <select id="acc-vic-cont-select">
+                                    <option value="">اختر المقاول...</option>
+                                </select>
+                                <div
+                                    style="
+                                        margin-top: 10px;
+                                        display: flex;
+                                        gap: 10px;
+                                    "
+                                >
+                                    <input
+                                        type="text"
+                                        id="acc-vic-nid"
+                                        placeholder="الرقم القومي للبحث"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="btn-secondary btn-small"
+                                        onclick="searchPersonByNID('acc-vic')"
+                                    >
+                                        <i class="fas fa-search"></i> بحث
+                                    </button>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="acc-vic-cont-name"
+                                    placeholder="اسم العامل (يكتب يدوياً أو يظهر بالبحث)"
+                                    style="margin-top: 5px"
+                                />
+                            </div>
+
+                            <div
+                                class="form-group vic-input-group"
+                                id="acc-vic-vis-group"
+                                style="display: none"
+                            >
+                                <label>بيانات الزائر:</label>
+                                <input
+                                    type="text"
+                                    id="acc-vic-vis-nid"
+                                    placeholder="الرقم القومي"
+                                />
+                                <input
+                                    type="text"
+                                    id="acc-vic-vis-name"
+                                    placeholder="الاسم بالكامل"
+                                    style="margin-top: 5px"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>
+                                <i class="fas fa-users-cog"></i> الأشخاص
+                                المعنيون والشهود
+                            </h3>
+
+                            <div class="persons-grid-container">
+                                <div class="person-box">
+                                    <div class="person-box-header">
+                                        <h4>
+                                            <i class="fas fa-users"></i> الأشخاص
+                                            المتداخلين (Involved)
+                                        </h4>
+                                        <button
+                                            type="button"
+                                            class="btn-box-add"
+                                            onclick="openPersonModal('involved')"
+                                        >
+                                            <i class="fas fa-plus"></i> إضافة
+                                        </button>
+                                    </div>
+                                    <div class="list-wrapper">
+                                        <ul
+                                            id="acc-involved-list"
+                                            class="styled-person-list"
+                                        ></ul>
+                                        <p
+                                            id="involved-empty-msg"
+                                            class="empty-msg"
+                                        >
+                                            لم يتم إضافة أشخاص...
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="person-box">
+                                    <div class="person-box-header">
+                                        <h4>
+                                            <i class="fas fa-eye"></i> الشهود
+                                            (Witnesses)
+                                        </h4>
+                                        <button
+                                            type="button"
+                                            class="btn-box-add"
+                                            onclick="openPersonModal('witness')"
+                                        >
+                                            <i class="fas fa-plus"></i> إضافة
+                                        </button>
+                                    </div>
+                                    <div class="list-wrapper">
+                                        <ul
+                                            id="acc-witness-list"
+                                            class="styled-person-list"
+                                        ></ul>
+                                        <p
+                                            id="witness-empty-msg"
+                                            class="empty-msg"
+                                        >
+                                            لم يتم إضافة شهود...
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>
+                                <i class="fas fa-search-plus"></i> تحليل الأسباب
+                                (Root Cause Analysis)
+                            </h3>
+
+                            <div class="form-group">
+                                <label>أسباب مباشرة (Direct Causes):</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="acc-direct-input" />
+                                    <button
+                                        type="button"
+                                        class="btn-secondary btn-small"
+                                        onclick="addToList('acc-direct-input', 'acc-direct-list')"
+                                    >
+                                        إضافة
+                                    </button>
+                                </div>
+                                <ul
+                                    id="acc-direct-list"
+                                    class="simple-list"
+                                ></ul>
+                            </div>
+
+                            <div class="form-group">
+                                <label
+                                    >أسباب غير مباشرة (Indirect Causes):</label
+                                >
+                                <div class="input-with-button">
+                                    <input
+                                        type="text"
+                                        id="acc-indirect-input"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="btn-secondary btn-small"
+                                        onclick="addToList('acc-indirect-input', 'acc-indirect-list')"
+                                    >
+                                        إضافة
+                                    </button>
+                                </div>
+                                <ul
+                                    id="acc-indirect-list"
+                                    class="simple-list"
+                                ></ul>
+                            </div>
+
+                            <div class="form-group">
+                                <label>أسباب جذرية (Root Causes):</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="acc-root-input" />
+                                    <button
+                                        type="button"
+                                        class="btn-secondary btn-small"
+                                        onclick="addToList('acc-root-input', 'acc-root-list')"
+                                    >
+                                        إضافة
+                                    </button>
+                                </div>
+                                <ul id="acc-root-list" class="simple-list"></ul>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>
+                                <i class="fas fa-check-circle"></i> الإجراءات
+                                المتخذة (Control Measures)
+                            </h3>
+
+                            <div class="form-group">
+                                <label>إجراءات فورية (Immediate):</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="acc-imm-input" />
+                                    <button
+                                        type="button"
+                                        class="btn-secondary btn-small"
+                                        onclick="addToList('acc-imm-input', 'acc-imm-list')"
+                                    >
+                                        إضافة
+                                    </button>
+                                </div>
+                                <ul id="acc-imm-list" class="simple-list"></ul>
+                            </div>
+
+                            <div class="form-group">
+                                <label>إجراءات قصيرة المدى (Short-term):</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="acc-short-input" />
+                                    <button
+                                        type="button"
+                                        class="btn-secondary btn-small"
+                                        onclick="addToList('acc-short-input', 'acc-short-list')"
+                                    >
+                                        إضافة
+                                    </button>
+                                </div>
+                                <ul
+                                    id="acc-short-list"
+                                    class="simple-list"
+                                ></ul>
+                            </div>
+
+                            <div class="form-group">
+                                <label>إجراءات بعيدة المدى (Long-term):</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="acc-long-input" />
+                                    <button
+                                        type="button"
+                                        class="btn-secondary btn-small"
+                                        onclick="addToList('acc-long-input', 'acc-long-list')"
+                                    >
+                                        إضافة
+                                    </button>
+                                </div>
+                                <ul id="acc-long-list" class="simple-list"></ul>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>
+                                <i class="fas fa-tasks"></i> خطة العمل (Action
+                                Plan)
+                            </h3>
+
+                            <div class="results-table-container">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="min-width: 200px">
+                                                الإجراء التصحيحي
+                                            </th>
+                                            <th style="min-width: 150px">
+                                                المسؤول
+                                            </th>
+                                            <th style="min-width: 130px">
+                                                تاريخ التنفيذ
+                                            </th>
+                                            <th style="width: 50px">حذف</th>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    id="plan-action"
+                                                    placeholder="الإجراء..."
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    id="plan-resp"
+                                                    placeholder="المسؤول..."
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="date"
+                                                    id="plan-date"
+                                                />
+                                            </td>
+                                            <td style="text-align: center">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-secondary btn-small"
+                                                    onclick="addActionPlanRow()"
+                                                >
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="acc-plan-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            style="width: 100%; margin-top: 20px"
+                        >
+                            حفظ التقرير
+                        </button>
+                    </form>
+                </section>
+
+                <section
+                    id="MonitorAccidents"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-folder-open"></i> الحوادث المفتوحة
+                        (Open Accidents)
+                    </h2>
+                    <div class="app-form">
+                        <button
+                            class="btn btn-secondary"
+                            onclick="loadUserOpenAccidents()"
+                            style="margin-bottom: 15px"
+                        >
+                            <i class="fas fa-sync"></i> تحديث القائمة
+                        </button>
+                        <div
+                            id="open-accidents-list"
+                            class="results-table-container"
+                        >
+                            <p style="text-align: center">جاري التحميل...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <div id="person-modal" class="modal" style="display: none">
+                    <div class="modal-content">
+                        <span class="close" onclick="closePersonModal()"
+                            >&times;</span
+                        >
+                        <h3 id="person-modal-title">إضافة شخص</h3>
+
+                        <div class="form-group">
+                            <label>النوع:</label>
+                            <select
+                                id="modal-type"
+                                onchange="updatePersonInputs('modal')"
+                            >
+                                <option value="">اختر...</option>
+                                <option value="Employee">موظف</option>
+                                <option value="Contractor">مقاول</option>
+                                <option value="Visitor">زائر/عامة</option>
+                            </select>
+                        </div>
+
+                        <div
+                            id="modal-emp-group"
+                            class="vic-input-group"
+                            style="display: none"
+                        >
+                            <label>اسم الموظف:</label>
+                            <select id="modal-emp-select">
+                                <option>اختر الموظف...</option>
+                            </select>
+                            <div class="checkbox-group">
+                                <input
+                                    type="checkbox"
+                                    id="modal-emp-all"
+                                    onchange="toggleAllEmployees('modal')"
+                                />
+                                <label for="modal-emp-all">كل الموظفين</label>
+                            </div>
+                        </div>
+
+                        <div
+                            id="modal-cont-group"
+                            class="vic-input-group"
+                            style="display: none"
+                        >
+                            <label>اسم المقاول:</label>
+                            <select id="modal-cont-select">
+                                <option>اختر المقاول...</option>
+                            </select>
+                            <div
+                                style="display: flex; gap: 5px; margin-top: 5px"
+                            >
+                                <input
+                                    type="text"
+                                    id="modal-nid"
+                                    placeholder="رقم قومي"
+                                />
+                                <button
+                                    type="button"
+                                    class="btn-secondary btn-small"
+                                    onclick="searchPersonByNID('modal')"
+                                >
+                                    بحث
+                                </button>
+                            </div>
+                            <input
+                                type="text"
+                                id="modal-cont-name"
+                                placeholder="الاسم"
+                                style="margin-top: 5px"
+                            />
+                        </div>
+
+                        <div
+                            id="modal-vis-group"
+                            class="vic-input-group"
+                            style="display: none"
+                        >
+                            <label>بيانات الزائر:</label>
+                            <input
+                                type="text"
+                                id="modal-vis-nid"
+                                placeholder="رقم قومي"
+                            />
+                            <input
+                                type="text"
+                                id="modal-vis-name"
+                                placeholder="الاسم"
+                                style="margin-top: 5px"
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            onclick="confirmAddPerson()"
+                            style="margin-top: 10px; width: 100%"
+                        >
+                            إضافة
+                        </button>
+                    </div>
+                </div>
+                <section
+                    id="MYAccidents"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <div
+                        class="print-header-only"
+                        style="
+                            display: none;
+                            border-bottom: 2px solid #c8102e;
+                            padding-bottom: 10px;
+                            margin-bottom: 20px;
+                            align-items: center;
+                            justify-content: space-between;
+                        "
+                    >
+                        <img
+                            src="../turnkey.png"
+                            alt="Logo"
+                            style="max-height: 60px"
+                        />
+                        <div style="text-align: center; flex-grow: 1">
+                            <h1
+                                style="
+                                    color: #c8102e;
+                                    margin: 0;
+                                    font-size: 1.8rem;
+                                "
+                            >
+                                سجل الحوادث (Accident Log)
+                            </h1>
+                            <p
+                                style="margin: 5px 0 0 0; font-size: 0.9rem"
+                                id="acc-print-date"
+                            ></p>
+                        </div>
+                    </div>
+
+                    <h2 class="no-print">
+                        <i class="fas fa-file-medical-alt"></i> سجل الحوادث
+                    </h2>
+
+                    <div class="app-form no-print">
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select id="mon-acc-project">
+                                    <option value="ALL_ACCESSIBLE">الكل</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>من:</label>
+                                    <input type="date" id="mon-acc-from" />
+                                </div>
+                                <div class="form-group">
+                                    <label>إلى:</label>
+                                    <input type="date" id="mon-acc-to" />
+                                </div>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="mon-acc-open" />
+                                <label
+                                    for="mon-acc-open"
+                                    style="font-weight: normal"
+                                    >المفتوحة فقط</label
+                                >
+                            </div>
+                            <button type="button" id="mon-acc-btn" class="btn">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="mon-acc-results" class="results-table-container">
+                        <p
+                            style="
+                                text-align: center;
+                                padding: 20px;
+                                color: #666;
+                            "
+                        >
+                            حدد معايير البحث...
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="mon-acc-print-btn"
+                        class="btn btn-secondary no-print"
+                        style="width: 100%; margin-top: 15px; display: none"
+                    >
+                        <i class="fas fa-print"></i> طباعة المحدد
+                    </button>
+                </section>
             </main>
         </div>
 

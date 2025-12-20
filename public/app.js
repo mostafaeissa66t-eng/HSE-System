@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ContractorAnalytics: "تحليلات أداء المقاولين",
     EmployeeReports: "تقارير الموظفين", // (جديد)
     AccidentReport: "تسجيل حادث",
-    MonitorAccidents: "حوادث مفتوحة",
+    MonitorAccidents: "تقارير مفتوحة",
     NewNearMiss: "Near Miss", // Example
     MYAccidents: "سجل الحوادث",
   };

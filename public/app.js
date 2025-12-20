@@ -163,6 +163,9 @@ document.addEventListener("DOMContentLoaded", function () {
     ContractorAnalytics: "fas fa-chart-pie",
     EmployeeReports: "fas fa-id-card", // (جديد)
     NewNearMiss: "fas fa-exclamation-triangle", // Example
+    AccidentReport: "fas fa-car-crash",
+    MonitorAccidents: "fas fa-file-medical-alt",
+    MYAccidents: "fas fa-folder-open",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -186,7 +189,10 @@ document.addEventListener("DOMContentLoaded", function () {
     NewContractor: "تسجيل مقاولين (اشتراطات)",
     ContractorAnalytics: "تحليلات أداء المقاولين",
     EmployeeReports: "تقارير الموظفين", // (جديد)
+    AccidentReport: "تسجيل حادث",
+    MonitorAccidents: "حوادث مفتوحة",
     NewNearMiss: "Near Miss", // Example
+    MYAccidents: "سجل الحوادث",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -255,6 +261,12 @@ document.addEventListener("DOMContentLoaded", function () {
       title: "إدارة الموظفين",
       icon: "fas fa-users",
       children: ["EmployeeReports"], // "EmployeeReports" هو id السكشن
+    },
+    {
+      type: "group",
+      title: "إدارة الحوادث",
+      icon: "fas fa-ambulance", // أيقونة المجموعة
+      children: ["AccidentReport", "MonitorAccidents", "MYAccidents"],
     },
   ];
 
@@ -665,6 +677,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
       if (sectionId === "EmployeeReports") initEmployeeReports();
+      if (sectionId === "AccidentReport") initAccidentPage();
+      if (sectionId === "MonitorAccidents") loadUserOpenAccidents();
+      if (sectionId === "MYAccidents") initMonitorAccidentsPage();
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -1252,7 +1267,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const employeeId = kpiEmployeeSelect.value;
     const periodValue = kpiPeriodSelect.value; // "YYYY-MM"
     kpiEmployeeJobTitle.textContent = "";
-    kpiListContainer.innerHTML = "<p>الرجاء اختيار الموظف وفترة التقييم...</p>";
+    kpiListContainer.innerHTML =
+      "<p> الرجاء اختيار الموظف وفترة التقييم...</p>";
     kpiSaveBtn.style.display = "none";
     showMessage(kpiMessageArea, "", true);
     showMessage(kpiSaveMessage, "", true);
@@ -2332,7 +2348,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     // 1. فلترة الموظفين
     filterTrnEmployees();
 
-    // 2. فلترة شركات المقاولين (استدعاء السيرفر)
+    // 2. فلترة شرك����ت المقاولين (استدعاء السيرفر)
     if (proj) {
       trnContCompany.innerHTML = "<option>جاري التحميل...</option>";
       callApi("getContractorsForProject", { projectName: proj })
@@ -2561,7 +2577,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   async function initObservationPage() {
     console.log("بدء تشغيل صفحة الملاحظات...");
 
-    // 1. ضبط التاريخ والاسم (يدوياً لضمان الشكل الصحيح)
+    // 1. ضبط التاريخ والاسم (يدو=�ا-y-� لضمان الشكل الصحيح)
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0"); // شهر 1 يبقى 01
@@ -4821,7 +4837,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
   // دالة الطباعة (PDF)
   function handlePrintPDF() {
-    // 1. معرفة الأعمدة المختارة
+    // 1. معرفة الe�عمدة المختارة
     const checkboxes = document.querySelectorAll(
       '.columns-selector input[type="checkbox"]',
     );
@@ -5023,5 +5039,663 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   // (مهم) أضف استدعاء initEmployeeReports في دالة showSection
   // ابحث عن showSection وعدل الشرط:
   // if (sectionId === "EmployeeReports") initEmployeeReports();
+  // =================================================================
+  // --- (جديد) وحدة تسجيل ومتابعة الحوادث (Accident Module) ---
+  // =================================================================
+
+  // Selectors
+  const accForm = document.getElementById("accident-form");
+  const accReporter = document.getElementById("acc-reporter");
+  const accDate = document.getElementById("acc-date");
+  const accTime = document.getElementById("acc-time");
+  const accProject = document.getElementById("acc-project");
+  const accClass = document.getElementById("acc-class");
+  const accInjuriesGroup = document.getElementById("acc-injuries-count-group");
+  const accInjuriesCount = document.getElementById("acc-injuries-count");
+  // Text Areas
+  const accRoutine = document.getElementById("acc-routine");
+  const accWhatHappened = document.getElementById("acc-what-happened");
+  const accNotification = document.getElementById("acc-notification");
+  const accDamageDesc = document.getElementById("acc-damage-desc");
+  // Victim Selectors
+  const accVicType = document.getElementById("acc-vic-type");
+  const accVicEmpSelect = document.getElementById("acc-vic-emp-select");
+  const accVicEmpAll = document.getElementById("acc-vic-emp-all");
+  const accVicContSelect = document.getElementById("acc-vic-cont-select");
+  const accVicNid = document.getElementById("acc-vic-nid");
+  const accVicContName = document.getElementById("acc-vic-cont-name");
+  const accVicVisNid = document.getElementById("acc-vic-vis-nid");
+  const accVicVisName = document.getElementById("acc-vic-vis-name");
+  // Lists Containers
+  const accInvolvedList = document.getElementById("acc-involved-list");
+  const accWitnessList = document.getElementById("acc-witness-list");
+  const accDirectList = document.getElementById("acc-direct-list");
+  const accIndirectList = document.getElementById("acc-indirect-list");
+  const accRootList = document.getElementById("acc-root-list");
+  const accImmList = document.getElementById("acc-imm-list");
+  const accShortList = document.getElementById("acc-short-list");
+  const accLongList = document.getElementById("acc-long-list");
+  const accPlanBody = document.getElementById("acc-plan-body");
+
+  // Modal Selectors
+  const personModal = document.getElementById("person-modal");
+  const modalType = document.getElementById("modal-type");
+  const modalEmpSelect = document.getElementById("modal-emp-select");
+  const modalEmpAll = document.getElementById("modal-emp-all");
+  const modalContSelect = document.getElementById("modal-cont-select");
+  const modalNid = document.getElementById("modal-nid");
+  const modalContName = document.getElementById("modal-cont-name");
+  const modalVisNid = document.getElementById("modal-vis-nid");
+  const modalVisName = document.getElementById("modal-vis-name");
+
+  // Data
+  let accInvolvedData = [];
+  let accWitnessData = [];
+  let accActionPlanData = [];
+  let currentModalContext = ""; // 'involved' or 'witness'
+
+  // --- 1. التهيئة (Init) ---
+  async function initAccidentPage() {
+    console.log("Accident Page Init...");
+
+    // ضبط الوقت والتاريخ والمبلغ
+    const now = new Date();
+    if (accDate) accDate.value = now.toLocaleDateString("en-CA");
+
+    // ضبط الوقت (HH:MM)
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    if (accTime) accTime.value = `${hh}:${mm}`;
+
+    if (accReporter && currentUser) accReporter.value = currentUser.username;
+
+    // تحميل المشاريع
+    if (accProject && accProject.options.length <= 1) {
+      if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+        // استخدام الكاش الموجود
+        const userProj = (currentUser.projects || "").toString();
+        const acc =
+          userProj === "ALL"
+            ? ppeLocations
+            : ppeLocations.filter((p) => userProj.includes(p));
+        fillSelect(accProject, acc);
+      } else {
+        // طلب جديد
+        try {
+          const r = await callApi("getInventoryInitData", {
+            userInfo: currentUser,
+          });
+          if (r.status === "success") {
+            ppeLocations = r.locations;
+            ppeEmployees = r.employees;
+            ppeContractors = r.contractors;
+            const userProj = (currentUser.projects || "").toString();
+            const acc =
+              userProj === "ALL"
+                ? r.locations
+                : r.locations.filter((p) => userProj.includes(p));
+            fillSelect(accProject, acc);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    // تصفير القوائم
+    accInvolvedData = [];
+    accWitnessData = [];
+    accActionPlanData = [];
+    renderSimplePersonList("acc-involved-list", []);
+    renderSimplePersonList("acc-witness-list", []);
+    renderActionPlan();
+
+    // تصفير قوائم النصوص
+    document
+      .querySelectorAll(".simple-list")
+      .forEach((ul) => (ul.innerHTML = ""));
+  }
+
+  // --- 2. تحميل بيانات المشروع (للمقاولين والموظفين) ---
+  window.loadProjectDataForAccident = async function () {
+    const proj = accProject.value;
+    if (!proj) return;
+
+    // تحديث قائمة الموظفين (للضحية)
+    updateAccEmployeeSelect(accVicEmpSelect, accVicEmpAll.checked, proj);
+
+    // تحديث قائمة المقاولين (للضحية)
+    accVicContSelect.innerHTML = "<option>جاري التحميل...</option>";
+    try {
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      if (r.contractors) {
+        fillSelect(accVicContSelect, r.contractors);
+        fillSelect(modalContSelect, r.contractors); // نملأ المودال بالمرة
+      }
+    } catch (e) {
+      accVicContSelect.innerHTML = "<option>خطأ</option>";
+    }
+  };
+
+  // دالة تحديث قائمة الموظفين (عامة)
+  function updateAccEmployeeSelect(selectEl, showAll, projName) {
+    selectEl.innerHTML = '<option value="">-- اختر --</option>';
+    if (typeof ppeEmployees === "undefined") return;
+
+    const list = showAll
+      ? ppeEmployees
+      : ppeEmployees.filter((e) => e.project === projName);
+
+    list.forEach((e) => {
+      const opt = new Option(`${e.name} (${showAll ? e.project : ""})`, e.name); // Value is Name
+      opt.dataset.id = e.id;
+      opt.dataset.company = "السويدي";
+      selectEl.add(opt);
+    });
+  }
+
+  // --- 3. UI Toggles ---
+  window.toggleInjuryCount = function () {
+    const val = accClass.value;
+    if (
+      val === "Property Damage" ||
+      val === "Nearmiss" ||
+      val === "Environmental Incident"
+    ) {
+      accInjuriesGroup.style.display = "none";
+      accInjuriesCount.value = "0";
+    } else {
+      accInjuriesGroup.style.display = "block";
+      if (accInjuriesCount.value == "0" || accInjuriesCount.value == "")
+        accInjuriesCount.value = "1";
+    }
+  };
+
+  window.updatePersonInputs = function (prefix) {
+    const typeEl = document.getElementById(`${prefix}-type`);
+    const type = typeEl.value;
+
+    document.getElementById(`${prefix}-emp-group`).style.display =
+      type === "Employee" ? "block" : "none";
+    document.getElementById(`${prefix}-cont-group`).style.display =
+      type === "Contractor" ? "block" : "none";
+    document.getElementById(`${prefix}-vis-group`).style.display =
+      type === "Visitor" || type === "Public" ? "block" : "none";
+
+    // لو اخترنا موظف، نحدث القائمة فوراً
+    if (type === "Employee") {
+      const isModal = prefix === "modal";
+      const proj = accProject.value;
+      const selectEl = document.getElementById(`${prefix}-emp-select`);
+      const checkEl = document.getElementById(`${prefix}-emp-all`);
+      updateAccEmployeeSelect(selectEl, checkEl.checked, proj);
+    }
+  };
+
+  window.toggleAllEmployees = function (prefix) {
+    const proj = accProject.value;
+    const selectEl = document.getElementById(`${prefix}-emp-select`);
+    const checkEl = document.getElementById(`${prefix}-emp-all`);
+    updateAccEmployeeSelect(selectEl, checkEl.checked, proj);
+  };
+
+  // --- 4. البحث عن مقاول ---
+  window.searchPersonByNID = async function (prefix) {
+    const nidEl = document.getElementById(`${prefix}-nid`);
+    const nameEl = document.getElementById(`${prefix}-cont-name`);
+    const compEl = document.getElementById(`${prefix}-cont-select`); // Select element
+
+    if (!nidEl.value) {
+      alert("أدخل الرقم القومي");
+      return;
+    }
+
+    nameEl.value = "جاري البحث...";
+    nameEl.readOnly = true;
+
+    try {
+      const r = await callApi("getRecipientByNID", { nationalId: nidEl.value });
+      if (r.status === "found") {
+        nameEl.value = r.name;
+        compEl.value = r.contractor;
+        nameEl.readOnly = true;
+        alert("تم العثور عليه.");
+      } else {
+        nameEl.value = "";
+        nameEl.placeholder = "اسم جديد... أدخله يدوياً";
+        nameEl.readOnly = false;
+        alert("غير مسجل، يرجى كتابة الاسم.");
+      }
+    } catch (e) {
+      nameEl.value = "";
+      nameEl.readOnly = false;
+    }
+  };
+
+  // --- 5. Modal Logic (Add Person) ---
+  window.openPersonModal = function (context) {
+    currentModalContext = context;
+    document.getElementById("person-modal-title").textContent =
+      context === "involved" ? "إضافة شخص متداخل" : "إضافة شاهد";
+    personModal.style.display = "block";
+
+    // Reset Modal Fields
+    modalType.value = "";
+    updatePersonInputs("modal"); // Hide all inputs
+    modalNid.value = "";
+    modalContName.value = "";
+    modalVisNid.value = "";
+    modalVisName.value = "";
+  };
+
+  window.closePersonModal = function () {
+    personModal.style.display = "none";
+  };
+
+  window.confirmAddPerson = function () {
+    const type = modalType.value;
+    if (!type) return;
+
+    let p = { type: type, isNew: false };
+
+    if (type === "Employee") {
+      const sel = modalEmpSelect;
+      p.name = sel.value;
+      p.id = sel.options[sel.selectedIndex]?.dataset.id || "N/A";
+      p.company = "السويدي";
+    } else if (type === "Contractor") {
+      p.company = modalContSelect.value;
+      p.id = modalNid.value;
+      p.name = modalContName.value;
+      p.isNew = !modalContName.readOnly;
+    } else {
+      p.id = modalVisNid.value;
+      p.name = modalVisName.value;
+      p.company = "Visitor/Public";
+      p.isNew = true;
+    }
+
+    if (!p.name) {
+      alert("الاسم مطلوب");
+      return;
+    }
+
+    if (currentModalContext === "involved") {
+      accInvolvedData.push(p);
+      renderSimplePersonList("acc-involved-list", accInvolvedData);
+    } else {
+      accWitnessData.push(p);
+      renderSimplePersonList("acc-witness-list", accWitnessData);
+    }
+    closePersonModal();
+  };
+
+  function renderSimplePersonList(containerId, list) {
+    const ul = document.getElementById(containerId);
+    ul.innerHTML = "";
+
+    // تحديد رسالة "فارغ" المناسبة بناءً على ID القائمة
+    let emptyMsgId = "";
+    if (containerId === "acc-involved-list") emptyMsgId = "involved-empty-msg";
+    else if (containerId === "acc-witness-list")
+      emptyMsgId = "witness-empty-msg";
+
+    const emptyMsgEl = document.getElementById(emptyMsgId);
+
+    if (list.length === 0) {
+      if (emptyMsgEl) emptyMsgEl.style.display = "block"; // أظهر الرسالة
+    } else {
+      if (emptyMsgEl) emptyMsgEl.style.display = "none"; // أخفِ الرسالة
+
+      list.forEach((p, idx) => {
+        const li = document.createElement("li");
+        // تنسيق جميل للاسم والنوع والشركة
+        li.innerHTML = `
+                <div>
+                    <span>${p.name}</span>
+                    <br>
+                    <small><i class="fas fa-id-badge"></i> ${p.type}</small> 
+                    ${p.company ? `<small>| <i class="fas fa-building"></i> ${p.company}</small>` : ""}
+                </div>
+                <button type="button" class="btn-small btn-danger" onclick="removeAccPerson('${containerId}', ${idx})">
+                    <i class="fas fa-trash"></i>
+                </button>`;
+        ul.appendChild(li);
+      });
+    }
+  }
+  window.removeAccPerson = function (containerId, idx) {
+    if (containerId === "acc-involved-list") {
+      accInvolvedData.splice(idx, 1);
+      renderSimplePersonList(containerId, accInvolvedData);
+    } else {
+      accWitnessData.splice(idx, 1);
+      renderSimplePersonList(containerId, accWitnessData);
+    }
+  };
+
+  // --- 6. List Helper (Causes & Actions) ---
+  window.addToList = function (inputId, listId) {
+    const input = document.getElementById(inputId);
+    const val = input.value.trim();
+    if (!val) return;
+
+    const ul = document.getElementById(listId);
+    const li = document.createElement("li");
+    li.innerHTML = `<span>${val}</span> <button type="button" class="btn-small btn-danger" onclick="this.parentElement.remove()">x</button>`;
+    ul.appendChild(li);
+    input.value = "";
+  };
+
+  // --- 7. Action Plan Table ---
+  window.addActionPlanRow = function () {
+    const act = document.getElementById("plan-action").value;
+    const resp = document.getElementById("plan-resp").value;
+    const date = document.getElementById("plan-date").value;
+
+    if (!act || !resp) {
+      alert("أكمل البيانات");
+      return;
+    }
+
+    accActionPlanData.push({ action: act, resp: resp, date: date });
+    renderActionPlan();
+
+    document.getElementById("plan-action").value = "";
+    document.getElementById("plan-resp").value = "";
+    document.getElementById("plan-date").value = "";
+  };
+
+  function renderActionPlan() {
+    accPlanBody.innerHTML = "";
+    accActionPlanData.forEach((row, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${row.action}</td><td>${row.resp}</td><td>${row.date}</td><td><button type="button" class="btn-small btn-danger" onclick="remAccPlan(${i})">x</button></td>`;
+      accPlanBody.appendChild(tr);
+    });
+  }
+  window.remAccPlan = function (i) {
+    accActionPlanData.splice(i, 1);
+    renderActionPlan();
+  };
+
+  // --- 8. Save Accident ---
+  if (accForm) {
+    accForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!confirm("هل أنت متأكد من حفظ التقرير؟")) return;
+
+      // تجميع القوائم النصية
+      const getList = (id) =>
+        Array.from(document.querySelectorAll(`#${id} li span`)).map(
+          (el) => el.textContent,
+        );
+
+      // تجميع بيانات الضحية
+      const vType = accVicType.value;
+      let victim = { type: vType, isNew: false };
+      if (vType === "Employee") {
+        const sel = accVicEmpSelect;
+        victim.name = sel.value;
+        victim.id = sel.options[sel.selectedIndex]?.dataset.id || "";
+        victim.company = "السويدي";
+      } else if (vType === "Contractor") {
+        victim.company = accVicContSelect.value;
+        victim.id = accVicNid.value;
+        victim.name = accVicContName.value;
+        victim.isNew = !accVicContName.readOnly;
+      } else {
+        victim.id = accVicVisNid.value;
+        victim.name = accVicVisName.value;
+        victim.company = "Visitor/Public";
+        victim.isNew = true;
+      }
+
+      if (!victim.name) {
+        alert("بيانات المصاب الرئيسي ناقصة");
+        return;
+      }
+
+      const data = {
+        date: accDate.value,
+        time: accTime.value,
+        project: accProject.value,
+        classification: accClass.value,
+        injuriesCount: accInjuriesCount.value,
+        routineActivity: accRoutine.value,
+        whatHappened: accWhatHappened.value,
+        notificationInfo: accNotification.value,
+        injuriesDesc: accDamageDesc.value,
+        victim: victim,
+        involved: accInvolvedData,
+        witnesses: accWitnessData,
+        directCauses: getList("acc-direct-list"),
+        indirectCauses: getList("acc-indirect-list"),
+        rootCauses: getList("acc-root-list"),
+        immediateActions: getList("acc-imm-list"),
+        shortTermActions: getList("acc-short-list"),
+        longTermActions: getList("acc-long-list"),
+        actionPlan: accActionPlanData,
+      };
+
+      const btn = accForm.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = "جاري الحفظ...";
+
+      try {
+        const r = await callApi("saveAccident", {
+          accidentData: data,
+          userInfo: currentUser,
+        });
+        alert(r.message);
+        // Reset
+        accForm.reset();
+        initAccidentPage();
+      } catch (err) {
+        alert("خطأ: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "حفظ التقرير";
+      }
+    });
+  }
+
+  // --- 9. Monitor Open Accidents ---
+  window.loadUserOpenAccidents = async function () {
+    const container = document.getElementById("open-accidents-list");
+    if (!container) return;
+
+    container.innerHTML = '<div class="loader-small">جاري التحميل...</div>';
+
+    try {
+      const r = await callApi("getUserOpenAccidents", {
+        userInfo: currentUser,
+      });
+      if (r.status === "success" && r.accidents.length > 0) {
+        let html = "";
+        r.accidents.forEach((acc) => {
+          html += `
+                  <div class="permit-card" style="border-left: 5px solid #ff9800;">
+                      <div class="permit-info">
+                          <p><strong>المشروع:</strong> ${acc.project}</p>
+                          <p><strong>التصنيف:</strong> ${acc.class}</p>
+                          <p><strong>التاريخ:</strong> ${acc.date ? new Date(acc.date).toLocaleDateString("en-GB") : "-"}</p>
+                          <p><strong>الوصف:</strong> ${acc.desc.substring(0, 60)}...</p>
+                      </div>
+                      <button class="btn-danger" onclick="closeAccidentPrompt('${acc.id}')">إغلاق الحادث</button>
+                  </div>`;
+        });
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = "<p>لا توجد حوادث مفتوحة.</p>";
+      }
+    } catch (e) {
+      container.innerHTML = `<p class="error-message">${e.message}</p>`;
+    }
+  };
+
+  window.closeAccidentPrompt = async function (id) {
+    const note = prompt("ملاحظات الإغلاق (تم تنفيذ الخطة بالكامل):");
+    if (note) {
+      showLoader("جاري الإغلاق...");
+      try {
+        const r = await callApi("closeAccident", {
+          accId: id,
+          closingNote: note,
+        });
+        alert(r.message);
+        loadUserOpenAccidents();
+      } catch (e) {
+        alert(e.message);
+      } finally {
+        hideLoader();
+      }
+    }
+  };
+
+  // =================================================================
+  // --- (جديد) وحدة سجل الحوادث والطباعة (Monitor Accidents) ---
+  // =================================================================
+
+  const monAccProject = document.getElementById("mon-acc-project");
+  const monAccFrom = document.getElementById("mon-acc-from");
+  const monAccTo = document.getElementById("mon-acc-to");
+  const monAccOpen = document.getElementById("mon-acc-open");
+  const monAccBtn = document.getElementById("mon-acc-btn");
+  const monAccResults = document.getElementById("mon-acc-results");
+  const monAccPrintBtn = document.getElementById("mon-acc-print-btn");
+  const accPrintDate = document.getElementById("acc-print-date");
+
+  // 1. دالة التحميل الأولية (تعبئة المشاريع)
+  function initMonitorAccidentsPage() {
+    if (monAccProject && monAccProject.options.length <= 1) {
+      populateMonitorDropdowns(monAccProject); // استخدام الدالة العامة الموجودة مسبقاً
+    }
+    monAccResults.innerHTML =
+      '<p style="text-align:center; padding:20px; color:#666;">حدد معايير البحث...</p>';
+    monAccPrintBtn.style.display = "none";
+  }
+
+  // 2. دالة البحث
+  async function searchAccidents() {
+    monAccResults.innerHTML = '<div class="loader-small">جاري البحث...</div>';
+    monAccPrintBtn.style.display = "none";
+
+    const filters = {
+      project: monAccProject.value,
+      fromDate: monAccFrom.value,
+      toDate: monAccTo.value,
+      openOnly: monAccOpen.checked,
+    };
+
+    try {
+      // استدعاء الباك اند (اللي ضفناه في الخطوة السابقة)
+      const r = await callApi("searchAccidents", {
+        filters: filters,
+        userInfo: currentUser,
+      });
+      renderAccidentTable(r.data);
+    } catch (e) {
+      monAccResults.innerHTML = `<p class="error-message">${e.message}</p>`;
+    }
+  }
+
+  // 3. رسم الجدول (مع التشيك بوكس)
+  function renderAccidentTable(data) {
+    if (!data || data.length === 0) {
+      monAccResults.innerHTML =
+        '<p style="text-align:center;">لا توجد حوادث مطابقة.</p>';
+      return;
+    }
+
+    let html = `
+      <table class="results-table" id="acc-print-table">
+        <thead>
+            <tr>
+                <th class="print-select-col" style="width:40px; text-align:center;">
+                    <input type="checkbox" onchange="toggleAllAccidents(this)">
+                </th>
+                <th>الكود</th>
+                <th>التاريخ</th>
+                <th>المشروع</th>
+                <th>التصنيف</th>
+                <th>الوصف</th>
+                <th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    data.forEach((row) => {
+      html += `
+          <tr class="acc-row">
+              <td class="print-select-col" style="text-align:center;">
+                  <input type="checkbox" class="acc-print-check" checked> 
+              </td>
+              <td style="font-weight:bold;">${row.id}</td>
+              <td style="white-space:nowrap;">${row.date}</td>
+              <td>${row.project}</td>
+              <td style="color:#C8102E; font-weight:600;">${row.classification}</td>
+              <td class="desc-cell">${row.description}</td>
+              <td>
+                  <span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">
+                    ${row.status}
+                  </span>
+              </td>
+          </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    monAccResults.innerHTML = html;
+    monAccPrintBtn.style.display = "block"; // إظهار زر الطباعة
+  }
+
+  // دالة تحديد الكل
+  window.toggleAllAccidents = function (source) {
+    const checkboxes = document.querySelectorAll(".acc-print-check");
+    checkboxes.forEach((cb) => (cb.checked = source.checked));
+  };
+
+  // 4. منطق الطباعة الذكي
+  function handlePrintSelectedAccidents() {
+    const rows = document.querySelectorAll(".acc-row");
+    let hasSelection = false;
+
+    // أضف كلاس الإخفاء للصفوف غير المحددة
+    rows.forEach((row) => {
+      const checkbox = row.querySelector(".acc-print-check");
+      if (checkbox && !checkbox.checked) {
+        row.classList.add("hide-on-print");
+      } else {
+        row.classList.remove("hide-on-print");
+        hasSelection = true;
+      }
+    });
+
+    if (!hasSelection) {
+      alert("الرجاء تحديد حادث واحد على الأقل للطباعة.");
+      return;
+    }
+
+    // تحديث تاريخ الطباعة في الهيدر
+    if (accPrintDate) {
+      accPrintDate.textContent = `تاريخ التقرير: ${new Date().toLocaleDateString("ar-EG")}`;
+    }
+
+    // طباعة
+    window.print();
+
+    // تنظيف (إزالة كلاس الإخفاء بعد الطباعة)
+    // نستخدم timeout بسيط لضمان أن أمر الطباعة وصل للمتصفح
+    setTimeout(() => {
+      rows.forEach((row) => row.classList.remove("hide-on-print"));
+    }, 1000);
+  }
+
+  // Events
+  if (monAccBtn) monAccBtn.addEventListener("click", searchAccidents);
+  if (monAccPrintBtn)
+    monAccPrintBtn.addEventListener("click", handlePrintSelectedAccidents);
 });
 // --- END DOMContentLoaded ---

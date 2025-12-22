@@ -1565,12 +1565,12 @@ body {
 @media print {
     /* 1. إظهار القسم ومحتوياته */
     /* (مهم: لو غيرت اسم السكشن لـ MYAccidents عدل الاسم هنا كمان) */
-    #MonitorAccidents, #MonitorAccidents * {
+    #MYAccidents, #MYAccidents * {
         visibility: visible !important;
     }
 
     /* 2. ضبط مكان القسم ليحتل الصفحة بالكامل */
-    #MonitorAccidents {
+    #MYAccidents{
         position: absolute;
         left: 0;
         top: 0;
@@ -1583,32 +1583,32 @@ body {
     }
 
     /* 3. إخفاء فورم البحث والأزرار داخل هذا القسم */
-    #MonitorAccidents .app-form, 
-    #MonitorAccidents .no-print,
-    #MonitorAccidents button {
+    #MYAccidents .app-form, 
+    #MYAccidents .no-print,
+    #MYAccidents button {
         display: none !important;
     }
 
     /* 4. ضبط الجدول للطباعة */
-    #MonitorAccidents .results-table-container {
+    #MYAccidents .results-table-container {
         overflow: visible !important; /* إلغاء السكرول */
         display: block !important;
         border: none !important;
     }
 
-    #MonitorAccidents table {
+    #MYAccidents table {
         width: 100% !important;
         border-collapse: collapse;
         font-size: 11pt; /* حجم خط مناسب للقراءة */
     }
 
-    #MonitorAccidents th, #MonitorAccidents td {
+    #MYAccidents th, #MYAccidents td {
         border: 1px solid #000 !important; /* حدود سوداء واضحة */
         padding: 8px;
         color: #000 !important;
     }
 
-    #MonitorAccidents th {
+    #MYAccidents th {
         background-color: #f0f0f0 !important;
         -webkit-print-color-adjust: exact;
     }

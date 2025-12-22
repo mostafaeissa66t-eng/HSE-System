@@ -1623,3 +1623,76 @@ body {
         display: none !important;
     }
 }
+
+/* ========================================= */
+/* --- تنسيق معرض الصور في الداش بورد --- */
+/* ========================================= */
+
+.events-grid {
+    display: flex;
+    gap: 20px; /* مسافة بين الصور */
+    justify-content: space-between;
+}
+
+.event-card {
+    flex: 1; 
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+
+    /* (*** التعديل هنا ***) */
+    /* حذفنا height: 200px; واستبدلناها بالنسب التالية */
+    width: 100%;             /* العرض يملأ المساحة المتاحة */
+    aspect-ratio: 16 / 9;    /* يضبط الارتفاع تلقائياً بالنسبة للعرض (مثل شاشة اليوتيوب) */
+
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+
+.event-card:hover {
+    transform: translateY(-5px); /* حركة بسيطة لأعلى عند الماوس */
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+}
+
+.event-card img {
+    width: 100%;
+    height: 100%;
+
+    /* (*** التعديل هنا ***) */
+    /* cover: بتقص الصورة عشان تملأ المكان */
+    /* contain: بتصغر الصورة عشان تظهر بالكامل جوه المكان */
+    object-fit: contain; 
+
+    background-color: #fff; /* لون خلفية أبيض عشان يملأ الفراغات لو أبعاد الصورة مختلفة */
+    transition: transform 0.5s ease;
+}
+
+.event-card:hover img {
+    transform: scale(1.1); /* زووم خفيف للصورة */
+}
+
+/* شريط العنوان فوق الصورة (اختياري) */
+.event-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: #fff;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* --- Responsive (للموبايل) --- */
+@media (max-width: 768px) {
+    .events-grid {
+        flex-direction: column; /* الصور تحت بعض في الموبايل */
+    }
+    .event-card {
+        height: 180px; /* تقليل الارتفاع قليلاً في الموبايل */
+        width: 100%;
+    }
+}

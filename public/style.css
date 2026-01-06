@@ -1281,6 +1281,9 @@ body {
     overflow: auto; /* سكرول لو الشاشة صغيرة */
     background-color: rgba(0,0,0,0.6); /* خلفية سوداء شفافة */
     backdrop-filter: blur(3px); /* تغبيش الخلفية */
+    align-items: center; /* توسيط عمودي */
+    justify-content: center; /* توسيط أفقي */
+    
 }
 
 .modal-content {
@@ -1289,11 +1292,24 @@ body {
     padding: 25px;
     border: 1px solid #888;
     width: 90%; 
-    max-width: 500px; /* عرض النافذة */
+    max-width: 800px; /* زيادة العرض لاستيعاب الجدول */
+    max-height: 90vh; /* أقصى ارتفاع 90% من الشاشة */
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     position: relative;
     animation: slideDown 0.3s ease-out;
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    left: 15px; /* لأنه موقع عربي */
+    font-size: 24px;
+    font-weight: bold;
+    color: #888;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 10;
 }
 
 /* حركة ظهور ناعمة */
@@ -1695,4 +1711,30 @@ body {
         height: 180px; /* تقليل الارتفاع قليلاً في الموبايل */
         width: 100%;
     }
+}
+/* تنسيق احتياطي للجدول لضمان الشكل */
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 0.9em;
+    font-family: 'Cairo', sans-serif;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+.styled-table thead tr {
+    background-color: #C8102E; /* أحمر تيرنكي */
+    color: #ffffff;
+    text-align: right;
+}
+.styled-table th, .styled-table td {
+    padding: 12px 15px;
+}
+.styled-table tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+.styled-table tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+.styled-table tbody tr:last-of-type {
+    border-bottom: 2px solid #C8102E;
 }

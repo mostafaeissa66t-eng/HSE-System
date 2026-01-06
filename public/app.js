@@ -5739,7 +5739,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       });
 
       if (response.status === "success") {
-        currentTrainingData = response.data;
+        currentTrainingData = response.data.reverse();
         renderTrainingTable(response.data);
       } else {
         alert("خطأ: " + response.message);

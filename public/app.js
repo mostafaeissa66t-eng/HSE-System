@@ -154,6 +154,7 @@ document.addEventListener("DOMContentLoaded", function () {
     PpeTransactions: "fas fa-boxes", // (جديد)
     ProjectStockReport: "fas fa-chart-pie", // (جديد)
     NewTraining: "fas fa-chalkboard-teacher",
+    TrainingLog: "fas fa-clipboard-list", // <--- (جديد) أيقونة سجل التدريب
     MonitorObservations: "fas fa-search",
     MonitorHazards: "fas fa-search-location",
     NewNcrViolation: "fas fa-exclamation-triangle",
@@ -181,6 +182,7 @@ document.addEventListener("DOMContentLoaded", function () {
     PpeTransactions: "حركات المخزن", // (جديد)
     ProjectStockReport: "سجل أرصدة المخازن", // (جديد)
     NewTraining: "تسجيل تدريب", // (*** جديد ***) اسم القسم
+    TrainingLog: "سجل التدريب", // <--- (جديد) الاسم الظاهر
     MonitorObservations: "سجل الملاحظات",
     MonitorHazards: "سجل المخاطر",
     NewNcrViolation: "تسجيل NCR / مخالفة",
@@ -233,7 +235,12 @@ document.addEventListener("DOMContentLoaded", function () {
     },
 
     // 6. نظام التدريب (رابط مباشر - لأنه حاجة واحدة)
-    { type: "link", id: "NewTraining" },
+    {
+      type: "group",
+      title: "إدارة التدريب", // غيرنا العنوان ليكون أشمل
+      icon: "fas fa-chalkboard-teacher",
+      children: ["NewTraining", "TrainingLog"], // <--- (تم دمج القسمين هنا)
+    },
 
     // 7. تقييم الموظفين (رابط مباشر - لأنه حاجة واحدة)
     {
@@ -651,6 +658,10 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       if (sectionId === "NewTraining") {
         initTrainingPage();
+      }
+      // أضف الكود هنا
+      if (sectionId === "TrainingLog") {
+        initTrainingLogPage();
       }
       if (sectionId === "ProjectStockReport") {
         initStockReportPage(); // (*** هذا هو السطر الجديد ***)
@@ -2572,12 +2583,12 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   const monObsBtn = document.getElementById("mon-obs-btn");
   const monObsTable = document.getElementById("mon-obs-table");
 
-  let obsActionsCart = []; // سلة الإجراءات
+  let obsActionsCart = []; // سلة i�لإجراءات
 
   async function initObservationPage() {
     console.log("بدء تشغيل صفحة الملاحظات...");
 
-    // 1. ضبط التاريخ والاسم (يدو=�ا-y-� لضمان الشكل الصحيح)
+    // 1. ضبط التاريخ والاسم (يد=�=�ا-y-� لضمان الشكل الصحيح)
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0"); // شهر 1 يبقى 01
@@ -5697,5 +5708,161 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   if (monAccBtn) monAccBtn.addEventListener("click", searchAccidents);
   if (monAccPrintBtn)
     monAccPrintBtn.addEventListener("click", handlePrintSelectedAccidents);
+
+  // تهيئة الصفحة
+  window.initTrainingLogPage = function () {
+    const filterSelect = document.getElementById("train-project-filter");
+    // استخدام القائمة المحملة مسبقاً في نظامك
+    if (filterSelect && initialData && initialData.projects) {
+      fillSelect(filterSelect, initialData.projects);
+    }
+    document.getElementById("training-table-body").innerHTML =
+      '<tr><td colspan="6" style="text-align:center; padding:20px;">حدد معايير البحث واضغط على زر بحث...</td></tr>';
+  };
+
+  var currentTrainingData = [];
+  window.fetchTrainingLogs = async function () {
+    const startDate = document.getElementById("train-start-date").value;
+    const endDate = document.getElementById("train-end-date").value;
+    const project = document.getElementById("train-project-filter").value;
+
+    // استخدام الـ Loader الموحد في نظامك
+    showLoader("جاري جلب سجل التدريب...");
+
+    try {
+      // نبعت الطلب بنفس أسلوب callApi المتبع في باقي مشروعك
+      const response = await callApi("getTrainingLogs", {
+        startDate: startDate,
+        endDate: endDate,
+        filterProject: project || "all",
+        userInfo: currentUser, // مهم جداً عشان الصلاحيات
+      });
+
+      if (response.status === "success") {
+        currentTrainingData = response.data;
+        renderTrainingTable(response.data);
+      } else {
+        alert("خطأ: " + response.message);
+      }
+    } catch (err) {
+      alert("حدث خطأ: " + err.message);
+    } finally {
+      hideLoader();
+    }
+  };
+
+  function renderTrainingTable(data) {
+    const tbody = document.getElementById("training-table-body");
+    tbody.innerHTML = "";
+    if (!data || data.length === 0) {
+      tbody.innerHTML =
+        "<tr><td colspan='6' style='text-align:center; padding:20px;'>لا توجد بيانات مطابقة للبحث</td></tr>";
+      return;
+    }
+    data.forEach((session, index) => {
+      // تنسيق التاريخ ليظهر بشكل أفضل
+      let dateDisp = session.date;
+      try {
+        dateDisp = new Date(session.date).toLocaleDateString("en-GB");
+      } catch (e) {}
+
+      const row = `
+              <tr>
+                  <td style="font-weight:bold;">${dateDisp}</td>
+                  <td>${session.project}</td>
+                  <td style="color: var(--primary-color); font-weight:bold;">${session.topic}</td>
+                  <td>${session.trainer}</td>
+                  <td style="text-align:center;">
+                      <span class="badge bg-danger" style="font-size:0.9em; padding:5px 10px;">${session.attendees.length}</span>
+                  </td>
+                  <td style="text-align:center;">
+                      <button class="btn-small btn-secondary" onclick="window.openAttendeesModal(${index})" title="عرض قائمة الحضور">
+                          <i class="fas fa-eye"></i> عرض
+                      </button>
+                  </td>
+              </tr>`;
+      tbody.insertAdjacentHTML("beforeend", row);
+    });
+  }
+
+  window.openAttendeesModal = function (index) {
+    const session = currentTrainingData[index];
+    if (!session) return;
+
+    document.getElementById("modal-session-title").innerText =
+      `حضور: ${session.topic}`;
+    const listBody = document.getElementById("attendees-list-body");
+    listBody.innerHTML = session.attendees
+      .map(
+        (p, i) => `
+          <tr>
+              <td>${i + 1}</td>
+              <td>${p.name}</td>
+              <td>${p.company}</td>
+              <td><span class="badge">${p.type}</span></td>
+          </tr>
+      `,
+      )
+      .join("");
+    document.getElementById("attendees-modal").style.display = "flex";
+  };
 });
 // --- END DOMContentLoaded ---
+// --- دوال النافذة المنبثقة (خارج أي نطاق مغلق لضمان العمل) ---
+
+window.openAttendeesModal = function (index) {
+  // التأكد من وجود بيانات
+  if (typeof currentTrainingData === "undefined" || !currentTrainingData[index])
+    return;
+
+  const session = currentTrainingData[index];
+
+  // تعيين العنوان
+  const titleEl = document.getElementById("modal-session-title");
+  if (titleEl) titleEl.innerText = `حضور: ${session.topic}`;
+
+  // تعبئة الجدول
+  const listBody = document.getElementById("attendees-list-body");
+  if (listBody) {
+    listBody.innerHTML = session.attendees
+      .map(
+        (p, i) => `
+            <tr>
+                <td style="text-align:center">${i + 1}</td>
+                <td style="font-weight:600">${p.name}</td>
+                <td>${p.company}</td>
+                <td style="text-align:center">
+                    <span class="badge ${p.type === "موظف" ? "bg-success" : "bg-secondary"}" 
+                          style="background-color: ${p.type === "موظف" ? "#28a745" : "#6c757d"}; color: white; padding: 3px 8px; border-radius: 4px;">
+                        ${p.type}
+                    </span>
+                </td>
+            </tr>
+        `,
+      )
+      .join("");
+  }
+
+  // إظهار النافذة
+  const modal = document.getElementById("attendees-modal");
+  if (modal) {
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden"; // منع سكرول الصفحة الخلفية
+  }
+};
+
+window.closeAttendeesModal = function () {
+  const modal = document.getElementById("attendees-modal");
+  if (modal) {
+    modal.style.display = "none";
+    document.body.style.overflow = "auto"; // إعادة السكرول للصفحة
+  }
+};
+
+// إغلاق عند الضغط خارج محتوى النافذة
+window.onclick = function (event) {
+  const modal = document.getElementById("attendees-modal");
+  if (event.target === modal) {
+    window.closeAttendeesModal();
+  }
+};

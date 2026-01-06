@@ -265,7 +265,7 @@
                                 margin-bottom: 20px;
                             "
                         >
-                            <i class="fas fa-camera-retro"></i> معرض الصور 
+                            <i class="fas fa-camera-retro"></i> معرض الصور
                         </h3>
 
                         <div class="events-grid">
@@ -3580,6 +3580,131 @@
                         <i class="fas fa-print"></i> طباعة المحدد
                     </button>
                 </section>
+                <section
+                    id="TrainingLog"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-clipboard-list"></i> سجل التدريب
+                        (Training Log)
+                    </h2>
+
+                    <div class="app-form">
+                        <div class="filter-controls">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="train-start-date"
+                                        >من تاريخ:</label
+                                    >
+                                    <input type="date" id="train-start-date" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="train-end-date"
+                                        >إلى تاريخ:</label
+                                    >
+                                    <input type="date" id="train-end-date" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="train-project-filter"
+                                    >المشروع:</label
+                                >
+                                <select id="train-project-filter">
+                                    <option value="all">جميع المشاريع</option>
+                                </select>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn"
+                                onclick="window.fetchTrainingLogs()"
+                            >
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+
+                        <div
+                            id="training-results-container"
+                            class="results-table-container"
+                        >
+                            <table class="results-table">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>المشروع</th>
+                                        <th>الموضوع (Topic)</th>
+                                        <th>المدرب</th>
+                                        <th style="text-align: center">
+                                            العدد
+                                        </th>
+                                        <th style="text-align: center">
+                                            التفاصيل
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="training-table-body">
+                                    <tr>
+                                        <td
+                                            colspan="6"
+                                            style="
+                                                text-align: center;
+                                                padding: 20px;
+                                                color: #666;
+                                            "
+                                        >
+                                            حدد معايير البحث واضغط على زر بحث...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <div id="attendees-modal" class="modal">
+                    <div class="modal-content">
+                        <span
+                            class="close-modal"
+                            onclick="window.closeAttendeesModal()"
+                            >&times;</span
+                        >
+
+                        <h3
+                            id="modal-session-title"
+                            style="
+                                text-align: center;
+                                color: var(--primary-color);
+                                padding-bottom: 10px;
+                                border-bottom: 2px solid #f1f1f1;
+                            "
+                        >
+                            قائمة الحضور
+                        </h3>
+
+                        <div class="modal-body-scroll">
+                            <table class="results-table">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            style="
+                                                width: 40px;
+                                                text-align: center;
+                                            "
+                                        >
+                                            #
+                                        </th>
+                                        <th>الاسم</th>
+                                        <th>الشركة</th>
+                                        <th style="text-align: center">
+                                            الصفة
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendees-list-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
 

@@ -5710,9 +5710,9 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     monAccPrintBtn.addEventListener("click", handlePrintSelectedAccidents);
 
   // تهيئة الصفحة
+  // --- تهيئة صفحة سجل التدريب ---
   window.initTrainingLogPage = function () {
     const filterSelect = document.getElementById("train-project-filter");
-    // استخدام القائمة المحملة مسبقاً في نظامك
     if (filterSelect && initialData && initialData.projects) {
       fillSelect(filterSelect, initialData.projects);
     }
@@ -5720,24 +5720,19 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       '<tr><td colspan="6" style="text-align:center; padding:20px;">حدد معايير البحث واضغط على زر بحث...</td></tr>';
   };
 
-  var currentTrainingData = [];
+  // --- جلب السجلات ---
   window.fetchTrainingLogs = async function () {
     const startDate = document.getElementById("train-start-date").value;
     const endDate = document.getElementById("train-end-date").value;
     const project = document.getElementById("train-project-filter").value;
-
-    // استخدام الـ Loader الموحد في نظامك
     showLoader("جاري جلب سجل التدريب...");
-
     try {
-      // نبعت الطلب بنفس أسلوب callApi المتبع في باقي مشروعك
       const response = await callApi("getTrainingLogs", {
         startDate: startDate,
         endDate: endDate,
         filterProject: project || "all",
-        userInfo: currentUser, // مهم جداً عشان الصلاحيات
+        userInfo: currentUser,
       });
-
       if (response.status === "success") {
         currentTrainingData = response.data.reverse();
         renderTrainingTable(response.data);
@@ -5745,7 +5740,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         alert("خطأ: " + response.message);
       }
     } catch (err) {
-      alert("حدث خطأ: " + err.message);
+      alert(err.message);
     } finally {
       hideLoader();
     }
@@ -5753,116 +5748,189 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
   function renderTrainingTable(data) {
     const tbody = document.getElementById("training-table-body");
-    tbody.innerHTML = "";
-    if (!data || data.length === 0) {
-      tbody.innerHTML =
-        "<tr><td colspan='6' style='text-align:center; padding:20px;'>لا توجد بيانات مطابقة للبحث</td></tr>";
-      return;
-    }
+    tbody.innerHTML =
+      data.length === 0
+        ? "<tr><td colspan='6' style='text-align:center;'>لا توجد بيانات</td></tr>"
+        : "";
     data.forEach((session, index) => {
-      // تنسيق التاريخ ليظهر بشكل أفضل
-      let dateDisp = session.date;
-      try {
-        dateDisp = new Date(session.date).toLocaleDateString("en-GB");
-      } catch (e) {}
-
-      const row = `
-              <tr>
-                  <td style="font-weight:bold;">${dateDisp}</td>
-                  <td>${session.project}</td>
-                  <td style="color: var(--primary-color); font-weight:bold;">${session.topic}</td>
-                  <td>${session.trainer}</td>
-                  <td style="text-align:center;">
-                      <span class="badge bg-danger" style="font-size:0.9em; padding:5px 10px;">${session.attendees.length}</span>
-                  </td>
-                  <td style="text-align:center;">
-                      <button class="btn-small btn-secondary" onclick="window.openAttendeesModal(${index})" title="عرض قائمة الحضور">
-                          <i class="fas fa-eye"></i> عرض
-                      </button>
-                  </td>
-              </tr>`;
-      tbody.insertAdjacentHTML("beforeend", row);
+      tbody.insertAdjacentHTML(
+        "beforeend",
+        `
+        <tr>
+          <td>${session.date}</td>
+          <td>${session.project}</td>
+          <td style="font-weight:bold; color:var(--primary-color)">${session.topic}</td>
+          <td>${session.trainer}</td>
+          <td style="text-align:center;"><span class="badge bg-danger">${session.attendees.length}</span></td>
+          <td style="text-align:center;"><button class="btn-small btn-secondary" onclick="window.openAttendeesModal(${index})"><i class="fas fa-eye"></i></button></td>
+        </tr>`,
+      );
     });
   }
 
+  // --- منطق المقاولين والـ Datalist ---
+  // متغير عام لحفظ عمال المقاول المختار حالياً
+  let currentContractorWorkers = [];
+
+  // 1. تحميل العمال عند تغيير الشركة
+  window.loadContractorWorkers = async function () {
+    const contractorName = document.getElementById("trn-cont-company").value;
+    const dataList = document.getElementById("trn-workers-list");
+    const nameInput = document.getElementById("trn-cont-name");
+    const nidInput = document.getElementById("trn-cont-nid");
+
+    if (!contractorName) {
+      dataList.innerHTML = "";
+      return;
+    }
+
+    try {
+      const response = await callApi("getContractorWorkers", {
+        contractorName: contractorName,
+      });
+      if (response.status === "success") {
+        currentContractorWorkers = response.workers; // حفظ في المتغير العام
+
+        // تحديث الـ Datalist
+        dataList.innerHTML = response.workers
+          .map((w) => `<option value="${w.name}">${w.id}</option>`)
+          .join("");
+        console.log(
+          `تم تحميل ${response.workers.length} عامل لشركة ${contractorName}`,
+        );
+
+        nameInput.value = "";
+        nidInput.value = "";
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 2. الربط التلقائي بين الاسم والرقم القومي
+  window.handleTrnNameInput = function () {
+    const nameInput = document.getElementById("trn-cont-name");
+    const nidInput = document.getElementById("trn-cont-nid");
+    const nameVal = nameInput.value;
+
+    // البحث في القائمة المحملة
+    const worker = currentContractorWorkers.find((w) => w.name === nameVal);
+
+    if (worker) {
+      nidInput.value = worker.id;
+      nidInput.readOnly = true;
+      nidInput.style.backgroundColor = "#f0f0f0";
+    } else {
+      // لو بيكتب اسم جديد، نفتح خانة الرقم القومي
+      nidInput.readOnly = false;
+      nidInput.style.backgroundColor = "#fff";
+    }
+  };
+
+  // --- التحكم في النافذة المنبثقة (المودال) ---
   window.openAttendeesModal = function (index) {
     const session = currentTrainingData[index];
     if (!session) return;
-
     document.getElementById("modal-session-title").innerText =
       `حضور: ${session.topic}`;
-    const listBody = document.getElementById("attendees-list-body");
-    listBody.innerHTML = session.attendees
+    document.getElementById("attendees-list-body").innerHTML = session.attendees
       .map(
         (p, i) => `
-          <tr>
-              <td>${i + 1}</td>
-              <td>${p.name}</td>
-              <td>${p.company}</td>
-              <td><span class="badge">${p.type}</span></td>
-          </tr>
-      `,
+        <tr>
+            <td>${i + 1}</td>
+            <td style="font-weight:600">${p.name}</td>
+            <td>${p.company}</td>
+            <td><span class="badge">${p.type}</span></td>
+        </tr>`,
       )
       .join("");
     document.getElementById("attendees-modal").style.display = "flex";
   };
-});
-// --- END DOMContentLoaded ---
-// --- دوال النافذة المنبثقة (خارج أي نطاق مغلق لضمان العمل) ---
 
-window.openAttendeesModal = function (index) {
-  // التأكد من وجود بيانات
-  if (typeof currentTrainingData === "undefined" || !currentTrainingData[index])
-    return;
+  window.closeAttendeesModal = function () {
+    document.getElementById("attendees-modal").style.display = "none";
+  };
 
-  const session = currentTrainingData[index];
+  // إغلاق عند الضغط خارج المودال
+  window.addEventListener("click", (e) => {
+    const modal = document.getElementById("attendees-modal");
+    if (e.target === modal) window.closeAttendeesModal();
+  });
 
-  // تعيين العنوان
-  const titleEl = document.getElementById("modal-session-title");
-  if (titleEl) titleEl.innerText = `حضور: ${session.topic}`;
+  // --- دوال محرك اختيار عمال المقاولين ---
 
-  // تعبئة الجدول
-  const listBody = document.getElementById("attendees-list-body");
-  if (listBody) {
-    listBody.innerHTML = session.attendees
+  window.openWorkerSelector = function () {
+    const contractorName = document.getElementById("trn-cont-company").value;
+    if (!contractorName) {
+      alert("الرجاء اختيار شركة المقاول أولاً");
+      return;
+    }
+
+    document.getElementById("worker-selector-modal").style.display = "flex";
+    document.getElementById("worker-search-box").value = "";
+    document.getElementById("worker-search-box").focus();
+
+    renderWorkersInModal(currentContractorWorkers); // عرض القائمة المحملة مسبقاً
+  };
+
+  window.closeWorkerSelector = function () {
+    document.getElementById("worker-selector-modal").style.display = "none";
+  };
+
+  // رسم قائمة العمال داخل النافذة
+  function renderWorkersInModal(workers) {
+    const container = document.getElementById("worker-list-container");
+    if (!workers || workers.length === 0) {
+      container.innerHTML =
+        '<p style="text-align:center; padding:20px; color:#999;">لا يوجد عمال مسجلين لهذه الشركة</p>';
+      return;
+    }
+
+    container.innerHTML = workers
       .map(
-        (p, i) => `
-            <tr>
-                <td style="text-align:center">${i + 1}</td>
-                <td style="font-weight:600">${p.name}</td>
-                <td>${p.company}</td>
-                <td style="text-align:center">
-                    <span class="badge ${p.type === "موظف" ? "bg-success" : "bg-secondary"}" 
-                          style="background-color: ${p.type === "موظف" ? "#28a745" : "#6c757d"}; color: white; padding: 3px 8px; border-radius: 4px;">
-                        ${p.type}
-                    </span>
-                </td>
-            </tr>
-        `,
+        (w) => `
+          <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:5px;" onclick="window.selectWorker('${w.id}', '${w.name}')">
+              <div style="text-align:right;">
+                  <span style="display:block; font-weight:700;">${w.name}</span>
+                  <small style="color:#666;">ID: ${w.id}</small>
+              </div>
+              <i class="fas fa-chevron-left" style="color:#ccc;"></i>
+          </div>
+      `,
       )
       .join("");
   }
 
-  // إظهار النافذة
-  const modal = document.getElementById("attendees-modal");
-  if (modal) {
-    modal.style.display = "flex";
-    document.body.style.overflow = "hidden"; // منع سكرول الصفحة الخلفية
-  }
-};
+  // تصفية القائمة أثناء الكتابة (البحث)
+  window.filterWorkerList = function () {
+    const query = document
+      .getElementById("worker-search-box")
+      .value.toLowerCase();
+    const filtered = currentContractorWorkers.filter(
+      (w) => w.name.toLowerCase().includes(query) || w.id.includes(query),
+    );
+    renderWorkersInModal(filtered);
+  };
 
-window.closeAttendeesModal = function () {
-  const modal = document.getElementById("attendees-modal");
-  if (modal) {
-    modal.style.display = "none";
-    document.body.style.overflow = "auto"; // إعادة السكرول للصفحة
-  }
-};
+  // عند اختيار عامل من القائمة
+  window.selectWorker = function (id, name) {
+    document.getElementById("trn-cont-name").value = name;
+    document.getElementById("trn-cont-nid").value = id;
+    document.getElementById("trn-cont-nid").readOnly = true;
+    document.getElementById("trn-cont-nid").style.backgroundColor = "#f0f0f0";
+    window.closeWorkerSelector();
+  };
 
-// إغلاق عند الضغط خارج محتوى النافذة
-window.onclick = function (event) {
-  const modal = document.getElementById("attendees-modal");
-  if (event.target === modal) {
-    window.closeAttendeesModal();
-  }
-};
+  // في حالة الرغبة في إضافة اسم غير موجود
+  window.addNewWorkerManually = function () {
+    const query = document.getElementById("worker-search-box").value;
+    document.getElementById("trn-cont-name").value = query;
+    document.getElementById("trn-cont-nid").value = "";
+    document.getElementById("trn-cont-nid").readOnly = false;
+    document.getElementById("trn-cont-nid").style.backgroundColor = "#fff";
+    document.getElementById("trn-cont-nid").focus();
+    window.closeWorkerSelector();
+  };
+});
+// --- END DOMContentLoaded ---
+// --- دوال النافذة المنبثقة (خارج أي نطاق مغلق لضمان العمل) ---

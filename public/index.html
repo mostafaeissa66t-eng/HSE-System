@@ -1364,32 +1364,36 @@
                         <div id="trn-cont-group" style="display: none">
                             <div class="form-group">
                                 <label for="trn-cont-company">الشركة:</label>
-                                <select id="trn-cont-company"></select>
+                                <select
+                                    id="trn-cont-company"
+                                    onchange="loadContractorWorkers()"
+                                ></select>
                             </div>
-                            <div class="form-group">
-                                <label>الرقم القومي:</label>
-                                <div class="input-with-button">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>الرقم القومي:</label>
                                     <input
                                         type="text"
                                         id="trn-cont-nid"
-                                        placeholder="بحث بالرقم القومي..."
+                                        placeholder="الرقم القومي"
+                                        oninput="handleTrnNidInput()"
                                     />
-                                    <button
-                                        type="button"
-                                        id="trn-cont-search-btn"
-                                        class="btn-small"
-                                    >
-                                        <i class="fas fa-search"></i>
-                                    </button>
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                <label>الاسم:</label>
-                                <input
-                                    type="text"
-                                    id="trn-cont-name"
-                                    placeholder="الاسم..."
-                                />
+                                <div class="form-group">
+                                    <label>الاسم:</label>
+                                    <input
+                                        type="text"
+                                        id="trn-cont-name"
+                                        readonly
+                                        onclick="window.openWorkerSelector()"
+                                        placeholder="اضغط لاختيار عامل..."
+                                        style="
+                                            cursor: pointer;
+                                            background-color: #fff !important;
+                                            border: 2px solid #c8102e;
+                                        "
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -3661,33 +3665,48 @@
                     </div>
                 </section>
 
-                <div id="attendees-modal" class="modal">
-                    <div class="modal-content">
+                <div
+                    id="attendees-modal"
+                    class="modal"
+                    onclick="if(event.target == this) window.closeAttendeesModal()"
+                >
+                    <div
+                        class="modal-content"
+                        style="max-width: 800px; width: 95%"
+                    >
                         <span
-                            class="close-modal"
+                            class="close"
                             onclick="window.closeAttendeesModal()"
+                            style="
+                                cursor: pointer;
+                                font-size: 30px;
+                                float: left;
+                            "
                             >&times;</span
                         >
 
                         <h3
                             id="modal-session-title"
                             style="
-                                text-align: center;
                                 color: var(--primary-color);
+                                border-bottom: 2px solid #eee;
                                 padding-bottom: 10px;
-                                border-bottom: 2px solid #f1f1f1;
+                                margin-bottom: 15px;
                             "
                         >
                             قائمة الحضور
                         </h3>
 
-                        <div class="modal-body-scroll">
+                        <div
+                            class="results-table-container"
+                            style="max-height: 70vh; overflow-y: auto"
+                        >
                             <table class="results-table">
                                 <thead>
                                     <tr>
                                         <th
                                             style="
-                                                width: 40px;
+                                                width: 50px;
                                                 text-align: center;
                                             "
                                         >
@@ -3702,6 +3721,55 @@
                                 </thead>
                                 <tbody id="attendees-list-body"></tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    id="worker-selector-modal"
+                    class="modal"
+                    onclick="if(event.target == this) window.closeWorkerSelector()"
+                >
+                    <div class="modal-content worker-selection-modal">
+                        <span
+                            class="close-modal"
+                            onclick="window.closeWorkerSelector()"
+                            >&times;</span
+                        >
+
+                        <h3
+                            style="
+                                text-align: center;
+                                color: var(--primary-color);
+                                margin-bottom: 20px;
+                            "
+                        >
+                            <i class="fas fa-users"></i> اختيار عامل المقاول
+                        </h3>
+
+                        <div class="form-group" style="margin-bottom: 15px">
+                            <input
+                                type="text"
+                                id="worker-search-box"
+                                placeholder="ابحث بالاسم أو الرقم القومي..."
+                                oninput="window.filterWorkerList()"
+                                class="search-input-fancy"
+                            />
+                        </div>
+
+                        <div
+                            id="worker-list-container"
+                            class="modal-scroll-area"
+                        ></div>
+
+                        <div class="worker-modal-footer">
+                            <button
+                                type="button"
+                                class="btn-new-worker-full"
+                                onclick="window.addNewWorkerManually()"
+                            >
+                                <i class="fas fa-user-plus"></i> إضافة عامل جديد
+                                (غير مسجل)
+                            </button>
                         </div>
                     </div>
                 </div>

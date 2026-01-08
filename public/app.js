@@ -1468,7 +1468,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         });
         if (data.status === "success") {
           ppeLocations = data.locations;
-          ppeEmployees = data.employees;
+          window.ppeEmployees = data.employees;
           ppeContractors = data.contractors;
           ppeItems = data.ppeItems;
         }
@@ -1546,28 +1546,125 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   /**
    * (معدل) دالة مساعدة لإظهار/إخفاء حقول الموظف/المقاول
    */
-  function checkRecipientTypeUI() {
-    const type = ppeRecipientType.value;
-    ppeRecipientEmployeeGroup.style.display =
+  window.checkRecipientTypeUI = function () {
+    const type = document.getElementById("ppe-recipient-type").value;
+
+    // إظهار وإخفاء المجموعات
+    document.getElementById("ppe-recipient-employee-group").style.display =
       type === "موظف" ? "block" : "none";
-    ppeRecipientContractorGroup.style.display =
+    document.getElementById("ppe-recipient-contractor-group").style.display =
       type === "مقاول" ? "block" : "none";
 
     if (type === "موظف") {
-      updateEmployeeDropdown();
+      // حذفنا استدعاء updateEmployeeDropdown() لأنه لم يعد هناك قائمة منسدلة
+      console.log(
+        "تم اختيار نوع المستلم: موظف. بانتظار فتح النافذة المنبثقة للاختيار.",
+      );
+    } else if (type === "مقاول") {
+      if (typeof updatePpeContractorDropdown === "function")
+        updatePpeContractorDropdown();
     }
-    // (*** الإضافة الجديدة ***)
-    else if (type === "مقاول") {
-      updatePpeContractorDropdown();
+  };
+
+  // --- دوال اختيار الموظف في المخزن (PPE Selector) ---
+
+  window.openPpeEmpSelector = function () {
+    const selectedProject = document.getElementById(
+      "ppe-recipient-location",
+    ).value;
+    const showAll = document.getElementById("ppe-show-all-emp").checked;
+
+    // التحقق من اختيار المخزن/المشروع أولاً
+    if (!selectedProject && !showAll) {
+      alert("الرجاء اختيار المخزن أولاً أو تفعيل خيار 'عرض الكل'");
+      return;
     }
+
+    if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+      alert("جاري تحميل بيانات الموظفين... انتظر ثانية وجرب مرة أخرى.");
+      return;
+    }
+
+    document.getElementById("ppe-emp-modal").style.display = "flex";
+    document.getElementById("ppe-emp-search-box").value = "";
+    document.getElementById("ppe-emp-search-box").focus();
+
+    // فلترة القائمة الأولية
+    const list = showAll
+      ? window.ppeEmployees
+      : window.ppeEmployees.filter((e) => e.project === selectedProject);
+    renderPpeEmpsInModal(list);
+  };
+
+  window.closePpeEmpSelector = function () {
+    document.getElementById("ppe-emp-modal").style.display = "none";
+  };
+
+  // رسم الأسماء داخل المودال
+  function renderPpeEmpsInModal(list) {
+    const container = document.getElementById("ppe-emp-list-container");
+    if (!container) return;
+
+    if (list.length === 0) {
+      container.innerHTML =
+        '<p style="text-align:center; padding:20px;">لا توجد نتائج</p>';
+      return;
+    }
+
+    container.innerHTML = list
+      .map(
+        (e) => `
+          <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:8px;" 
+               onclick="window.selectPpeEmployee('${e.id}', '${e.name}')">
+              <div style="text-align:right;">
+                  <span style="display:block; font-weight:700;">${e.name}</span>
+                  <small style="color:#666;">ID: ${e.id} | Project: ${e.project}</small>
+              </div>
+              <i class="fas fa-hand-pointer" style="color:#ccc;"></i>
+          </div>
+      `,
+      )
+      .join("");
   }
 
+  // بحث مباشر داخل المودال
+  window.filterPpeEmpList = function () {
+    const query = document
+      .getElementById("ppe-emp-search-box")
+      .value.toLowerCase();
+    const selectedProject = document.getElementById(
+      "ppe-recipient-location",
+    ).value;
+    const showAll = document.getElementById("ppe-show-all-emp").checked;
+
+    // التأكد من وجود بيانات للبحث فيها
+    if (!window.ppeEmployees) return;
+
+    const baseList = showAll
+      ? window.ppeEmployees
+      : window.ppeEmployees.filter((e) => e.project === selectedProject);
+
+    const filtered = baseList.filter(
+      (e) =>
+        (e.name && e.name.toLowerCase().includes(query)) ||
+        (e.id && e.id.toString().includes(query)),
+    );
+    renderPpeEmpsInModal(filtered);
+  };
+
+  // عند اختيار الموظف
+  window.selectPpeEmployee = function (id, name) {
+    document.getElementById("ppe-emp-name-display").value = name;
+    document.getElementById("ppe-emp-id-hidden").value = id;
+    window.closePpeEmpSelector();
+  };
   /**
    * (جديد) دالة فلترة قايمة الموظفين بناءً على المشروع المختار
    */
   /**
    * (معدل) دالة فلترة قايمة الموظفين بناءً على المشروع أو عرض الكل
    */
+  /*
   function updateEmployeeDropdown() {
     // 1. هات اسم المشروع المختار
     const selectedProject = ppeRecipientLocation.value;
@@ -1605,14 +1702,14 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       const displayText = showAll ? `${emp.name} (${emp.project})` : emp.name;
 
       const opt = new Option(displayText, emp.id);
-      // بننقل البيانات الإضافية عشان لو احتاجناها في الحفظ
+      // بننقل ال٨يانات الإضافية عشان لو احتاجناها في الحفظ
       opt.dataset.company = emp.company;
       opt.dataset.project = emp.project;
 
       ppeRecipientEmployee.add(opt);
     });
   }
-
+*/
   /**
    * (جديد) تحديث قائمة المقاولين بناءً على المشروع المختار
    */
@@ -1812,7 +1909,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         // فحص الرصيد الحالي + ما تم إضافته للسلة
         const existingItem = ppeCart.find((item) => item.id === itemId);
         const qtyInCart = existingItem ? existingItem.qty : 0;
-        const totalQtyNeeded = qty + qtyInCart; // الكمية المطلوبة = (اللي في السلة + اللي هتضيفه)
+        const totalQtyNeeded = qty + qtyInCart; // الكمية المطل �بة = (اللي في السلة + اللي هتضيفه)
 
         // استدعاء الـ API للتحقق
         const response = await callApi("checkStockBalance", {
@@ -1964,13 +2061,15 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         transactionData.recipient.type = recType;
 
         if (recType === "موظف") {
-          const empId = ppeRecipientEmployee.value;
-          const empObj = ppeEmployees.find((e) => e.id == empId);
-          if (!empObj) throw new Error("يجب اختيار اسم الموظف.");
+          const empId = document.getElementById("ppe-emp-id-hidden").value;
+          const empName = document.getElementById("ppe-emp-name-display").value;
+          if (!empId || !empName) {
+            throw new Error("يجب اختيار اسم الموظف من القائمة.");
+          }
 
-          transactionData.recipient.id = empObj.id;
-          transactionData.recipient.name = empObj.name;
-          transactionData.recipient.company = empObj.company || "السويدي";
+          transactionData.recipient.id = empId;
+          transactionData.recipient.name = empName;
+          transactionData.recipient.company = "السويدي"; // القيمة الافتراضية لموظفي الشركة
         } else if (recType === "مقاول") {
           const comp = ppeRecipientContractorCompany.value;
           const nid = ppeRecipientNid.value;
@@ -2101,14 +2200,13 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   if (ppeTransactionType) {
     ppeTransactionType.addEventListener("change", updatePpeFormUI);
   }
-  if (ppeRecipientLocation) {
-    ppeRecipientLocation.addEventListener("change", updateEmployeeDropdown);
-  }
+
   // (*** تعديل ***) ربط الدالة الجديدة
   // (معدل) عند تغيير موقع الصرف/الاستلام
   if (ppeRecipientLocation) {
     ppeRecipientLocation.addEventListener("change", () => {
-      updateEmployeeDropdown(); // فلترة الموظفين
+      document.getElementById("ppe-emp-name-display").value = "";
+      document.getElementById("ppe-emp-id-hidden").value = "";
       updatePpeContractorDropdown(); // (جديد) فلترة المقاولين
       refreshPpeItemsDropdown(); // فلترة المهمات (الرصيد)
     });
@@ -2131,9 +2229,6 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   }
   if (ppeForm) {
     ppeForm.addEventListener("submit", handlePpeSave);
-  }
-  if (ppeShowAllEmp) {
-    ppeShowAllEmp.addEventListener("change", updateEmployeeDropdown);
   }
 
   // --- نهاية وحدة المخازن ---
@@ -2291,86 +2386,118 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   const trnNotes = document.getElementById("trn-notes");
 
   // Data
-  let trnAttendeesCart = [];
+  // --- متغيرات الحالة (تأكد من وجودها في أعلى الملف أو بداية سكشن التدريب) ---
   let trainingDataLoaded = false;
 
   async function initTrainingPage() {
-    console.log("بدء تشغيل صفحة التدريب...");
+    console.log("بدء تشغيل صفحة التدريب (المطورة)...");
 
-    // 1. إعدادات أولية (التاريخ والوقت والمدرب)
+    // 1. إعدادات التاريخ والوقت والمدرب
     const now = new Date();
-    if (trnDate) trnDate.value = now.toLocaleDateString("en-CA");
-    if (trnTime)
-      trnTime.value = now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-    if (trnTrainer && currentUser) trnTrainer.value = currentUser.username;
+    if (document.getElementById("trn-date"))
+      document.getElementById("trn-date").value =
+        now.toLocaleDateString("en-CA");
+    if (document.getElementById("trn-time")) {
+      document.getElementById("trn-time").value = now.toLocaleTimeString(
+        "en-US",
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        },
+      );
+    }
+    if (document.getElementById("trn-trainer") && currentUser)
+      document.getElementById("trn-trainer").value = currentUser.username;
 
-    trnAttendeesCart = [];
-    updateTrnCartUI();
+    // 2. تحميل البيانات الأساسية (المشاريع، المواضيع، والموظفين)
+    try {
+      const r = await callApi("getTrainingInitData", { userInfo: currentUser });
 
-    // 2. تحميل البيانات
-    if (!trainingDataLoaded) {
-      try {
-        const r = await callApi("getTrainingInitData", {
-          userInfo: currentUser,
-        });
+      if (r.status === "success") {
+        // (هام جداً) تعبئة المصفوفة العالمية للموظفين ليراها المودال
+        window.ppeEmployees = r.employees;
 
-        if (r.status === "success") {
-          // تخزين البيانات
-          ppeEmployees = r.employees;
-          ppeContractors = r.contractors;
+        // تعبئة المشاريع والمواضيع والمقاولين في القوائم المنسدلة
+        const userProj = (currentUser.projects || "").toString();
+        let accProj =
+          userProj === "ALL"
+            ? r.projects
+            : r.projects.filter((p) => userProj.includes(p));
 
-          // تعبئة المشاريع
-          const userProj = (currentUser.projects || "").toString();
-          let accProj = r.projects;
-          if (userProj !== "ALL") {
-            accProj = r.projects.filter((p) => userProj.includes(p));
-          }
-          fillSelect(trnProject, accProj);
+        fillSelect(document.getElementById("trn-project"), accProj);
+        fillSelect(document.getElementById("trn-topic"), r.topics);
+        document.getElementById("trn-cont-company").innerHTML =
+          '<option value="">-- اختر المشروع أولاً --</option>';
 
-          // تعبئة المواضيع
-          fillSelect(trnTopic, r.topics);
-
-          // تعبئة المقاولين
-          fillSelect(trnContCompany, r.contractors);
-
-          trainingDataLoaded = true;
-        } else {
-          // (تعديل) إظهار رسالة الخطأ بوضوح
-          alert("خطأ من السيرفر: " + r.message);
-        }
-      } catch (e) {
-        // (تعديل) إظهار رسالة الخطأ بوضوح
-        alert("فشل تحميل البيانات: " + e.message);
+        trainingDataLoaded = true;
       }
+    } catch (e) {
+      console.error("فشل تحميل بيانات التدريب:", e);
+    }
+  }
+
+  // دالة اختيار الموظف المحدثة (إصلاح ReferenceError)
+  window.openEmpSelector = function () {
+    const proj = document.getElementById("trn-project").value;
+    const showAll = document.getElementById("trn-show-all-emp").checked;
+
+    // التأكد من تحميل البيانات أولاً
+    if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+      alert("جاري تحميل بيانات الموظفين، يرجى الانتظار ثانية...");
+      return;
     }
 
-    // تشغيل الفلترة
-    if (trnProject) handleTrnProjectChange();
-  }
+    if (!proj && !showAll) {
+      alert("الرجاء اختيار المشروع أولاً أو تفعيل خيار 'عرض كل الموظفين'");
+      return;
+    }
+
+    document.getElementById("emp-selector-modal").style.display = "flex";
+    document.getElementById("emp-search-box").value = "";
+
+    const list = showAll
+      ? window.ppeEmployees
+      : window.ppeEmployees.filter((e) => e.project === proj);
+    renderEmployeesInModal(list);
+  };
 
   // فلترة الموظفين والمقاولين حسب المشروع
-  function handleTrnProjectChange() {
-    const proj = trnProject.value;
+  window.handleTrnProjectChange = async function () {
+    const proj = document.getElementById("trn-project").value;
+    const contSelect = document.getElementById("trn-cont-company");
+    const workerNameInput = document.getElementById("trn-cont-name");
+    const workerNidInput = document.getElementById("trn-cont-nid");
 
-    // 1. فلترة الموظفين
-    filterTrnEmployees();
+    // تصفير حقول الموظف والمقاول عند تغيير المشروع لضمان الدقة
+    if (workerNameInput) workerNameInput.value = "";
+    if (workerNidInput) workerNidInput.value = "";
+    if (typeof window.resetEmpSelector === "function")
+      window.resetEmpSelector();
 
-    // 2. فلترة شرك����ت المقاولين (استدعاء السيرفر)
-    if (proj) {
-      trnContCompany.innerHTML = "<option>جاري التحميل...</option>";
-      callApi("getContractorsForProject", { projectName: proj })
-        .then((r) => {
-          if (r.contractors) fillSelect(trnContCompany, r.contractors);
-        })
-        .catch(() => {
-          trnContCompany.innerHTML = '<option value="">خطأ</option>';
-        });
+    if (!proj) {
+      contSelect.innerHTML =
+        '<option value="">-- اختر المشروع أولاً --</option>';
+      return;
     }
-  }
+
+    contSelect.innerHTML = "<option>جاري تحميل مقاولي المشروع...</option>";
+
+    try {
+      const r = await callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      if (r.status === "success") {
+        fillSelect(contSelect, r.contractors);
+      } else {
+        contSelect.innerHTML =
+          '<option value="">لا يوجد مقاولين لهذا المشروع</option>';
+      }
+    } catch (e) {
+      console.error("خطأ في جلب مقاولي المشروع:", e);
+      contSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+    }
+  };
 
   // منطق فلترة الموظفين (بالزرار)
   function filterTrnEmployees() {
@@ -2398,20 +2525,21 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
   // إضافة للحضور
   function addTrnAttendee() {
-    if (trnAddMsg) trnAddMsg.style.display = "none";
-    const type = trnAttendeeType.value;
+    const type = document.getElementById("trn-attendee-type").value;
     let att = { type: type };
 
     if (type === "موظف") {
-      const empId = trnEmpSelect.value;
-      if (!empId) {
-        showMessage(trnAddMsg, "اختر الموظف", false);
+      // القراءة من الحقول الجديدة التي يملأها المودال
+      const empName = document.getElementById("trn-emp-name-display").value;
+      const empId = document.getElementById("trn-emp-id-hidden").value;
+
+      if (!empName) {
+        alert("الرجاء اختيار الموظف من القائمة أولاً");
         return;
       }
-      const opt = trnEmpSelect.selectedOptions[0];
       att.id = empId;
-      att.name = opt.dataset.name;
-      att.company = opt.dataset.company;
+      att.name = empName;
+      att.company = "السويدي";
     } else {
       const nid = trnContNid.value;
       const name = trnContName.value;
@@ -3563,9 +3691,19 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     });
   }
   async function initNcrPage() {
-    console.log("بدء تشغي؄ صفحة NCR...");
+    console.log("بدء تشغيل صفحة NCR والمخالفات (النسخة المطورة)...");
 
-    // 1. الوقت والتاريخ
+    // 1. تصفير حقول الاختيار الجديدة (Popup Inputs) لضمان نظافة السجل
+    if (document.getElementById("ncr-emp-name-display"))
+      document.getElementById("ncr-emp-name-display").value = "";
+    if (document.getElementById("ncr-emp-id-hidden"))
+      document.getElementById("ncr-emp-id-hidden").value = "";
+    if (document.getElementById("vio-emp-name-display"))
+      document.getElementById("vio-emp-name-display").value = "";
+    if (document.getElementById("vio-emp-id-hidden"))
+      document.getElementById("vio-emp-id-hidden").value = "";
+
+    // 2. ضبط الوقت والتاريخ واسم المصدر
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-CA");
     const timeStr = now.toLocaleTimeString("en-US", {
@@ -3574,11 +3712,29 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       hour12: true,
     });
 
-    if (ncrDate) ncrDate.value = dateStr;
-    if (ncrTime) ncrTime.value = timeStr;
-    if (ncrIssuer) ncrIssuer.value = currentUser.username;
+    if (document.getElementById("ncr-date"))
+      document.getElementById("ncr-date").value = dateStr;
+    if (document.getElementById("ncr-time"))
+      document.getElementById("ncr-time").value = timeStr;
+    if (document.getElementById("ncr-issuer") && currentUser)
+      document.getElementById("ncr-issuer").value = currentUser.username;
 
-    // 2. تحميل المشاريع
+    // 3. التأكد من جلب بيانات الموظفين وتخزينها في window لكي يراها المودال
+    if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+      try {
+        const r = await callApi("getInventoryInitData", {
+          userInfo: currentUser,
+        });
+        if (r.status === "success") {
+          window.ppeEmployees = r.employees;
+          console.log("تم تحميل بيانات الموظفين بنجاح.");
+        }
+      } catch (e) {
+        console.error("Error loading employees for NCR:", e);
+      }
+    }
+
+    // 4. تحميل المشاريع في القائمة المنسدلة
     if (ncrProject && ncrProject.options.length <= 1) {
       if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
         fillSelect(ncrProject, ppeLocations);
@@ -3589,18 +3745,23 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
           });
           if (r.status === "success") {
             ppeLocations = r.locations;
-            ppeEmployees = r.employees;
-            ppeContractors = r.contractors;
+            // تحديث القوائم
             fillSelect(ncrProject, r.locations);
+            // تعبئة المشاريع في قسم المخالفات أيضاً لو كان له سلكتور مختلف
+            if (document.getElementById("vio-project"))
+              fillSelect(document.getElementById("vio-project"), r.locations);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error("Error loading projects:", e);
+        }
       }
     }
 
+    // 5. تصفير سلة الإجراءات ورسمها فارغة
     ncrActionsCart = [];
     renderNcrActions();
 
-    // (هام) ضبط الحالة الأولية للفورم
+    // 6. ضبط الحالة الأولية للفورم (إظهار NCR أو Violation بناءً على المختار)
     toggleReportType();
   }
 
@@ -3639,7 +3800,6 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       ncrContGroup.style.display = "none";
       setContainerState(ncrEmpGroup, true);
       setContainerState(ncrContGroup, false);
-      updateNcrEmployees();
     } else {
       ncrEmpGroup.style.display = "none";
       ncrContGroup.style.display = "block";
@@ -3649,23 +3809,106 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     }
   }
 
-  function updateNcrEmployees() {
-    const proj = ncrProject.value;
-    const showAll = ncrShowAllEmp.checked;
-    ncrObserverEmp.innerHTML = '<option value="">-- اختر --</option>';
+  // متغير لتحديد أي حقل سيتم ملؤه (NCR أم Violation)
+  let currentNcrVioContext = "";
 
-    if (!proj && !showAll) return;
-    if (typeof ppeEmployees === "undefined") return;
+  // دالة فتح المودال لقسم NCR
+  window.openNcrEmpSelector = function () {
+    const proj = document.getElementById("ncr-project").value;
+    const showAll = document.getElementById("ncr-show-all-emp").checked;
+    if (!proj && !showAll) {
+      alert("الرجاء اختيار المشروع أولاً");
+      return;
+    }
+
+    currentNcrVioContext = "NCR";
+    document.getElementById("ncrvio-modal-title").innerText =
+      "اختيار المُبلغ (NCR)";
+    openNcrVioModalBase(proj, showAll);
+  };
+
+  // دالة فتح المودال لقسم المخالفات
+  window.openVioEmpSelector = function () {
+    const proj = document.getElementById("vio-project").value;
+    const showAll = document.getElementById("vio-show-all-emp").checked;
+    if (!proj && !showAll) {
+      alert("الرجاء اختيار المشروع أولاً");
+      return;
+    }
+
+    currentNcrVioContext = "VIO";
+    document.getElementById("ncrvio-modal-title").innerText =
+      "اختيار الموظف المخالف";
+    openNcrVioModalBase(proj, showAll);
+  };
+
+  function openNcrVioModalBase(proj, showAll) {
+    document.getElementById("ncrvio-emp-modal").style.display = "flex";
+    document.getElementById("ncrvio-emp-search-box").value = "";
+    document.getElementById("ncrvio-emp-search-box").focus();
 
     const list = showAll
-      ? ppeEmployees
-      : ppeEmployees.filter((e) => e.project === proj);
-    list.forEach((e) => {
-      const opt = new Option(`${e.name} (${showAll ? e.project : ""})`, e.id);
-      opt.dataset.name = e.name;
-      ncrObserverEmp.add(opt);
-    });
+      ? window.ppeEmployees
+      : window.ppeEmployees.filter((e) => e.project === proj);
+    renderNcrVioEmpsInModal(list);
   }
+
+  window.closeNcrVioEmpSelector = function () {
+    document.getElementById("ncrvio-emp-modal").style.display = "none";
+  };
+
+  function renderNcrVioEmpsInModal(list) {
+    const container = document.getElementById("ncrvio-emp-list-container");
+    container.innerHTML =
+      list.length === 0
+        ? '<p style="text-align:center; padding:20px;">لا توجد نتائج</p>'
+        : list
+            .map(
+              (e) => `
+              <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:8px;" 
+                   onclick="window.selectNcrVioEmployee('${e.id}', '${e.name}')">
+                  <div style="text-align:right;">
+                      <span style="display:block; font-weight:700;">${e.name}</span>
+                      <small style="color:#666;">ID: ${e.id} | Project: ${e.project}</small>
+                  </div>
+              </div>`,
+            )
+            .join("");
+  }
+
+  window.filterNcrVioEmpList = function () {
+    const query = document
+      .getElementById("ncrvio-emp-search-box")
+      .value.toLowerCase();
+    const proj =
+      currentNcrVioContext === "NCR"
+        ? document.getElementById("ncr-project").value
+        : document.getElementById("vio-project").value;
+    const showAll =
+      currentNcrVioContext === "NCR"
+        ? document.getElementById("ncr-show-all-emp").checked
+        : document.getElementById("vio-show-all-emp").checked;
+
+    const baseList = showAll
+      ? window.ppeEmployees
+      : window.ppeEmployees.filter((e) => e.project === proj);
+    const filtered = baseList.filter(
+      (e) =>
+        e.name.toLowerCase().includes(query) || e.id.toString().includes(query),
+    );
+    renderNcrVioEmpsInModal(filtered);
+  };
+
+  window.selectNcrVioEmployee = function (id, name) {
+    if (currentNcrVioContext === "NCR") {
+      document.getElementById("ncr-emp-name-display").value = name;
+      document.getElementById("ncr-emp-id-hidden").value = id;
+    } else {
+      document.getElementById("vio-emp-name-display").value = name;
+      document.getElementById("vio-emp-id-hidden").value = id;
+    }
+    window.closeNcrVioEmpSelector();
+  };
 
   async function updateNcrContractors() {
     const proj = ncrProject.value;
@@ -3779,7 +4022,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
         // 2. تجهيز بيانات المُبلغ (Observer)
         if (data.observer.type === "السويدي") {
-          const empId = ncrObserverEmp.value;
+          const empId = document.getElementById("ncr-emp-id-hidden").value;
           // البحث في مصفوفة الموظفين المحملة
           const emp = ppeEmployees.find((x) => x.id == empId);
           if (!emp) {
@@ -3890,7 +4133,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
         // 2. تحديد بيانات المخالف
         if (violatorType === "موظف") {
-          const empId = vioEmpSelect.value;
+          const empId = document.getElementById("vio-emp-id-hidden").value;
           const emp = ppeEmployees.find((x) => x.id == empId);
           if (!emp) {
             showMessage(ncrSaveMsg, "الرجاء اختيار الموظف المخالف.", false);
@@ -3945,16 +4188,16 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   }
 
   // Events
-  if (ncrProject)
+  if (ncrProject) {
     ncrProject.addEventListener("change", () => {
-      updateNcrEmployees();
-      updateNcrContractors();
+      document.getElementById("ncr-emp-name-display").value = "";
+      document.getElementById("ncr-emp-id-hidden").value = "";
     });
+  }
   ncrTypeRadios.forEach((r) => r.addEventListener("change", toggleReportType));
   if (ncrObserverType)
     ncrObserverType.addEventListener("change", toggleNcrObserver);
-  if (ncrShowAllEmp)
-    ncrShowAllEmp.addEventListener("change", updateNcrEmployees);
+
   if (ncrNidSearchBtn) ncrNidSearchBtn.addEventListener("click", searchNcrNid);
   if (ncrAddActBtn) ncrAddActBtn.addEventListener("click", addNcrAction);
   // =================================================================
@@ -4094,7 +4337,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     if (vioTime) vioTime.value = timeStr;
     if (vioIssuer && currentUser) vioIssuer.value = currentUser.username;
 
-    // 2. المشاريع (إعادة استخدام المخزن)
+    // 2. المشاريع (إعادة استخدام المخزn�)
     if (vioProject && vioProject.options.length <= 1) {
       if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
         const userProj = (currentUser.projects || "").toString();
@@ -4134,7 +4377,6 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       vioContGroup.style.display = "none";
       setContainerState(vioEmpGroup, true);
       setContainerState(vioContGroup, false);
-      updateVioEmployees();
     } else {
       vioEmpGroup.style.display = "none";
       vioContGroup.style.display = "block";
@@ -4143,21 +4385,6 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       updateVioContractors();
     }
     updateVioItemDropdown();
-  }
-
-  function updateVioEmployees() {
-    const proj = vioProject.value;
-    const showAll = vioShowAllEmp.checked;
-    vioEmpSelect.innerHTML = '<option value="">-- اختر --</option>';
-    if (!proj && !showAll) return;
-    if (typeof ppeEmployees === "undefined") return;
-    const list = showAll
-      ? ppeEmployees
-      : ppeEmployees.filter((e) => e.project === proj);
-    list.forEach((e) => {
-      const opt = new Option(e.name, e.id);
-      vioEmpSelect.add(opt);
-    });
   }
 
   async function updateVioContractors() {
@@ -4344,14 +4571,13 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   }
 
   // Events
-  if (vioProject)
+  if (vioProject) {
     vioProject.addEventListener("change", () => {
-      updateVioEmployees();
-      updateVioContractors();
+      document.getElementById("vio-emp-name-display").value = "";
+      document.getElementById("vio-emp-id-hidden").value = "";
     });
+  }
   if (vioType) vioType.addEventListener("change", toggleVioType);
-  if (vioShowAllEmp)
-    vioShowAllEmp.addEventListener("change", updateVioEmployees);
 
   // =================================================================
   // --- (جديد) بحث NCR والمخالفات ---
@@ -4701,7 +4927,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     }
   }
 
-  // رسم الجدول (V4: PPE Details with Badges)
+  // رسم الجدوr� (V4: PPE Details with Badges)
   function renderAnalyticsTable(data) {
     if (!data || data.length === 0) {
       anaResultsContainer.innerHTML =
@@ -5051,7 +5277,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   // ابحث عن showSection وعدل الشرط:
   // if (sectionId === "EmployeeReports") initEmployeeReports();
   // =================================================================
-  // --- (جديد) وحدة تسجيل ومتابعة الحوادث (Accident Module) ---
+  // --- (جديد) و-�دة y�سجيt� ومتابعة الحوادث (Accident Module) ---
   // =================================================================
 
   // Selectors
@@ -5771,7 +5997,8 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   // --- منطق المقاولين والـ Datalist ---
   // متغير عام لحفظ عمال المقاول المختار حالياً
   let currentContractorWorkers = [];
-
+  let currentTrainingData = [];
+  let trnAttendeesCart = [];
   // 1. تحميل العمال عند تغيير الشركة
   window.loadContractorWorkers = async function () {
     const contractorName = document.getElementById("trn-cont-company").value;
@@ -5932,5 +6159,90 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     window.closeWorkerSelector();
   };
 });
+// --- دوال محرك اختيار الموظفين (Employees Selector) ---
+
+// دالة اختيار الموظف المحدثة (إصلاح ReferenceError)
+window.openEmpSelector = function () {
+  const proj = document.getElementById("trn-project").value;
+  const showAll = document.getElementById("trn-show-all-emp").checked;
+
+  // التأكد من تحميل البيانات أولاً
+  if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+    alert("جاري تحميل بيانات الموظفين، يرجى الانتظار ثانية...");
+    return;
+  }
+
+  if (!proj && !showAll) {
+    alert("الرجاء اختيار المشروع أولاً أو تفعيل خيار 'عرض كل الموظفين'");
+    return;
+  }
+
+  document.getElementById("emp-selector-modal").style.display = "flex";
+  document.getElementById("emp-search-box").value = "";
+
+  const list = showAll
+    ? window.ppeEmployees
+    : window.ppeEmployees.filter((e) => e.project === proj);
+  renderEmployeesInModal(list);
+};
+
+window.closeEmpSelector = function () {
+  document.getElementById("emp-selector-modal").style.display = "none";
+};
+
+// رسم قائمة الموظفين داخل المودال
+function renderEmployeesInModal(list) {
+  const container = document.getElementById("emp-list-container");
+  if (!list || list.length === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; padding:20px; color:#999;">لا يوجد موظفين مطابقين للبحث</p>';
+    return;
+  }
+
+  container.innerHTML = list
+    .map(
+      (e) => `
+        <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:8px;" onclick="window.selectEmployee('${e.id}', '${e.name}', '${e.company}')">
+            <div style="text-align:right;">
+                <span style="display:block; font-weight:700;">${e.name}</span>
+                <small style="color:#666;">ID: ${e.id} | ${e.project}</small>
+            </div>
+            <i class="fas fa-chevron-left" style="color:#ccc;"></i>
+        </div>
+    `,
+    )
+    .join("");
+}
+
+// تصفية القائمة أثناء الكتابة
+window.filterEmpList = function () {
+  const query = document.getElementById("emp-search-box").value.toLowerCase();
+  const proj = document.getElementById("trn-project").value;
+  const showAll = document.getElementById("trn-show-all-emp").checked;
+
+  // الفلترة بناءً على المشروع + كلمة البحث
+  const baseList = showAll
+    ? ppeEmployees
+    : ppeEmployees.filter((e) => e.project === proj);
+
+  const filtered = baseList.filter(
+    (e) =>
+      e.name.toLowerCase().includes(query) || e.id.toString().includes(query),
+  );
+
+  renderEmployeesInModal(filtered);
+};
+
+// عند اختيار موظف من القائمة
+window.selectEmployee = function (id, name, company) {
+  document.getElementById("trn-emp-name-display").value = name;
+  document.getElementById("trn-emp-id-hidden").value = id;
+
+  // حفظ البيانات في الحقول التي تستخدمها دالة trnAddBtn
+  // (لأن دالة addTrnAttendee عندك تعتمد على trnEmpSelect)
+  // سنقوم بتعديل بسيط في trnAddBtn لاحقاً
+
+  window.closeEmpSelector();
+};
 // --- END DOMContentLoaded ---
 // --- دوال النافذة المنبثقة (خارج أي نطاق مغلق لضمان العمل) ---

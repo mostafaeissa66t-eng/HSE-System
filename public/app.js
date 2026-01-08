@@ -3088,7 +3088,11 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
 
   async function initHazardPage() {
     console.log("بدء تشغيل صفحة تقارير الخطر...");
-
+    // --- إضافة: تفريغ حقول البوب أب الجديدة لضمان نظافة التقرير ---
+    if (document.getElementById("haz-emp-name-display"))
+      document.getElementById("haz-emp-name-display").value = "";
+    if (document.getElementById("haz-emp-id-hidden"))
+      document.getElementById("haz-emp-id-hidden").value = "";
     // 1. ضبط التاريخ والاسم (يدوياً)
     const now = new Date();
     const year = now.getFullYear();
@@ -3100,13 +3104,6 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     if (document.getElementById("haz-view-date")) {
       document.getElementById("haz-view-date").value = dateString;
     }
-
-    // تعيين اسم المستخدم (المصدر)
-    if (document.getElementById("haz-issuer") && currentUser) {
-      document.getElementById("haz-issuer").value = currentUser.username;
-    }
-
-    // 2. تعبئة المشاريع
     if (hazProject && hazProject.options.length <= 1) {
       if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
         const userProj = (currentUser.projects || "").toString();
@@ -3132,6 +3129,23 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         });
       }
     }
+    // تعيين اسم المستخدم (المصدر)
+    if (document.getElementById("haz-issuer") && currentUser) {
+      document.getElementById("haz-issuer").value = currentUser.username;
+    }
+    if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+      try {
+        const r = await callApi("getInventoryInitData", {
+          userInfo: currentUser,
+        });
+        if (r.status === "success") {
+          window.ppeEmployees = r.employees;
+        }
+      } catch (e) {
+        console.error("Error loading employees for Hazard:", e);
+      }
+    }
+    // 2. تعبئة المشاريع
 
     // 3. تعبئة قائمة المخاطر
     if (hazResult && hazResult.options.length <= 1) {
@@ -3154,21 +3168,81 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     const type = hazReporterType.value;
     hazEmpGroup.style.display = type === "موظف" ? "block" : "none";
     hazContGroup.style.display = type === "مقاول" ? "block" : "none";
-    if (type === "موظف") updateHazEmployees();
+
     if (type === "مقاول") updateHazContractors();
   }
+  // --- دوال اختيار الموظف في تقارير الخطر (Hazard Popup) ---
 
-  function updateHazEmployees() {
-    const proj = hazProject.value;
-    hazReporterEmp.innerHTML = '<option value="">-- اختر --</option>';
-    if (!proj) return;
-    // استخدام ppeEmployees المحملة مسبقاً
-    if (typeof ppeEmployees !== "undefined") {
-      const fil = ppeEmployees.filter((e) => e.project === proj);
-      fil.forEach((e) => hazReporterEmp.add(new Option(e.name, e.id)));
+  window.openHazEmpSelector = function () {
+    const proj = document.getElementById("haz-project").value;
+    const showAll = document.getElementById("haz-show-all-emp").checked;
+
+    if (!proj && !showAll) {
+      alert("الرجاء اختيار المشروع أولاً");
+      return;
     }
+
+    if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+      alert("جاري تحميل البيانات... حاول مرة أخرى");
+      return;
+    }
+
+    document.getElementById("haz-emp-modal").style.display = "flex";
+    document.getElementById("haz-emp-search-box").value = "";
+    document.getElementById("haz-emp-search-box").focus();
+
+    const list = showAll
+      ? window.ppeEmployees
+      : window.ppeEmployees.filter((e) => e.project === proj);
+    renderHazEmpsInModal(list);
+  };
+
+  window.closeHazEmpSelector = function () {
+    document.getElementById("haz-emp-modal").style.display = "none";
+  };
+
+  function renderHazEmpsInModal(list) {
+    const container = document.getElementById("haz-emp-list-container");
+    container.innerHTML =
+      list.length === 0
+        ? '<p style="text-align:center; padding:20px;">لا توجد نتائج</p>'
+        : list
+            .map(
+              (e) => `
+              <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:8px;" 
+                   onclick="window.selectHazEmployee('${e.id}', '${e.name}')">
+                  <div style="text-align:right;">
+                      <span style="display:block; font-weight:700;">${e.name}</span>
+                      <small style="color:#666;">ID: ${e.id} | Project: ${e.project}</small>
+                  </div>
+                  <i class="fas fa-search-location" style="color:#ccc;"></i>
+              </div>`,
+            )
+            .join("");
   }
 
+  window.filterHazEmpList = function () {
+    const query = document
+      .getElementById("haz-emp-search-box")
+      .value.toLowerCase();
+    const proj = document.getElementById("haz-project").value;
+    const showAll = document.getElementById("haz-show-all-emp").checked;
+
+    const baseList = showAll
+      ? window.ppeEmployees
+      : window.ppeEmployees.filter((e) => e.project === proj);
+    const filtered = baseList.filter(
+      (e) =>
+        e.name.toLowerCase().includes(query) || e.id.toString().includes(query),
+    );
+    renderHazEmpsInModal(filtered);
+  };
+
+  window.selectHazEmployee = function (id, name) {
+    document.getElementById("haz-emp-name-display").value = name;
+    document.getElementById("haz-emp-id-hidden").value = id;
+    window.closeHazEmpSelector();
+  };
   async function updateHazContractors() {
     const proj = hazProject.value;
     if (!proj) return;
@@ -3240,14 +3314,20 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       };
 
       if (data.reporter.type === "موظف") {
-        const empId = hazReporterEmp.value;
-        const emp = ppeEmployees.find((x) => x.id == empId);
-        if (!emp) {
-          alert("اختر الموظف");
+        const empId = document.getElementById("haz-emp-id-hidden").value;
+        const empName = document.getElementById("haz-emp-name-display").value;
+
+        // التحقق من أن المستخدم اختار موظفاً بالفعل من البوب أب
+        if (!empId || !empName) {
+          alert("الرجاء الضغط على خانة الاسم واختيار الموظف من القائمة");
           return;
         }
-        data.reporter.id = emp.id;
-        data.reporter.name = emp.name;
+
+        // استخدام window.ppeEmployees لضمان الوصول للبيانات
+        const emp = window.ppeEmployees.find((x) => x.id == empId);
+
+        data.reporter.id = empId;
+        data.reporter.name = empName;
         data.reporter.company = "السويدي";
       } else {
         data.reporter.id = hazReporterNid.value;
@@ -3286,7 +3366,6 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   // Events
   if (hazProject)
     hazProject.addEventListener("change", () => {
-      updateHazEmployees();
       updateHazContractors();
     });
   if (hazReporterType)
@@ -4347,7 +4426,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
             : ppeLocations.filter((p) => userProj.includes(p));
         fillSelect(vioProject, acc);
       } else {
-        // تحميل احتياطي
+        // تحميل احتيا��ي
         callApi("getInventoryInitData", { userInfo: currentUser }).then((r) => {
           if (r.status === "success") {
             ppeLocations = r.locations;
@@ -4517,7 +4596,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     });
   }
 
-  // 5. تحديث واجهة السلة والحسابات (معدل لتمييز العملة/الأيام)
+  // 5. تحديث واجهة ا؄سلة والحسابات (معدل لتميo�ز العملة/الأيام)
   function updateVioCartUI() {
     vioListContainer.innerHTML = "";
     let total = 0;
@@ -4729,7 +4808,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     }
   }
 
-  // عرض اسم الملف
+  // عر � اسم الملف
   if (contFile) {
     contFile.addEventListener("change", function () {
       if (this.files && this.files[0]) {
@@ -5125,7 +5204,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   const empReportContainer = document.getElementById("emp-report-container");
   const empPrintBtn = document.getElementById("emp-print-btn");
 
-  let allEmployeesCache = []; // لتخزين القائمة محلياً
+  let allEmployeesCache = []; // لتخزين اp�قائمة محلياً
 
   // دالة التهيئة (تستدعى من showSection)
   function initEmployeeReports() {
@@ -5584,7 +5663,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     if (list.length === 0) {
       if (emptyMsgEl) emptyMsgEl.style.display = "block"; // أظهر الرسالة
     } else {
-      if (emptyMsgEl) emptyMsgEl.style.display = "none"; // أخفِ الرسالة
+      if (emptyMsgEl) emptyMsgEl.style.display = "none"; // أخفِ الرسالo�
 
       list.forEach((p, idx) => {
         const li = document.createElement("li");

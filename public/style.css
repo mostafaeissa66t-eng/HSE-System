@@ -1968,3 +1968,36 @@ body {
 .btn-new-worker-full:hover {
     background-color: #000;
 }
+
+/* تنسيقات اختيار الموظفين داخل المودال */
+#emp-list-container .ppe-cart-item {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 12px 15px;
+    transition: all 0.2s ease;
+}
+
+#emp-list-container .ppe-cart-item:hover {
+    border-color: var(--primary-color);
+    background-color: #fff5f6;
+    transform: scale(1.01);
+}
+
+/* تنسيقات خاصة بمودال موظفي المخزن */
+#ppe-emp-modal .worker-selection-modal {
+    max-width: 600px !important;
+}
+
+#ppe-emp-list-container .ppe-cart-item:hover {
+    border-color: var(--primary-color);
+    background-color: #f8f9fa;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.popup-input-style {
+    cursor: pointer; 
+    background-color: #fff !important; 
+    border: 2px solid #C8102E !important;
+    font-weight: 600;
+}

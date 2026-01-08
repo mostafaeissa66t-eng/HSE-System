@@ -1085,14 +1085,25 @@
                                 style="display: none"
                             >
                                 <div class="form-group">
-                                    <label
-                                        for="ppe-recipient-employee"
-                                        class="required"
-                                        >اسم الموظف:</label
+                                    <label class="required"
+                                        >اسم الموظف المستلم:</label
                                     >
-                                    <select
-                                        id="ppe-recipient-employee"
-                                    ></select>
+                                    <input
+                                        type="text"
+                                        id="ppe-emp-name-display"
+                                        readonly
+                                        onclick="window.openPpeEmpSelector()"
+                                        placeholder="اضغط لاختيار الموظف..."
+                                        style="
+                                            cursor: pointer;
+                                            background-color: #fff !important;
+                                            border: 2px solid #c8102e;
+                                        "
+                                    />
+                                    <input
+                                        type="hidden"
+                                        id="ppe-emp-id-hidden"
+                                    />
                                 </div>
                                 <div class="form-group checkbox-group">
                                     <input
@@ -1104,6 +1115,47 @@
                                         style="font-weight: normal; color: #555"
                                         >عرض موظفي باقي المشاريع (زيارة)</label
                                     >
+                                </div>
+                            </div>
+
+                            <div
+                                id="ppe-emp-modal"
+                                class="modal"
+                                onclick="if(event.target == this) window.closePpeEmpSelector()"
+                            >
+                                <div
+                                    class="modal-content worker-selection-modal"
+                                >
+                                    <span
+                                        class="close-modal"
+                                        onclick="window.closePpeEmpSelector()"
+                                        >&times;</span
+                                    >
+                                    <h3
+                                        style="
+                                            text-align: center;
+                                            color: var(--primary-color);
+                                        "
+                                    >
+                                        <i class="fas fa-user-tag"></i> اختيار
+                                        الموظف (المخزن)
+                                    </h3>
+                                    <div
+                                        class="form-group"
+                                        style="margin-bottom: 15px"
+                                    >
+                                        <input
+                                            type="text"
+                                            id="ppe-emp-search-box"
+                                            placeholder="ابحث بالاسم أو الكود..."
+                                            oninput="window.filterPpeEmpList()"
+                                            class="search-input-fancy"
+                                        />
+                                    </div>
+                                    <div
+                                        id="ppe-emp-list-container"
+                                        class="modal-scroll-area"
+                                    ></div>
                                 </div>
                             </div>
 
@@ -1348,8 +1400,20 @@
 
                         <div id="trn-emp-group">
                             <div class="form-group">
-                                <label for="trn-emp-select">اسم الموظف:</label>
-                                <select id="trn-emp-select"></select>
+                                <label>اسم الموظف:</label>
+                                <input
+                                    type="text"
+                                    id="trn-emp-name-display"
+                                    readonly
+                                    onclick="window.openEmpSelector()"
+                                    placeholder="اضغط لاختيار موظف من القائمة..."
+                                    style="
+                                        cursor: pointer;
+                                        background-color: #fff !important;
+                                        border: 2px solid #c8102e;
+                                    "
+                                />
+                                <input type="hidden" id="trn-emp-id-hidden" />
                             </div>
                             <div class="form-group checkbox-group">
                                 <input type="checkbox" id="trn-show-all-emp" />
@@ -1796,19 +1860,26 @@
 
                             <div id="ncr-emp-group">
                                 <div class="form-group">
-                                    <label for="ncr-observer-emp"
-                                        >اسم الموظف:</label
-                                    >
-                                    <select id="ncr-observer-emp"></select>
+                                    <label>اسم الموظف (المُبلغ):</label>
+                                    <input
+                                        type="text"
+                                        id="ncr-emp-name-display"
+                                        readonly
+                                        onclick="window.openNcrEmpSelector()"
+                                        placeholder="اضغط لاختيار الموظف..."
+                                        class="popup-input-style"
+                                    />
+                                    <input
+                                        type="hidden"
+                                        id="ncr-emp-id-hidden"
+                                    />
                                 </div>
                                 <div class="form-group checkbox-group">
                                     <input
                                         type="checkbox"
                                         id="ncr-show-all-emp"
                                     />
-                                    <label
-                                        for="ncr-show-all-emp"
-                                        style="font-weight: normal"
+                                    <label for="ncr-show-all-emp"
                                         >عرض كل الأسماء (زيارة)</label
                                     >
                                 </div>
@@ -2016,17 +2087,26 @@
 
                                 <div id="vio-emp-group">
                                     <div class="form-group">
-                                        <label>اسم الموظف:</label>
-                                        <select id="vio-emp-select"></select>
+                                        <label>اسم الموظف المخالف:</label>
+                                        <input
+                                            type="text"
+                                            id="vio-emp-name-display"
+                                            readonly
+                                            onclick="window.openVioEmpSelector()"
+                                            placeholder="اضغط لاختيار الموظف..."
+                                            class="popup-input-style"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            id="vio-emp-id-hidden"
+                                        />
                                     </div>
                                     <div class="form-group checkbox-group">
                                         <input
                                             type="checkbox"
                                             id="vio-show-all-emp"
                                         />
-                                        <label
-                                            for="vio-show-all-emp"
-                                            style="font-weight: normal"
+                                        <label for="vio-show-all-emp"
                                             >عرض كل الموظفين</label
                                         >
                                     </div>
@@ -3771,6 +3851,77 @@
                                 (غير مسجل)
                             </button>
                         </div>
+                    </div>
+                </div>
+                <div
+                    id="emp-selector-modal"
+                    class="modal"
+                    onclick="if(event.target == this) window.closeEmpSelector()"
+                >
+                    <div class="modal-content worker-selection-modal">
+                        <span
+                            class="close-modal"
+                            onclick="window.closeEmpSelector()"
+                            >&times;</span
+                        >
+                        <h3
+                            style="
+                                text-align: center;
+                                color: var(--primary-color);
+                            "
+                        >
+                            <i class="fas fa-user-check"></i> اختيار الموظف
+                        </h3>
+
+                        <div class="form-group" style="margin-bottom: 15px">
+                            <input
+                                type="text"
+                                id="emp-search-box"
+                                placeholder="ابحث بالاسم أو الكود..."
+                                oninput="window.filterEmpList()"
+                                class="search-input-fancy"
+                            />
+                        </div>
+
+                        <div
+                            id="emp-list-container"
+                            class="modal-scroll-area"
+                        ></div>
+                    </div>
+                </div>
+                <div
+                    id="ncrvio-emp-modal"
+                    class="modal"
+                    onclick="if(event.target == this) window.closeNcrVioEmpSelector()"
+                >
+                    <div class="modal-content worker-selection-modal">
+                        <span
+                            class="close-modal"
+                            onclick="window.closeNcrVioEmpSelector()"
+                            >&times;</span
+                        >
+                        <h3
+                            id="ncrvio-modal-title"
+                            style="
+                                text-align: center;
+                                color: var(--primary-color);
+                            "
+                        >
+                            اختر الموظف
+                        </h3>
+                        <div class="form-group" style="margin-bottom: 15px">
+                            <input
+                                type="text"
+                                id="ncrvio-emp-search-box"
+                                placeholder="ابحث بالاسم أو الكود..."
+                                oninput="window.filterNcrVioEmpList()"
+                                class="search-input-fancy"
+                            />
+                        </div>
+                        <div
+                            id="ncrvio-emp-list-container"
+                            class="modal-scroll-area"
+                        ></div>
                     </div>
                 </div>
             </main>

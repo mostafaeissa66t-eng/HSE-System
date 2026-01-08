@@ -1572,12 +1572,75 @@
                                 </select>
                             </div>
 
-                            <div id="haz-emp-group">
+                            <div id="haz-emp-group" style="display: none">
                                 <div class="form-group">
-                                    <label for="haz-reporter-emp"
-                                        >اسم الموظف:</label
+                                    <label class="required"
+                                        >اسم الموظف المبلغ:</label
                                     >
-                                    <select id="haz-reporter-emp"></select>
+                                    <input
+                                        type="text"
+                                        id="haz-emp-name-display"
+                                        readonly
+                                        onclick="window.openHazEmpSelector()"
+                                        placeholder="اضغط لاختيار الموظف..."
+                                        class="popup-input-style"
+                                    />
+                                    <input
+                                        type="hidden"
+                                        id="haz-emp-id-hidden"
+                                    />
+                                </div>
+                                <div class="form-group checkbox-group">
+                                    <input
+                                        type="checkbox"
+                                        id="haz-show-all-emp"
+                                    />
+                                    <label for="haz-show-all-emp"
+                                        >عرض كل الأسماء (زيارة)</label
+                                    >
+                                </div>
+                            </div>
+
+                            <div
+                                id="haz-emp-modal"
+                                class="modal"
+                                onclick="if(event.target == this) window.closeHazEmpSelector()"
+                            >
+                                <div
+                                    class="modal-content worker-selection-modal"
+                                >
+                                    <span
+                                        class="close-modal"
+                                        onclick="window.closeHazEmpSelector()"
+                                        >&times;</span
+                                    >
+                                    <h3
+                                        style="
+                                            text-align: center;
+                                            color: var(--primary-color);
+                                        "
+                                    >
+                                        <i
+                                            class="fas fa-exclamation-triangle"
+                                        ></i>
+                                        اختيار الموظف المُبلغ
+                                    </h3>
+                                    <div
+                                        class="form-group"
+                                        style="margin-bottom: 15px"
+                                    >
+                                        <input
+                                            type="text"
+                                            id="haz-emp-search-box"
+                                            placeholder="ابحث بالاسم أو الكود..."
+                                            oninput="window.filterHazEmpList()"
+                                            class="search-input-fancy"
+                                        />
+                                    </div>
+                                    <div
+                                        id="haz-emp-list-container"
+                                        class="modal-scroll-area"
+                                    ></div>
                                 </div>
                             </div>
 

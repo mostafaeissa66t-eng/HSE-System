@@ -826,6 +826,7 @@
                     </div>
                 </section>
                 <!-- --- SECTION: KPI Evaluation (New) --- -->
+
                 <section
                     id="KpiEvaluation"
                     class="page-section"
@@ -835,61 +836,183 @@
                         <i class="fas fa-chart-line"></i> تقييم الموظفين (KPIs)
                     </h2>
 
-                    <!-- 1. Employee Selection -->
-                    <div class="kpi-selection-area">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="kpi-employee-select"
-                                    >اختر الموظف لتقييمه:</label
-                                >
-                                <select id="kpi-employee-select">
-                                    <option value="">اختر موظف...</option>
-                                    <!-- JS will fill this -->
-                                </select>
-                            </div>
-                            <div class="form-group">
+                    <div class="kpi-filter-card">
+                        <div class="filter-header">
+                            <i class="fas fa-filter"></i>
+                            <span>إعدادات التقييم</span>
+                        </div>
+
+                        <div class="filter-body">
+                            <div class="filter-group">
                                 <label for="kpi-period-select"
-                                    >اختر فترة التقييم:</label
+                                    ><i class="far fa-calendar-alt"></i> فترة
+                                    التقييم:</label
                                 >
                                 <input
                                     type="month"
                                     id="kpi-period-select"
-                                    placeholder="YYYY-MM"
+                                    class="modern-input"
                                 />
                             </div>
+
+                            <div class="filter-group">
+                                <label
+                                    ><i class="fas fa-user-tie"></i> الموظف
+                                    المستهدف:</label
+                                >
+                                <div
+                                    class="custom-select-trigger"
+                                    onclick="window.openKpiEmpSelector()"
+                                >
+                                    <input
+                                        type="text"
+                                        id="kpi-emp-name-display"
+                                        placeholder="اضغط لاختيار موظف من القائمة..."
+                                        readonly
+                                    />
+                                    <i
+                                        class="fas fa-search-plus search-icon"
+                                    ></i>
+                                </div>
+                                <input type="hidden" id="kpi-emp-id-hidden" />
+                            </div>
                         </div>
-                        <p
+
+                        <div
                             id="kpi-employee-jobtitle"
-                            class="job-title-display"
-                        ></p>
+                            class="employee-meta-info"
+                            style="display: none"
+                        ></div>
+                    </div>
+
+                    <div id="kpi-guidelines-container" class="guidelines-box">
+                        <h3>
+                            <i class="fas fa-info-circle"></i> دليل حساب نقاط
+                            التقييم لعام 2026
+                        </h3>
+                        <p
+                            style="
+                                margin-bottom: 10px;
+                                font-size: 0.9em;
+                                color: #555;
+                            "
+                        >
+                            يرجى اتباع الجدول التالي لحساب الدرجة المحققة بدقة:
+                        </p>
+
+                        <table class="guidelines-table">
+                            <thead>
+                                <tr>
+                                    <th>البند (المستهدف)</th>
+                                    <th>طريقة الحساب (للنقطة الواحدة)</th>
+                                    <th>مثال</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>جلسات TBT (المستهدف 10)</td>
+                                    <td>0.25 درجة لكل جلسة</td>
+                                    <td>عمل 4 جلسات = 1.0 درجة</td>
+                                </tr>
+                                <tr>
+                                    <td>جولات أسبوعية (المستهدف 4)</td>
+                                    <td>1.25 درجة لكل جولة</td>
+                                    <td>عمل جولتين = 2.5 درجة</td>
+                                </tr>
+                                <tr>
+                                    <td>تقارير يومية (المستهدف 5)</td>
+                                    <td>2.00 درجة لكل تقرير</td>
+                                    <td>تقديم 3 تقارير = 6.0 درجات</td>
+                                </tr>
+                                <tr>
+                                    <td>تقارير ملاحظات (المستهدف 10)</td>
+                                    <td>1.00 درجة لكل تقرير</td>
+                                    <td>تقديم 7 تقارير = 7.0 درجات</td>
+                                </tr>
+                                <tr>
+                                    <td>تقارير مخاطر سنوية (المستهدف 2)</td>
+                                    <td>1.25 درجة لكل تقرير</td>
+                                    <td>تقديم تقرير واحد = 1.25 درجة</td>
+                                </tr>
+                                <tr>
+                                    <td>تصاريح عمل / فحص معدات (المستهدف 5)</td>
+                                    <td>1.00 درجة لكل مستند</td>
+                                    <td>تقديم 5 مستندات = 5.0 درجات</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p class="note">
+                            ⚠️ ملاحظة: المخالفات للقواعد الذهبية تخصم درجة البند
+                            بالكامل (0 درجة).
+                        </p>
+                    </div>
+
+                    <form id="kpi-form-area">
+                        <div id="kpi-list-container">
+                            <p
+                                style="
+                                    text-align: center;
+                                    color: #777;
+                                    padding: 20px;
+                                "
+                            >
+                                الرجاء اختيار الموظف وفترة التقييم لعرض بنود
+                                التقييم الخاصة به...
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            id="kpi-save-btn"
+                            class="btn btn-primary"
+                            onclick="window.handleKpiSave(event)"
+                            style="display: none; width: 100%; margin-top: 20px"
+                        >
+                            <i class="fas fa-save"></i> حفظ التقييمات
+                        </button>
+                        <p id="kpi-save-message" class="success-message"></p>
                         <p
                             id="kpi-message-area"
                             class="error-message"
                             style="display: none"
                         ></p>
-                    </div>
-
-                    <!-- 2. KPI Form Area (Dynamically built) -->
-                    <form id="kpi-form-area">
-                        <div id="kpi-list-container">
-                            <!-- JS will build the KPI cards/rows here -->
-                            <p>
-                                الرجاء اختيار الموظف وفترة التقييم لعرض الـ KPIs
-                                الخاصة به.
-                            </p>
-                        </div>
-
-                        <button
-                            type="submit"
-                            id="kpi-save-btn"
-                            class="btn"
-                            style="display: none; margin-top: 20px"
-                        >
-                            <i class="fas fa-save"></i> حفظ التقييمات
-                        </button>
-                        <p id="kpi-save-message" class="success-message"></p>
                     </form>
                 </section>
+                <div
+                    id="kpi-emp-modal"
+                    class="modal"
+                    onclick="if(event.target == this) window.closeKpiEmpSelector()"
+                >
+                    <div class="modal-content worker-selection-modal">
+                        <span
+                            class="close-modal"
+                            onclick="window.closeKpiEmpSelector()"
+                            >&times;</span
+                        >
+                        <h3
+                            style="
+                                text-align: center;
+                                color: var(--primary-color);
+                            "
+                        >
+                            <i class="fas fa-star"></i> اختيار موظف للتقييم
+                        </h3>
+                        <div class="form-group" style="margin-bottom: 15px">
+                            <input
+                                type="text"
+                                id="kpi-emp-search-box"
+                                placeholder="ابحث بالاسم أو الكود..."
+                                oninput="window.filterKpiEmpList()"
+                                class="search-input-fancy"
+                            />
+                        </div>
+                        <div
+                            id="kpi-emp-list-container"
+                            class="modal-scroll-area"
+                        ></div>
+                    </div>
+                </div>
+
                 <section
                     id="ContractorEvaluation"
                     class="page-section"

@@ -3,13 +3,59 @@
 // =================================== */
 
 // API endpoint on the same server (points to api/index.js or server.js via proxy)
+// --- التعريفات العالمية (Global Scope) ---
+let evaluatedEmpIds = [];
+let currentUser = null;
 const API_URL = "/api";
 
+// جعل دوال اللودر عالمية لأن callApi تعتمد عليها
+function showLoader(message = "جاري التحميل...") {
+  const loader = document.getElementById("loader-overlay");
+  const loaderText = loader ? loader.querySelector("p") : null;
+  if (loaderText) loaderText.textContent = message;
+  if (loader) loader.style.display = "flex";
+}
+function showMessage(element, text, isSuccess) {
+  if (element) {
+    element.textContent = text;
+    element.className = isSuccess ? "success-message" : "error-message";
+    element.style.display = "block";
+    setTimeout(() => {
+      if (element) element.style.display = "none";
+    }, 5000);
+  }
+}
+function hideLoader() {
+  const loader = document.getElementById("loader-overlay");
+  setTimeout(() => {
+    if (loader) loader.style.display = "none";
+  }, 100);
+}
+
+// الدالة الأهم: جعل callApi عالمية لكي تراها كل الصفحات والبوب أب
+async function callApi(action, payload) {
+  showLoader(`جاري ${action}...`);
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: action, payload: payload }),
+    });
+    const responseText = await response.text();
+    hideLoader();
+    const result = JSON.parse(responseText);
+    if (result && result.status === "error") throw new Error(result.message);
+    return result;
+  } catch (error) {
+    hideLoader();
+    console.error(`API Error (${action}):`, error);
+    throw error;
+  }
+}
 // --- Run when DOM is ready ---
 document.addEventListener("DOMContentLoaded", function () {
   // --- GLOBAL STATE ---
-  let currentUser = null; // Stores {username, email, role, projects, sections}
-  let initialData = null; // Stores {projects:[], permitTypes:[], requesters:[]}
+
   // ============================================================
   // (*** جديد ***) التحقق من وجود جلسة محفوظة
   // ============================================================
@@ -288,30 +334,6 @@ document.addEventListener("DOMContentLoaded", function () {
       if (loader) loader.style.display = "none";
     }, 100);
   }
-  function showMessage(element, text, isSuccess) {
-    if (element) {
-      element.textContent = text;
-      element.className = isSuccess ? "success-message" : "error-message";
-      element.style.display = "block";
-
-      let timeout = 5000;
-      if (
-        isSuccess &&
-        (element.id === "kpi-save-message" || element.id === "ppe-save-message")
-      ) {
-        timeout = 10000; // 10 ثوان لرسائل النجاح الطويلة
-      }
-
-      setTimeout(() => {
-        if (element) element.style.display = "none";
-      }, timeout);
-    } else {
-      console.warn(
-        "Attempted to show message on a non-existent element:",
-        text,
-      );
-    }
-  }
 
   // --- (جديد) دالة عامة لتعبئة القوائم المنسدلة ---
   function fillSelect(element, dataArray) {
@@ -576,11 +598,11 @@ document.addEventListener("DOMContentLoaded", function () {
     parentContainer.appendChild(li);
   }
 
-  // دالة مساعدة لإنشاء قائمة منسدلة
+  // دالة مساعدة لإنشاء قائe�ة منسدلة
   function createGroupMenu(title, iconClass, childrenIds, parentContainer) {
     const li = document.createElement("li");
 
-    // 1. رأس القائمة (العنوان)
+    // 1. رأس n�لقائمة (العنوان)
     const aToggle = document.createElement("a");
     aToggle.href = "#";
     aToggle.className = "menu-toggle";
@@ -1213,22 +1235,53 @@ document.addEventListener("DOMContentLoaded", function () {
   // --- =================================== ---
   // --- KPI EVALUATION LOGIC (V2.1 Module) ---
   // --- =================================== ---
-  function initKpiPage() {
-    console.log("بدء تشغيل صفحة تقييم الموظفين (V2.1)...");
-    if (!kpiPeriodSelect.value) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = (now.getMonth() + 1).toString().padStart(2, "0");
-      kpiPeriodSelect.value = `${year}-${month}`;
+
+  // 1. تهيئة الصفحة (تستدعى عند فتح قسم التقييم)
+  window.initKpiPage = async function () {
+    console.log("تحديث صفحة التقييم...");
+
+    // جلب العناصر
+    const empNameDisplay = document.getElementById("kpi-emp-name-display");
+    const empIdHidden = document.getElementById("kpi-emp-id-hidden");
+    const kpiPeriodSelect = document.getElementById("kpi-period-select");
+    const jobTitleEl = document.getElementById("kpi-employee-jobtitle");
+    const guidelines = document.getElementById("kpi-guidelines-container");
+    const listContainer = document.getElementById("kpi-list-container");
+    const saveBtn = document.getElementById("kpi-save-btn");
+
+    // ريست للواجهة
+    if (empNameDisplay) empNameDisplay.value = "";
+    if (empIdHidden) empIdHidden.value = "";
+    if (jobTitleEl) {
+      jobTitleEl.innerHTML = "";
+      jobTitleEl.style.display = "none";
     }
-    loadKpiEmployees();
-    kpiEmployeeSelect.removeEventListener("change", handleKpiSelectionChange);
-    kpiPeriodSelect.removeEventListener("change", handleKpiSelectionChange);
-    kpiFormArea.removeEventListener("submit", handleKpiSave);
-    kpiEmployeeSelect.addEventListener("change", handleKpiSelectionChange);
-    kpiPeriodSelect.addEventListener("change", handleKpiSelectionChange);
-    kpiFormArea.addEventListener("submit", handleKpiSave);
-  }
+    if (guidelines) guidelines.style.display = "block"; // إظهار الإرشادات مرة أخرى
+    if (listContainer)
+      listContainer.innerHTML =
+        "<p style='text-align:center; padding:20px; color:#777;'>الرجاء اختيار الموظف وفترة التقييم لبدء التقييم...</p>";
+    if (saveBtn) saveBtn.style.display = "none";
+
+    // ضبط الشهر الحالي تلقائياً لو فاضي
+    if (kpiPeriodSelect && !kpiPeriodSelect.value) {
+      const now = new Date();
+      kpiPeriodSelect.value = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`;
+    }
+
+    try {
+      const r = await callApi("getKpiInitData", {
+        userInfo: currentUser,
+        selectedPeriod: kpiPeriodSelect.value,
+      });
+      if (r.status === "success") {
+        window.ppeEmployees = r.employees;
+        evaluatedEmpIds = r.evaluatedIds;
+      }
+    } catch (e) {
+      console.error("Error updating KPI data:", e);
+    }
+  };
+
   async function loadKpiEmployees() {
     if (!currentUser) return;
     if (kpiEmployeeSelect.options.length > 1) {
@@ -1300,139 +1353,7 @@ document.addEventListener("DOMContentLoaded", function () {
       loadKpisForEmployee(employeeId, period);
     }
   }
-  async function loadKpisForEmployee(employeeId, period) {
-    kpiListContainer.innerHTML = "<p>جاري تحميل بنود التقييم...</p>";
-    kpiSaveBtn.style.display = "none";
-    showMessage(kpiMessageArea, "", true);
-    try {
-      const payload = {
-        employeeId: employeeId,
-        period: period,
-        userInfo: currentUser,
-      };
-      const response = await callApi("getKPIsForEmployee", payload);
-      if (response.status === "success" && response.kpis) {
-        if (response.kpis.length > 0) {
-          buildKpiForm(response.kpis);
-          kpiSaveBtn.style.display = "block";
-        } else {
-          kpiListContainer.innerHTML =
-            "<p>لا توجد بنود تقييم مطلوبة لهذا الموظف في هذه الفترة.</p>";
-          kpiSaveBtn.style.display = "none";
-        }
-      } else {
-        throw new Error(response.message || "Failed to load KPIs.");
-      }
-    } catch (error) {
-      showMessage(kpiMessageArea, error.message, false);
-      kpiListContainer.innerHTML =
-        '<p style="color:red;">خطأ في تحميل الـ KPIs.</p>';
-    }
-  }
-  function buildKpiForm(kpis) {
-    if (!kpiListContainer) return;
-    kpiListContainer.innerHTML = "";
-    let totalMaxScore = 0;
-    kpis.forEach((kpi, index) => {
-      totalMaxScore += parseFloat(kpi.maxScore) || 0;
-      const card = document.createElement("div");
-      card.className = "kpi-card";
-      card.dataset.kpiId = kpi.kpiId;
-      card.dataset.maxScore = kpi.maxScore;
-      card.innerHTML = `
-<div class="kpi-card-info">
-<h4>${index + 1}. ${kpi.description || "N/A"}</h4>
-<p>التكرار: <span>${kpi.frequency || "-"}</span> | الدرجة القصوى: <span>${kpi.maxScore || 0}</span></p>
-</div>
-<div class="kpi-card-input">
-<div class="score-group">
-<label for="score-${kpi.kpiId}">الدرجة:</label>
-<input type="number" id="score-${kpi.kpiId}" class="kpi-score-input" 
-value="${kpi.scoreAchieved || ""}" 
-min="0" max="${kpi.maxScore || 0}" step="0.5" placeholder="0">
-</div>
-<input type="text" id="notes-${kpi.kpiId}" class="kpi-notes-input" 
-value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
-</div>`;
-      kpiListContainer.appendChild(card);
-    });
-    if (kpiEmployeeJobTitle) {
-      kpiEmployeeJobTitle.textContent = `${kpiEmployeeJobTitle.textContent} | إجمالي الدرجات المتاحة: ${totalMaxScore}`;
-    }
-  }
-  async function handleKpiSave(event) {
-    event.preventDefault();
-    if (!currentUser) {
-      showMessage(kpiMessageArea, "انتهت الجلسة.", false);
-      return;
-    }
-    const employeeId = kpiEmployeeSelect.value;
-    const period = `${kpiPeriodSelect.value}-01`;
-    if (!employeeId || !kpiPeriodSelect.value) {
-      showMessage(kpiMessageArea, "اختر الموظف والفترة.", false);
-      return;
-    }
-    const scoresToSave = [];
-    const kpiCards = kpiListContainer.querySelectorAll(".kpi-card");
-    let validationError = false;
-    kpiCards.forEach((card) => {
-      const kpiId = card.dataset.kpiId;
-      const maxScore = parseFloat(card.dataset.maxScore);
-      const scoreInput = card.querySelector(".kpi-score-input");
-      const score = scoreInput.value;
-      const scoreNum = parseFloat(score);
-      if (score !== "" && (scoreNum < 0 || scoreNum > maxScore)) {
-        scoreInput.style.borderColor = "red";
-        showMessage(
-          kpiMessageArea,
-          `الدرجة لـ ${kpiId} (${scoreNum}) غير صالحة (الحد الأقصى ${maxScore}).`,
-          false,
-        );
-        validationError = true;
-      } else {
-        scoreInput.style.borderColor = "";
-      }
-      scoresToSave.push({
-        kpiId: kpiId,
-        score: score === "" ? null : scoreNum,
-        maxScore: maxScore,
-        notes: card.querySelector(".kpi-notes-input")?.value || "",
-      });
-    });
-    if (validationError) return;
-    const evaluationsData = {
-      employeeId: employeeId,
-      period: period,
-      scores: scoresToSave,
-    };
-    if (
-      !confirm(
-        `هل أنت متأكد من حفظ التقييم لـ ${kpiEmployeeSelect.options[kpiEmployeeSelect.selectedIndex].text} عن فترة ${kpiPeriodSelect.value}؟`,
-      )
-    ) {
-      return;
-    }
-    try {
-      const response = await callApi("saveEvaluations", {
-        evaluationsData: evaluationsData,
-        userInfo: currentUser,
-      });
-      onSaveEvaluationSuccess(response);
-    } catch (error) {
-      onSaveEvaluationFailure(error);
-    }
-  }
-  function onSaveEvaluationSuccess(response) {
-    showMessage(kpiSaveMessage, response.message || "تم الحفظ!", true);
-    if (kpiSaveMessage) kpiSaveMessage.style.whiteSpace = "pre-wrap";
-    kpiListContainer.innerHTML =
-      "<p>تم الحفظ. الرجاء اختيار موظف وفترة تقييم...</p>";
-    kpiSaveBtn.style.display = "none";
-    kpiEmployeeJobTitle.textContent = "";
-  }
-  function onSaveEvaluationFailure(error) {
-    showMessage(kpiMessageArea, error.message, false);
-  }
+
   // --- نهاية كود KPIs ---
 
   // =================================================================
@@ -1461,7 +1382,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     updatePpeCartUI();
 
     try {
-      // نستخدم البيانات المحملة مسبقاً إذا وجدت، أو نحملها
+      // نستخدم البيانات المحملة مسبقاً إذا وجدت، أو نحم��ها
       if (typeof ppeLocations === "undefined" || ppeLocations.length === 0) {
         const data = await callApi("getInventoryInitData", {
           userInfo: currentUser,
@@ -1482,10 +1403,12 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
           ? ppeLocations
           : ppeLocations.filter((p) => userProj.includes(p));
 
-      populateSelect(ppeRecipientLocation, availableLocs); // للصرف
-      populateSelect(ppeSupplierDest, availableLocs); // للتوريد
-      populateSelect(ppeTransferSource, availableLocs); // للتحويل من
-      populateSelect(ppeTransferDest, availableLocs); // للتحويل إلى
+      populateSelect(ppeRecipientLocation, availableLocs);
+      populateSelect(ppeTransferSource, availableLocs); // "من مخزن" يظهر مشروعاتي فقط
+
+      // ب) القوائم التي تظهر كل مشاريع الشركة (إلى أين أورد أو أحول)
+      populateSelect(ppeSupplierDest, ppeLocations); // التوريد قد يكون لأي مشروع
+      populateSelect(ppeTransferDest, ppeLocations); // "إلى مخزن" يظهر كل المشاريع
 
       if (ppeContractors)
         populateSelect(ppeRecipientContractorCompany, ppeContractors);
@@ -1779,7 +1702,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       } else {
         ppeItemSelect.innerHTML =
           '<option value="">جاري تحميل القائمة الرئيسية...</option>';
-        // محاولة إعادة تحميل البيانات لو مش موجودة
+        // محاولة إعادة تحميل الC�يانات لو مش موجودة
         try {
           const r = await callApi("getInventoryInitData", {
             userInfo: currentUser,
@@ -1893,7 +1816,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         throw new Error("الرجاء اختيار مهمة وكمية صحيحة.");
       }
 
-      // (*** هذا هو المنطق الجديد  �لتحقق من الرصيد ***)
+      // (*** هذا هو المنطق الجديد  �لتحe�ق من الرصيد ***)
       // (التحقق من الرصيد مطلوب فقط في "الصرف" و "التحويل")
       if (type === "صرف" || type === "تحويل") {
         let sourceLocation = null;
@@ -3029,7 +2952,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
       return;
     }
 
-    // إظهار لودر بسيط
+    // إظهار لودر بسh�ط
     showLoader("جاري إغلاق الملاحظة...");
 
     try {
@@ -3317,7 +3240,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         const empId = document.getElementById("haz-emp-id-hidden").value;
         const empName = document.getElementById("haz-emp-name-display").value;
 
-        // التحقق من أن المستخدم اختار موظفاً بالفعل من البوب أب
+        // اr�تحقق من أن المستخدم اختار موظفاً بالفعل من البوب أب
         if (!empId || !empName) {
           alert("الرجاء الضغط على خانة الاسم واختيار الموظف من القائمة");
           return;
@@ -3443,7 +3366,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     }
   }
 
-  // 2. منطق بحث المخاطر
+  // 2. منطق بحث المخ �طر
   async function searchHazards() {
     monHazTable.innerHTML = "جاري البحث...";
     const filters = {
@@ -4102,7 +4025,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
         // 2. تجهيز بيانات المُبلغ (Observer)
         if (data.observer.type === "السويدي") {
           const empId = document.getElementById("ncr-emp-id-hidden").value;
-          // البحث في مصفوفة الموظفين المحملة
+          // البحث في مصفوفة الt�وظفين المحملة
           const emp = ppeEmployees.find((x) => x.id == empId);
           if (!emp) {
             showMessage(
@@ -5204,7 +5127,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
   const empReportContainer = document.getElementById("emp-report-container");
   const empPrintBtn = document.getElementById("emp-print-btn");
 
-  let allEmployeesCache = []; // لتخزين اp�قائمة محلياً
+  let allEmployeesCache = []; // لتخزين اp�i�ائمة محلياً
 
   // دالة التهيئة (تستدعى من showSection)
   function initEmployeeReports() {
@@ -5978,7 +5901,7 @@ value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
     const rows = document.querySelectorAll(".acc-row");
     let hasSelection = false;
 
-    // أضف كلاس الإخفاء للصفوف غير المحددة
+    // أضف كلاس ا=�إخفاء للصفوف غير المحددة
     rows.forEach((row) => {
       const checkbox = row.querySelector(".acc-print-check");
       if (checkbox && !checkbox.checked) {
@@ -6322,6 +6245,339 @@ window.selectEmployee = function (id, name, company) {
   // سنقوم بتعديل بسيط في trnAddBtn لاحقاً
 
   window.closeEmpSelector();
+  if (kpiPeriodSelect) {
+    kpiPeriodSelect.addEventListener("change", () => {
+      // عند تغيير الشهر، نفرغ القائمة المعروضة حالياً لأن علامات الصح ستتغير
+      kpiListContainer.innerHTML =
+        "<p>الرجاء اختيار الموظف لبدء التقييم للفترة الجديدة...</p>";
+      // تصفير معرفات الموظف المختار
+      document.getElementById("kpi-emp-name-display").value = "";
+      document.getElementById("kpi-emp-id-hidden").value = "";
+    });
+  }
 };
+
+////////////////////////////////////////////////////////////
 // --- END DOMContentLoaded ---
+
+window.buildKpiForm = function (kpis) {
+  const listContainer = document.getElementById("kpi-list-container");
+  if (!listContainer) return;
+  listContainer.innerHTML = "";
+
+  kpis.forEach((kpi, index) => {
+    const card = document.createElement("div");
+    card.className = "kpi-card";
+    card.dataset.kpiId = kpi.kpiId;
+    card.dataset.maxScore = kpi.maxScore;
+    card.innerHTML = `
+            <div class="kpi-card-info">
+                <h4>${index + 1}. ${kpi.description || "N/A"}</h4>
+                <p>التكرار: <span>${kpi.frequency || "-"}</span> | الدرجة القصوى: <span>${kpi.maxScore || 0}</span></p>
+            </div>
+            <div class="kpi-card-input">
+                <div class="score-group">
+                    <label>الدرجة:</label>
+                    <input type="number" class="kpi-score-input" 
+                           value="${kpi.scoreAchieved || ""}" 
+                           min="0" max="${kpi.maxScore || 0}" step="0.5" placeholder="0">
+                </div>
+                <input type="text" class="kpi-notes-input" 
+                       value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
+            </div>`;
+    listContainer.appendChild(card);
+  });
+};
+
+// 3. دالة تحميل البنود (إخفاء الإرشادات وإظهار الفورم)
+window.loadKpisForEmployee = async function (employeeId, period) {
+  const listContainer = document.getElementById("kpi-list-container");
+  const guidelines = document.getElementById("kpi-guidelines-container");
+  const saveBtn = document.getElementById("kpi-save-btn");
+  const msgArea = document.getElementById("kpi-message-area");
+
+  // إخفاء صندوق الإرشادات فوراً
+  if (guidelines) guidelines.style.display = "none";
+
+  if (listContainer)
+    listContainer.innerHTML =
+      "<div class='loader-small'>جاري جلب بنود التقييم...</div>";
+  if (saveBtn) saveBtn.style.display = "none";
+  if (msgArea) msgArea.style.display = "none";
+
+  try {
+    const response = await callApi("getKPIsForEmployee", {
+      employeeId: employeeId,
+      period: period,
+      userInfo: currentUser,
+    });
+
+    if (response.status === "success" && response.kpis) {
+      if (response.kpis.length > 0) {
+        window.buildKpiForm(response.kpis);
+        if (saveBtn) saveBtn.style.display = "block";
+      } else {
+        listContainer.innerHTML =
+          "<p class='error-message' style='display:block'>لا توجد بنود تقييم مسجلة لهذه الوظيفة.</p>";
+      }
+    }
+  } catch (error) {
+    listContainer.innerHTML =
+      "<p class='error-message' style='display:block'>حدث خطأ أثناء تحميل البيانات.</p>";
+  }
+};
 // --- دوال النافذة المنبثقة (خارج أي نطاق مغلق لضمان العمل) ---
+// --- دوال محرك تقييم الموظفين (KPI Popup Engine) ---
+
+window.openKpiEmpSelector = async function () {
+  const periodSelect = document.getElementById("kpi-period-select");
+  const selectedPeriod = periodSelect ? periodSelect.value : "";
+
+  if (!selectedPeriod) {
+    alert("الرجاء اختيار فترة التقييم أولاً");
+    return;
+  }
+
+  // إظهار لودر بسيط داخل الزر أو الصفحة
+  showLoader("جاري تحديث قائمة الموظفين...");
+
+  try {
+    // نطلب البيانات المفلترة بهذا الشهر تحديداً
+    const r = await callApi("getKpiInitData", {
+      userInfo: currentUser,
+      selectedPeriod: selectedPeriod,
+    });
+
+    if (r.status === "success") {
+      window.ppeEmployees = r.employees;
+      evaluatedEmpIds = r.evaluatedIds; // تحديث المصفوفة العالمية
+
+      // فتح المودال ورسم القائمة بعد التحديث
+      document.getElementById("kpi-emp-modal").style.display = "flex";
+      document.getElementById("kpi-emp-search-box").value = "";
+      renderKpiEmpsInModal(window.ppeEmployees);
+    }
+  } catch (e) {
+    alert("خطأ في جلب البيانات: " + e.message);
+  } finally {
+    hideLoader();
+  }
+};
+
+/**
+ * رسم قائمة الموظفين داخل نافذة اختيار التقييم (KPI Modal)
+ * تشمل الفلترة المسبقة من السيرفر، علامات التقييم المكتمل، والترتيب بالمشروع.
+ */
+function renderKpiEmpsInModal(list) {
+  const container = document.getElementById("kpi-emp-list-container");
+  if (!container) return;
+
+  // 1. ترتيب القائمة حسب اسم المشروع (Current_Project) لسهولة التقييم المتتالي
+  const sortedList = [...list].sort((a, b) =>
+    (a.project || "").localeCompare(b.project || ""),
+  );
+
+  // 2. التحقق من وجود بيانات (بعد فلترة السيرفر للمشاريع المسموحة)
+  if (sortedList.length === 0) {
+    container.innerHTML = `
+            <div style="text-align:center; padding:40px; color:#666;">
+                <i class="fas fa-users-slash fa-3x" style="margin-bottom:15px; color:#ccc;"></i>
+                <p>لا يوجد موظفين مسجلين في مشاريعك الحالية.</p>
+            </div>`;
+    return;
+  }
+
+  // 3. بناء واجهة القائمة
+  container.innerHTML = sortedList
+    .map((e) => {
+      // (هام) تنظيف الكود لمطابقة البيانات المستلمة من السيرفر (Evaluated IDs)
+      const currentEmpId = String(e.id).trim();
+      const isDone = (evaluatedEmpIds || []).some(
+        (id) => String(id).trim() === currentEmpId,
+      );
+
+      return `
+        <div class="ppe-cart-item ${isDone ? "evaluated-row" : ""}" 
+             style="cursor:pointer; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; transition: 0.2s;" 
+             onclick="window.selectKpiEmployee('${e.id}', '${e.name}', '${e.jobTitle}', '${e.project}')">
+
+            <div style="text-align:right; flex-grow:1;">
+                <span style="display:block; font-weight:700; color:#333;">
+                    ${e.name} 
+                    ${isDone ? '<i class="fas fa-check-circle" style="color:#28a745; margin-right:5px;" title="تم التقييم"></i>' : ""}
+                </span>
+                <small style="color:#666;">
+                    <i class="fas fa-id-card-alt"></i> ${e.id} | 
+                    <i class="fas fa-project-diagram"></i> ${e.project}
+                </small>
+            </div>
+
+            <div style="margin-right:10px;">
+                ${
+                  isDone
+                    ? '<span class="badge bg-success" style="font-size:0.75em; color:white; padding:5px 10px; border-radius:12px;">مـكتمل</span>'
+                    : '<i class="fas fa-chevron-left" style="color:#ddd;"></i>'
+                }
+            </div>
+        </div>`;
+    })
+    .join("");
+}
+
+window.filterKpiEmpList = function () {
+  const query = document
+    .getElementById("kpi-emp-search-box")
+    .value.toLowerCase();
+  const filtered = window.ppeEmployees
+    .filter(
+      (e) =>
+        e.name.toLowerCase().includes(query) || e.id.toString().includes(query),
+    )
+    .sort((a, b) => (a.project || "").localeCompare(b.project || ""));
+  renderKpiEmpsInModal(filtered);
+};
+
+// 2. دالة اختيار الموظف من البوب أب (تعديل الربط مع التصميم الجديد)
+window.selectKpiEmployee = function (id, name, job, project) {
+  // تعبئة الحقول الظاهرة والمخفية
+  const nameInput = document.getElementById("kpi-emp-name-display");
+  const idInput = document.getElementById("kpi-emp-id-hidden");
+  const jobTitleEl = document.getElementById("kpi-employee-jobtitle");
+
+  if (nameInput) nameInput.value = name;
+  if (idInput) idInput.value = id;
+
+  // إظهار المسمى الوظيفي والمشروع في "شريط المعلومات" الجديد
+  if (jobTitleEl) {
+    jobTitleEl.innerHTML = `
+            <span><i class="fas fa-briefcase"></i> ${job || "موظف"}</span> | 
+            <span><i class="fas fa-map-marker-alt"></i> المشروع: ${project || "غير محدد"}</span>
+        `;
+    jobTitleEl.style.display = "block";
+  }
+
+  // الانتقال للتحميل
+  const periodSelect = document.getElementById("kpi-period-select");
+  if (periodSelect && periodSelect.value && id) {
+    const period = `${periodSelect.value}-01`;
+    window.loadKpisForEmployee(id, period);
+  } else {
+    alert("الرجاء اختيار فترة التقييم أولاً");
+  }
+
+  window.closeKpiEmpSelector();
+};
+
+window.closeKpiEmpSelector = function () {
+  document.getElementById("kpi-emp-modal").style.display = "none";
+};
+// --- دالة حفظ التقييم العالمية (تمنع إعادة التحميل وتؤمن البيانات) ---
+// --- دالة حفظ التقييم العالمية (تمنع إعادة التحميل وتضمن استقرار البيانات) ---
+window.handleKpiSave = async function (event) {
+  // 1. منع إعادة تحميل الصفحة فوراً
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  // 2. جلب العناصر مباشرة بالـ ID لضمان الوصول إليها
+  const saveBtn = document.getElementById("kpi-save-btn");
+  const kpiListContainer = document.getElementById("kpi-list-container");
+  const empIdInput = document.getElementById("kpi-emp-id-hidden");
+  const periodSelect = document.getElementById("kpi-period-select");
+  const msgArea = document.getElementById("kpi-message-area");
+
+  // 3. التحقق من وجود المستخدم (العالمي) والبيانات الأساسية
+  if (!currentUser || !currentUser.username) {
+    alert("انتهت الجلسة، يرجى إعادة تسجيل الدخول.");
+    return;
+  }
+
+  const employeeId = empIdInput ? empIdInput.value : "";
+  const period = periodSelect ? `${periodSelect.value}-01` : "";
+
+  if (!employeeId || !period) {
+    alert("الرجاء اختيار الموظف وفترة التقييم أولاً.");
+    return;
+  }
+
+  // 4. تجميع الدرجات من الكروت
+  const scoresToSave = [];
+  const kpiCards = kpiListContainer.querySelectorAll(".kpi-card");
+  let validationError = false;
+
+  kpiCards.forEach((card) => {
+    const kpiId = card.dataset.kpiId;
+    const maxScore = parseFloat(card.dataset.maxScore);
+    const scoreInput = card.querySelector(".kpi-score-input");
+    const score = scoreInput.value;
+    const scoreNum = parseFloat(score);
+
+    if (score !== "" && (scoreNum < 0 || scoreNum > maxScore)) {
+      scoreInput.style.borderColor = "red";
+      validationError = true;
+    } else {
+      scoreInput.style.borderColor = "";
+    }
+
+    scoresToSave.push({
+      kpiId: kpiId,
+      score: score === "" ? null : scoreNum,
+      maxScore: maxScore,
+      notes: card.querySelector(".kpi-notes-input")?.value || "",
+    });
+  });
+
+  if (validationError) {
+    alert("الدرجات المدخلة غير صحيحة، يرجى مراجعة الحقول الحمراء.");
+    return;
+  }
+
+  if (!confirm("هل أنت متأكد من حفظ هذا التقييم؟")) return;
+
+  // 5. الإرسال للسيرفر
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+  }
+
+  try {
+    const response = await callApi("saveEvaluations", {
+      evaluationsData: { employeeId, period, scores: scoresToSave },
+      userInfo: currentUser,
+    });
+
+    // 6. استدعاء دالة النجاح
+    window.onSaveEvaluationSuccess(response);
+  } catch (error) {
+    alert("خطأ أثناء الحفظ: " + error.message);
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ التقييمات';
+    }
+  }
+};
+window.onSaveEvaluationSuccess = async function (response) {
+  const kpiSaveMessage = document.getElementById("kpi-save-message");
+  const kpiListContainer = document.getElementById("kpi-list-container");
+  const jobTitleEl = document.getElementById("kpi-employee-jobtitle");
+  const guidelines = document.getElementById("kpi-guidelines-container");
+
+  // إظهار رسالة النجاح
+  showMessage(kpiSaveMessage, response.message || "تم الحفظ بنجاح!", true);
+
+  // تنظيف الواجهة للتقييم القادم
+  if (kpiListContainer) {
+    kpiListContainer.innerHTML =
+      "<p class='success-message'>✅ تم حفظ التقييم بنجاح. يمكنك اختيار موظف آخر الآن.</p>";
+  }
+
+  document.getElementById("kpi-emp-name-display").value = "";
+  document.getElementById("kpi-emp-id-hidden").value = "";
+  if (jobTitleEl) jobTitleEl.style.display = "none";
+  if (guidelines) guidelines.style.display = "block"; // إعادة إظهار الإرشادات
+
+  // تحديث علامات الصح ✅
+  await window.initKpiPage();
+};

@@ -2446,16 +2446,14 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // إضافة للحضور
-  function addTrnAttendee() {
+  async function addTrnAttendee() {
     const type = document.getElementById("trn-attendee-type").value;
     let att = { type: type };
 
     if (type === "موظف") {
-      // القراءة من الحقول الجديدة التي يملأها المودال
+      // منطق الموظفين (يبقى كما هو)
       const empName = document.getElementById("trn-emp-name-display").value;
       const empId = document.getElementById("trn-emp-id-hidden").value;
-
       if (!empName) {
         alert("الرجاء اختيار الموظف من القائمة أولاً");
         return;
@@ -2464,33 +2462,63 @@ document.addEventListener("DOMContentLoaded", function () {
       att.name = empName;
       att.company = "السويدي";
     } else {
+      // منطق العمال (المقاولين)
       const nid = trnContNid.value;
       const name = trnContName.value;
       const comp = trnContCompany.value;
+
       if (!nid || !name || !comp) {
         showMessage(trnAddMsg, "بيانات المقاول ناقصة", false);
         return;
       }
+
+      // --- التعديل الجوهري هنا ---
+      // نعتبر العامل "موجود مسبقاً" إذا كان حقل الاسم مُعطلاً (بعد البحث)
+      // أو إذا كان حقل الرقم القومي "للقراءة فقط" (بعد الاختيار من القائمة أو المودال)
+      const isExistingWorker =
+        trnContName.disabled === true || trnContNid.readOnly === true;
+
+      if (!isExistingWorker) {
+        // فقط إذا كان المستخدم يكتب يدوياً (تسجيل جديد)، نقوم بالفحص
+        try {
+          const checkResult = await callApi("getRecipientByNID", {
+            nationalId: nid,
+          });
+          if (checkResult && checkResult.status === "found") {
+            alert(
+              `عفواً! الرقم القومي (${nid}) مسجل بالفعل باسم: [${checkResult.name}]\nالرجاء مسح الاسم المكتوب والبحث بالرقم القومي مرة أخرى لاستدعاء البيانات الصحيحة.`,
+            );
+            return; // منع الإضافة لأنه سجل جديد برقم موجود فعلياً
+          }
+        } catch (e) {
+          console.error("خطأ في فحص الرقم القومي:", e);
+        }
+      }
+
+      // إذا وصلنا هنا، يعني إما العامل موجود مسبقاً (وتم تخطي الفحص)
+      // أو هو عامل جديد فعلاً ورقمه القومي غير مكرر
       att.id = nid;
       att.name = name;
       att.company = comp;
-      att.isNew = !trnContName.disabled; // هل هو جديد؟
+      att.isNew = !isExistingWorker;
     }
 
-    // منع التكرار
+    // منع التكرار في القائمة الحالية (السلة)
     if (trnAttendeesCart.find((x) => x.id === att.id)) {
-      showMessage(trnAddMsg, "هذا الشخص مضاف بالفعل", false);
+      showMessage(trnAddMsg, "هذا الشخص مضاف بالفعل في القائمة", false);
       return;
     }
 
     trnAttendeesCart.push(att);
     updateTrnCartUI();
 
-    // ريسيت للخانات
+    // ريسيت للخانات بعد الإضافة
     if (type === "مقاول") {
       trnContNid.value = "";
       trnContName.value = "";
       trnContName.disabled = false;
+      trnContNid.readOnly = false; // إعادة الحقل قابلاً للكتابة
+      trnContNid.style.backgroundColor = "#fff";
     }
   }
 
@@ -2518,27 +2546,52 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   // بحث مقاول
+  // بحث مقاول في قسم التدريب
   async function searchTrnCont() {
     const nid = trnContNid.value;
     if (!nid) return;
+
     trnContName.value = "بحث...";
     trnContName.disabled = true;
+
     try {
       const r = await callApi("getRecipientByNID", { nationalId: nid });
+
       if (r.status === "found") {
+        // الرقم موجود بالفعل
         trnContName.value = r.name;
-        // محاولة تحديد الشركة لو موجودة في القائمة
-        trnContCompany.value = r.contractor;
         trnContName.disabled = true;
+        trnContCompany.value = r.contractor;
+
+        // إظهار الرسالة المطلوبة
+        showMessage(
+          trnAddMsg,
+          "الرقم القومى مسجل بالفعل الرجاء البحث فى قائمة الاسماء",
+          false,
+        );
+
+        // تنبيه إضافي لضمان اD�انتباه
+        alert(
+          "تنبيه: الرقم القومى مسجل بالفعل باسم ( " +
+            r.name +
+            " ). الرجاء استخدامه مباشرة.",
+        );
       } else {
+        // الرقم جديد
         trnContName.value = "";
         trnContName.placeholder = "اسم جديد...";
         trnContName.disabled = false;
         trnContName.focus();
+        showMessage(
+          trnAddMsg,
+          "هذا الرقم غير مسجل، يمكنك إضافة الاسم الآن.",
+          true,
+        );
       }
     } catch (e) {
       trnContName.value = "";
       trnContName.disabled = false;
+      showMessage(trnAddMsg, "خطأ في الاتصال بقاعدة البيانات", false);
     }
   }
 
@@ -2952,7 +3005,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // إظهار لودر بسh�ط
+    // إظهار لn�در بسh�ط
     showLoader("جاري إغلاق الملاحظة...");
 
     try {

@@ -5446,6 +5446,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document
       .querySelectorAll(".simple-list")
       .forEach((ul) => (ul.innerHTML = ""));
+    toggleInjuryCount();
   }
 
   // --- 2. تحميل بيانات المشروع (للمقاولين والموظفين) ---
@@ -5488,20 +5489,37 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // --- 3. UI Toggles ---
   window.toggleInjuryCount = function () {
     const val = accClass.value;
+    const victimSection = document.getElementById("acc-victim-section");
+    const injuriesInput = document.getElementById("acc-injuries-count"); // الحقل المسبب للمشكلة
+
     if (
       val === "Property Damage" ||
       val === "Nearmiss" ||
       val === "Environmental Incident"
     ) {
+      // 1. إخفاء الحقل وتصفير القيمة
       accInjuriesGroup.style.display = "none";
-      accInjuriesCount.value = "0";
+      injuriesInput.value = "0";
+
+      // 2. الحل الجذري: إزالة قيود التحقق عند الإخفاء لمنع تعليق الحفظ
+      injuriesInput.removeAttribute("required");
+      injuriesInput.setAttribute("min", "0"); // تغيير الحد الأدنى لـ 0 مؤقتاً
+
+      if (victimSection) victimSection.style.display = "none";
     } else {
+      // 1. إظهار الحقل وضبط القيمة الافتراضية لـ 1
       accInjuriesGroup.style.display = "block";
-      if (accInjuriesCount.value == "0" || accInjuriesCount.value == "")
-        accInjuriesCount.value = "1";
+      if (injuriesInput.value == "0" || injuriesInput.value == "") {
+        injuriesInput.value = "1";
+      }
+
+      // 2. إعادة قيود التحقق عند الإظهار
+      injuriesInput.setAttribute("required", "required");
+      injuriesInput.setAttribute("min", "1");
+
+      if (victimSection) victimSection.style.display = "block";
     }
   };
 
@@ -5719,48 +5737,70 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       if (!confirm("هل أنت متأكد من حفظ التقرير؟")) return;
 
+      // 1. تحديد نوع الحادث أولاً لمعرفة هل نحتاج بيانات ضحية أم لا
+      const classification = accClass.value;
+      const noVictimTypes = [
+        "Property Damage",
+        "Environmental Incident",
+        "Nearmiss",
+      ];
+      const isVictimRequired = !noVictimTypes.includes(classification);
+
       // تجميع القوائم النصية
       const getList = (id) =>
         Array.from(document.querySelectorAll(`#${id} li span`)).map(
           (el) => el.textContent,
         );
 
-      // تجميع بيانات الضحية
-      const vType = accVicType.value;
-      let victim = { type: vType, isNew: false };
-      if (vType === "Employee") {
-        const sel = accVicEmpSelect;
-        victim.name = sel.value;
-        victim.id = sel.options[sel.selectedIndex]?.dataset.id || "";
-        victim.company = "السويدي";
-      } else if (vType === "Contractor") {
-        victim.company = accVicContSelect.value;
-        victim.id = accVicNid.value;
-        victim.name = accVicContName.value;
-        victim.isNew = !accVicContName.readOnly;
-      } else {
-        victim.id = accVicVisNid.value;
-        victim.name = accVicVisName.value;
-        victim.company = "Visitor/Public";
-        victim.isNew = true;
+      // 2. تجميع بيانات الضحية (بشروط)
+      let victim = {
+        type: "N/A",
+        name: "N/A",
+        id: "N/A",
+        company: "N/A",
+        isNew: false,
+      };
+
+      if (isVictimRequired) {
+        const vType = accVicType.value;
+        victim.type = vType;
+
+        if (vType === "Employee") {
+          const sel = accVicEmpSelect;
+          victim.name = sel.value;
+          victim.id = sel.options[sel.selectedIndex]?.dataset.id || "";
+          victim.company = "السويدي";
+        } else if (vType === "Contractor") {
+          victim.company = accVicContSelect.value;
+          victim.id = accVicNid.value;
+          victim.name = accVicContName.value;
+          victim.isNew = !accVicContName.readOnly;
+        } else if (vType === "Visitor") {
+          victim.id = accVicVisNid.value;
+          victim.name = accVicVisName.value;
+          victim.company = "Visitor/Public";
+          victim.isNew = true;
+        }
+
+        // تفعيل التنبيه فقط إذا كان نوع الحادث يتطلب ضحية
+        if (!victim.name || victim.name === "N/A") {
+          alert("بيانات الشخص المعني بالحادث (المصاب) ناقصة");
+          return;
+        }
       }
 
-      if (!victim.name) {
-        alert("بيانات المصاب الرئيسي ناقصة");
-        return;
-      }
-
+      // 3. بناء كائن البيانات النهائي
       const data = {
         date: accDate.value,
         time: accTime.value,
         project: accProject.value,
-        classification: accClass.value,
+        classification: classification,
         injuriesCount: accInjuriesCount.value,
         routineActivity: accRoutine.value,
         whatHappened: accWhatHappened.value,
         notificationInfo: accNotification.value,
         injuriesDesc: accDamageDesc.value,
-        victim: victim,
+        victim: victim, // ستحتوي على N/A في الحوادث غير البشرية
         involved: accInvolvedData,
         witnesses: accWitnessData,
         directCauses: getList("acc-direct-list"),
@@ -6071,7 +6111,7 @@ document.addEventListener("DOMContentLoaded", function () {
         contractorName: contractorName,
       });
       if (response.status === "success") {
-        currentContractorWorkers = response.workers; // حفظ في المتغير العام
+        currentContractorWorkers = response.workers; // حe�ظ في المتغير العام
 
         // تحديث الـ Datalist
         dataList.innerHTML = response.workers

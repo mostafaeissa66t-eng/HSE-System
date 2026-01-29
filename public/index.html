@@ -786,7 +786,23 @@
                             class="error-message"
                             style="text-align: center; display: none"
                         ></p>
-
+                        <div
+                            id="monitor-count-badge"
+                            style="
+                                display: none;
+                                text-align: center;
+                                margin: 15px 0;
+                                padding: 10px;
+                                background: #e9ecef;
+                                border-radius: 8px;
+                                font-weight: bold;
+                                color: #c8102e;
+                                border: 1px solid #ddd;
+                            "
+                        >
+                            <i class="fas fa-file-invoice"></i> إجمالي عدد
+                            التصاريح: <span id="permits-total-count">0</span>
+                        </div>
                         <div
                             id="monitor-results-table"
                             class="results-table-container"
@@ -3892,7 +3908,58 @@
                                 <i class="fas fa-search"></i> بحث
                             </button>
                         </div>
-
+                        <div
+                            id="training-stats-summary"
+                            class="stats-grid"
+                            style="display: none; margin-bottom: 20px"
+                        >
+                            <div class="stat-card sewedy-trn">
+                                <i class="fas fa-id-badge"></i>
+                                <div class="stat-info">
+                                    <span class="stat-label"
+                                        >Sewedy Training</span
+                                    >
+                                    <span
+                                        id="count-sewedy-trn"
+                                        class="stat-value"
+                                        >0</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="stat-card sewedy-ind">
+                                <i class="fas fa-id-badge"></i>
+                                <div class="stat-info">
+                                    <span class="stat-label"
+                                        >Sewedy Induction</span
+                                    >
+                                    <span
+                                        id="count-sewedy-ind"
+                                        class="stat-value"
+                                        >0</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="stat-card sub-trn">
+                                <i class="fas fa-id-badge"></i>
+                                <div class="stat-info">
+                                    <span class="stat-label">Sub Training</span>
+                                    <span id="count-sub-trn" class="stat-value"
+                                        >0</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="stat-card sub-ind">
+                                <i class="fas fa-user-shield"></i>
+                                <div class="stat-info">
+                                    <span class="stat-label"
+                                        >Sub Induction</span
+                                    >
+                                    <span id="count-sub-ind" class="stat-value"
+                                        >0</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
                         <div
                             id="training-results-container"
                             class="results-table-container"

@@ -1144,9 +1144,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
   function onSearchSuccess(response) {
-    buildResultsTable(response.permits);
+    const countBadge = document.getElementById("monitor-count-badge");
+    const countSpan = document.getElementById("permits-total-count");
+    const permits = response.permits || [];
+
+    // تحديث العداد
+    if (countBadge && countSpan) {
+      if (permits.length > 0) {
+        countSpan.textContent = permits.length;
+        countBadge.style.display = "block"; // إظهار العداد
+      } else {
+        countBadge.style.display = "none"; // إخفاء لو مفيش نتائج
+      }
+    }
+
+    buildResultsTable(permits);
   }
   function onSearchFailure(error) {
+    const countBadge = document.getElementById("monitor-count-badge");
+    if (countBadge) countBadge.style.display = "none"; // إخفاء العداد في حالة الخطأ
+
     showMessage(monitorMessage, error.message, false);
     if (monitorResultsTable) monitorResultsTable.innerHTML = "";
   }
@@ -2309,7 +2326,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const trnNotes = document.getElementById("trn-notes");
 
   // Data
-  // --- متغيرات الحالة (تأكد من وجودها في أعلى الملف أو بداية سكشن التدريب) ---
+  // --- متغيرات الحالة (تأكد من وجودها في أعلى الملف أو بداية سكشن التدf�يب) ---
   let trainingDataLoaded = false;
 
   async function initTrainingPage() {
@@ -2517,7 +2534,7 @@ document.addEventListener("DOMContentLoaded", function () {
       trnContNid.value = "";
       trnContName.value = "";
       trnContName.disabled = false;
-      trnContNid.readOnly = false; // إعادة الحقل قابلاً للكتابة
+      trnContNid.readOnly = false; // إعادة ا �f�قل قابلاً للكتابة
       trnContNid.style.backgroundColor = "#fff";
     }
   }
@@ -6046,6 +6063,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const startDate = document.getElementById("train-start-date").value;
     const endDate = document.getElementById("train-end-date").value;
     const project = document.getElementById("train-project-filter").value;
+
+    // تصفير وإخفاء الإحصائيات قبل البحث الجديد
+    const statsBox = document.getElementById("training-stats-summary");
+    if (statsBox) statsBox.style.display = "none";
+
     showLoader("جاري جلب سجل التدريب...");
     try {
       const response = await callApi("getTrainingLogs", {
@@ -6054,9 +6076,15 @@ document.addEventListener("DOMContentLoaded", function () {
         filterProject: project || "all",
         userInfo: currentUser,
       });
+
       if (response.status === "success") {
         currentTrainingData = response.data.reverse();
         renderTrainingTable(response.data);
+
+        // تشغيل الحساب فوراً بعد ظهور الجدول
+        if (typeof window.calculateTrainingStats === "function") {
+          window.calculateTrainingStats(response.data);
+        }
       } else {
         alert("خطأ: " + response.message);
       }
@@ -6348,6 +6376,42 @@ window.selectEmployee = function (id, name, company) {
       document.getElementById("kpi-emp-id-hidden").value = "";
     });
   }
+  window.calculateTrainingStats = function (sessions) {
+    let stats = {
+      sewTrn: 0,
+      sewInd: 0,
+      subTrn: 0,
+      subInd: 0,
+    };
+
+    sessions.forEach((session) => {
+      // التحقق هل المحاضرة هي Induction أم تدريب عادي
+      const isInduction = session.topic.toLowerCase().includes("induction");
+
+      session.attendees.forEach((att) => {
+        // التحقق هل الشخص موظف سويدي أم مقاول
+        // نعتمد على النوع (موظف) أو اسم الشركة (السويدي)
+        const isSewedy = att.type === "موظف" || att.company === "السويدي";
+
+        if (isSewedy) {
+          if (isInduction) stats.sewInd++;
+          else stats.sewTrn++;
+        } else {
+          if (isInduction) stats.subInd++;
+          else stats.subTrn++;
+        }
+      });
+    });
+
+    // تحديث الأرقام في الواجهة
+    document.getElementById("count-sewedy-trn").textContent = stats.sewTrn;
+    document.getElementById("count-sewedy-ind").textContent = stats.sewInd;
+    document.getElementById("count-sub-trn").textContent = stats.subTrn;
+    document.getElementById("count-sub-ind").textContent = stats.subInd;
+
+    // إظهار اللوحة
+    document.getElementById("training-stats-summary").style.display = "grid";
+  };
 };
 
 ////////////////////////////////////////////////////////////
@@ -6673,4 +6737,57 @@ window.onSaveEvaluationSuccess = async function (response) {
 
   // تحديث علامات الصح ✅
   await window.initKpiPage();
+};
+window.calculateTrainingStats = function (sessions) {
+  console.log("جاري حساب إحصائيات التدريب..."); // للتأكد في الـ Console
+
+  let stats = {
+    sewTrn: 0,
+    sewInd: 0,
+    subTrn: 0,
+    subInd: 0,
+  };
+
+  if (!sessions || !Array.isArray(sessions)) return;
+
+  sessions.forEach((session) => {
+    // فحص نوع المحاضرة (بالإنجليزي أو العربي)
+    const topic = (session.topic || "").toLowerCase();
+    const isInduction = topic.includes("induction") || topic.includes("اندكشن");
+
+    if (session.attendees && Array.isArray(session.attendees)) {
+      session.attendees.forEach((att) => {
+        // فحص هل هو سويدي (موظف) أم مقاول
+        const isSewedy =
+          att.type === "موظف" ||
+          att.company === "السويدي" ||
+          att.company === "Elsewedy";
+
+        if (isSewedy) {
+          if (isInduction) stats.sewInd++;
+          else stats.sewTrn++;
+        } else {
+          if (isInduction) stats.subInd++;
+          else stats.subTrn++;
+        }
+      });
+    }
+  });
+
+  // تحديث الأرقام في المربعات الملونة
+  const updateEl = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  updateEl("count-sewedy-trn", stats.sewTrn);
+  updateEl("count-sewedy-ind", stats.sewInd);
+  updateEl("count-sub-trn", stats.subTrn);
+  updateEl("count-sub-ind", stats.subInd);
+
+  // إظهار اللوحة
+  const summaryBox = document.getElementById("training-stats-summary");
+  if (summaryBox) {
+    summaryBox.style.display = "grid";
+  }
 };

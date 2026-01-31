@@ -3418,6 +3418,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // 1. منطق بحث الملاحظات
   async function searchObservations() {
     monObsTable.innerHTML = "جاري البحث...";
+    // تصفير الإحصائيات قبل البحث
+    document.getElementById("obs-stats-summary").style.display = "none";
+
     const filters = {
       project: monObsProject.value,
       fromDate: monObsFrom.value,
@@ -3430,7 +3433,14 @@ document.addEventListener("DOMContentLoaded", function () {
         filters: filters,
         userInfo: currentUser,
       });
+
+      // رسم الجدول
       renderMonitorTable(r.data, monObsTable);
+
+      // حساب الإحصائيات (السطر الجديد)
+      if (r.data && r.data.length > 0) {
+        window.calculateObservationStats(r.data);
+      }
     } catch (e) {
       monObsTable.innerHTML = e.message;
     }
@@ -6790,4 +6800,36 @@ window.calculateTrainingStats = function (sessions) {
   if (summaryBox) {
     summaryBox.style.display = "grid";
   }
+};
+
+window.calculateObservationStats = function (data) {
+  let stats = { sewOpen: 0, sewClosed: 0, subOpen: 0, subClosed: 0 };
+
+  data.forEach((row) => {
+    // تنظيف النص من المسافات الزائدة
+    const responsibility = String(row.resp || "").trim();
+    const isSewedy =
+      responsibility === "السويدي" || responsibility === "Elsewedy";
+    const isOpen =
+      String(row.status || "")
+        .trim()
+        .toLowerCase() === "open";
+
+    if (isSewedy) {
+      if (isOpen) stats.sewOpen++;
+      else stats.sewClosed++;
+    } else {
+      if (isOpen) stats.subOpen++;
+      else stats.subClosed++;
+    }
+  });
+
+  document.getElementById("count-sewedy-open-obs").textContent = stats.sewOpen;
+  document.getElementById("count-sewedy-closed-obs").textContent =
+    stats.sewClosed;
+  document.getElementById("count-contractor-open-obs").textContent =
+    stats.subOpen;
+  document.getElementById("count-contractor-closed-obs").textContent =
+    stats.subClosed;
+  document.getElementById("obs-stats-summary").style.display = "grid";
 };

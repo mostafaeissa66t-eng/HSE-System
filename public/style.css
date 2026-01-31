@@ -2174,3 +2174,8 @@ body {
     font-weight: bold;
     color: #333;
 }
+
+.sewedy-open-obs { border-right-color: #c8102e !important; }   /* أحمر */
+.sewedy-closed-obs { border-right-color: #28a745 !important; } /* أخضر */
+.contractor-open-obs { border-right-color: #ff9800 !important; } /* برتقالي */
+.contractor-closed-obs { border-right-color: #0056b3 !important; } /* أزرق */

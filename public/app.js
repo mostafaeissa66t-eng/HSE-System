@@ -2234,34 +2234,64 @@ document.addEventListener("DOMContentLoaded", function () {
   /**
    * عند الضغط على زر "بحث"
    */
+  /**
+   * دالة البحث في أرصدة المخازن مع ميزة الطباعة الاحترافية المنفصلة
+   */
   async function handleStockReportSearch() {
     const locationName = stockReportProjectSelect.value;
+    const printBtn = document.getElementById("stock-report-print-btn");
+
+    // 1. التحقق من اختيار الموقع
     if (!locationName) {
       showMessage(stockReportMessage, "الرجاء اختيار الموقع أولاً.", false);
       return;
     }
 
-    showMessage(stockReportMessage, "", true); // إخفاء الرسالة
-    stockReportResultsTable.innerHTML = "<p>جاري تحميل التقرير...</p>";
+    // 2. تجهيز الواجهة (إخفاء زر الطباعة ومسح الرسائل)
+    if (printBtn) printBtn.style.display = "none";
+    showMessage(stockReportMessage, "", true);
+    stockReportResultsTable.innerHTML =
+      "<p><i class='fas fa-spinner fa-spin'></i> جاري تحميل التقرير...</p>";
 
     try {
-      // (مهم) هنبعت بيانات المستخدم عشان السيرفر يتأكد من الصلاحيات
+      // 3. استدعاء البيانات من السيرفر
       const response = await callApi("getProjectStockReport", {
         locationName: locationName,
         userInfo: currentUser,
       });
 
+      // 4. التحقق من وجود بيانات ورسم الجدول
       if (response.report && response.report.length > 0) {
         buildStockReportTable(response.report, locationName);
+
+        // 5. تفعيل زر الطباعة بالنظام الجديد (النافذة المنفصلة)
+        if (printBtn) {
+          printBtn.style.setProperty("display", "inline-flex", "important");
+
+          printBtn.onclick = function () {
+            // نأخذ المحتوى الذي تم إنشاؤه داخل حاوية النتائج فقط
+            const tableHtml = stockReportResultsTable.innerHTML;
+
+            // استدعاء دالة التوليد الاحترافية (تأكد أنها معرفة في app.js)
+            window.generateProfessionalPDF(
+              `تقرير رصيد مخزن: ${locationName}`,
+              tableHtml,
+            );
+          };
+        }
       } else {
-        stockReportResultsTable.innerHTML = `<p>المخزن [${locationName}] فارغ حالياً.</p>`;
+        stockReportResultsTable.innerHTML = `<p style='text-align:center; padding:20px;'>المخزن [${locationName}] فارغ حالياً أو لا توجد به بيانات.</p>`;
       }
     } catch (e) {
-      showMessage(stockReportMessage, e.message, false);
+      console.error("Stock Report Error:", e);
+      showMessage(
+        stockReportMessage,
+        "حدث خطأ أثناء جلب البيانات: " + e.message,
+        false,
+      );
       stockReportResultsTable.innerHTML = "";
     }
   }
-
   /**
    * دالة بناء جدول النتائج
    */
@@ -3856,7 +3886,7 @@ document.addEventListener("DOMContentLoaded", function () {
       ncrFieldsDiv.style.display = "block";
       vioFieldsDiv.style.display = "none";
 
-      // تفعيل حقول NCR وتعطيل حقول Violation (لحل مشكلة الـ Submit)
+      // تفعيل حقول NCR وتعطيل حقول Violation (لح � مشكلة الـ Submit)
       setContainerState(ncrFieldsDiv, true);
       setContainerState(vioFieldsDiv, false);
 
@@ -4733,7 +4763,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (monNcrVioBtn) monNcrVioBtn.addEventListener("click", searchNcrViolations);
 
   // =================================================================
-  // --- (معدل) وحدة المقاولين والرفع (Contractors Upload) ---
+  // --- (معدل) e�حدة المقاولين والرفع (Contractors Upload) ---
   // =================================================================
 
   const contForm = document.getElementById("contractor-form");
@@ -5181,8 +5211,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // 4. أمر الطباعة
     window.print();
 
-    // 5. (اختياري) إعادة إظهار كل الأعمدة بعد الطباعة (عشان لو اليوزر كنسل متبقاش الصفحة بايظة)
-    // ممكن نعملها بـ setTimeout عشان تلحق تظهر في الطباعة الأول
+    // 5. (اختياري) إعادة إظهار كل الأعمدة بعد -�لطباعة (عشان لو اليوزر كنسل متب=�اش الصفحة بايظة)
+    // ممكن نعم����ها بـ setTimeout عشان تلحق تظهر فi� الطباعة الأول
     setTimeout(() => {
       checkboxes.forEach((chk) => {
         const colClass = `col-${chk.dataset.col}`;
@@ -5348,10 +5378,31 @@ document.addEventListener("DOMContentLoaded", function () {
   // الطباعة
   if (empPrintBtn) {
     empPrintBtn.addEventListener("click", () => {
-      const d = new Date();
-      document.getElementById("emp-print-date").textContent =
-        "تاريخ التقرير: " + d.toLocaleDateString("ar-EG");
-      window.print();
+      // 1. تجميع بيانات الموظف من العناصر الموجودة في الصفحة
+      const empData = {
+        name: document.getElementById("r-emp-name").textContent,
+        id: document.getElementById("r-emp-id").textContent,
+        job: document.getElementById("r-emp-job").textContent,
+        dept: document.getElementById("r-emp-dept").textContent,
+        proj: document.getElementById("r-emp-proj").textContent,
+        join: document.getElementById("r-emp-join").textContent,
+        kpi: document.getElementById("r-emp-kpi-val").textContent,
+      };
+
+      // 2. بناء محتوى الجداول بشكل منظم للـ PDF
+      const tablesHtml = `
+              <div class="section-title"><i class="fas fa-chalkboard-teacher"></i> سجل التدريب</div>
+              ${document.getElementById("r-training-table").innerHTML}
+
+              <div class="section-title"><i class="fas fa-hard-hat"></i> سجل العهدة والمهمات (PPE)</div>
+              ${document.getElementById("r-ppe-table").innerHTML}
+
+              <div class="section-title"><i class="fas fa-exclamation-triangle"></i> سجل المخالفات والجزاءات</div>
+              ${document.getElementById("r-violations-table").innerHTML}
+          `;
+
+      // 3. استدعاء الدالة المخصصة الجديدة
+      window.generateEmployeeProfilePDF(empData, tablesHtml);
     });
   }
 
@@ -6493,7 +6544,7 @@ window.loadKpisForEmployee = async function (employeeId, period) {
       "<p class='error-message' style='display:block'>حدث خطأ أثناء تحميل البيانات.</p>";
   }
 };
-// --- دوال النافذة المنبثقة (خارج أي نطاق مغلق لضمان العمل) ---
+// --- دوال النافذة اr�منبثقة (خارج أي نطاق مغلق لضمان العمل) ---
 // --- دوال محرك تقييم الموظفين (KPI Popup Engine) ---
 
 window.openKpiEmpSelector = async function () {
@@ -6832,4 +6883,266 @@ window.calculateObservationStats = function (data) {
   document.getElementById("count-contractor-closed-obs").textContent =
     stats.subClosed;
   document.getElementById("obs-stats-summary").style.display = "grid";
+};
+// دالة الطباعة الشاملة
+// =================================================================
+// نظام توليد PDF الاحترافي المنفصل (V2.0)
+// =================================================================
+window.generateProfessionalPDF = function (title, contentHtml) {
+  const printWindow = window.open("", "_blank", "width=1000,height=800");
+
+  const htmlTemplate = `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            @page {
+                size: A4;
+                margin: 1.5cm;
+            }
+            body { 
+                font-family: 'Cairo', sans-serif; 
+                margin: 0;
+                padding: 0;
+                color: #2C2A29;
+                line-height: 1.4;
+                background-color: #fff;
+            }
+            /* حاوية التقرير */
+            .report-wrapper {
+                width: 100%;
+            }
+            /* الهيدر الاحترافي */
+            .pdf-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 4px solid #C8102E;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+            }
+            .header-info {
+                text-align: right;
+            }
+            .header-info h1 { 
+                color: #C8102E; 
+                margin: 0; 
+                font-size: 26px; 
+                font-weight: 800;
+            }
+            .header-info p {
+                margin: 5px 0 0 0;
+                font-size: 14px;
+                color: #555;
+                font-weight: 600;
+            }
+            .logo-container img {
+                height: 60px;
+                width: auto;
+            }
+
+            /* شريط تفاصيل المشروع */
+            .project-bar {
+                background-color: #f8f9fa;
+                padding: 12px 20px;
+                border-radius: 8px;
+                border-right: 6px solid #C8102E;
+                margin-bottom: 25px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .project-bar span {
+                font-weight: 700;
+                font-size: 15px;
+            }
+            .project-bar strong {
+                color: #C8102E;
+            }
+
+            /* تنسيق الجدول */
+            table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-top: 10px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            }
+            th { 
+                background-color: #2C2A29 !important; /* أسود تيرنكي */
+                color: #ffffff !important; 
+                font-weight: 700; 
+                border: 1px solid #2C2A29; 
+                padding: 14px 10px;
+                font-size: 14px;
+                -webkit-print-color-adjust: exact; 
+            }
+            td { 
+                border: 1px solid #dee2e6; 
+                padding: 12px 10px;
+                text-align: center; 
+                font-size: 13px;
+                font-weight: 600;
+            }
+            /* تلوين الصفوف */
+            tr:nth-child(even) { background-color: #fcfcfc; }
+
+            /* تمييز عمود الكمية */
+            td:last-child {
+                color: #C8102E;
+                font-weight: 800;
+                font-size: 16px;
+                background-color: rgba(200, 16, 46, 0.03);
+            }
+
+            /* فوتر التقرير */
+            .pdf-footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                font-size: 11px;
+                color: #888;
+                border-top: 1px solid #eee;
+                padding-top: 10px;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            /* منع كسر الجداول في منتصف الصف */
+            tr { page-break-inside: avoid; }
+        </style>
+    </head>
+    <body>
+        <div class="report-wrapper">
+            <div class="pdf-header">
+                <div class="header-info">
+                    <h1>تقرير أرصدة المخازن</h1>
+                    <p>ELSEWEDY TURNKEY | HSE DEPARTMENT</p>
+                    <p>قسم السلامة والصحة المهنية والبيئة</p>
+                </div>
+                <div class="logo-container">
+                    <img src="../turnkey.png" alt="Company Logo">
+                </div>
+            </div>
+
+            <div class="project-bar">
+                <span>الموقع: <strong>${title.replace("تقرير مخزن: ", "")}</strong></span>
+                <span>تاريخ التقرير: <strong>${new Date().toLocaleDateString("ar-EG")}</strong></span>
+            </div>
+
+            <div class="pdf-content">
+                ${contentHtml}
+            </div>
+
+            <div class="pdf-footer">
+                <span>نظام الأرشفة الرقمي - قطاع المشروعات</span>
+                <span>تم الاستخراج بواسطة: ${currentUser.username}</span>
+                <span>الصفحة 1 من 1</span>
+            </div>
+        </div>
+
+        <script>
+            window.onload = function() {
+                setTimeout(() => {
+                    window.print();
+                }, 500);
+            };
+        <\/script>
+    </body>
+    </html>
+    `;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlTemplate);
+  printWindow.document.close();
+};
+
+// =================================================================
+// دالة طباعة ملف الموظف الشامل (Professional Employee PDF)
+// =================================================================
+window.generateEmployeeProfilePDF = function (empData, tablesHtml) {
+  const printWindow = window.open("", "_blank", "width=1000,height=800");
+
+  const htmlTemplate = `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <title>ملف الموظف: ${empData.name}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            @page { size: A4; margin: 1.2cm; }
+            body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; color: #2C2A29; line-height: 1.4; }
+
+            /* الهيدر الرسمي بلون السويدي */
+            .pdf-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #C8102E; padding-bottom: 15px; margin-bottom: 25px; }
+            .header-info h1 { color: #C8102E; margin: 0; font-size: 24px; font-weight: 800; }
+            .header-info p { margin: 3px 0; font-size: 13px; color: #555; font-weight: 600; }
+            .logo-container img { height: 75px; }
+
+            /* كارت بيانات الموظف المطور */
+            .emp-profile-box { background: #fdfdfd; border: 1px solid #dee2e6; border-right: 6px solid #C8102E; border-radius: 8px; padding: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+            .emp-details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex-grow: 1; }
+            .detail-item { font-size: 14px; color: #444; }
+            .detail-item strong { color: #2C2A29; margin-left: 5px; }
+
+            /* دائرة KPI */
+            .kpi-summary { text-align: center; border-right: 1px solid #eee; padding-right: 25px; margin-right: 20px; min-width: 130px; }
+            .kpi-val { font-size: 28px; font-weight: 800; color: #C8102E; display: block; }
+            .kpi-label { font-size: 11px; color: #777; font-weight: 700; text-transform: uppercase; }
+
+            /* تنسيق الأقسام والجداول */
+            .section-title { background: #2C2A29; color: #fff; padding: 8px 15px; font-size: 15px; border-radius: 4px; margin: 25px 0 10px 0; display: inline-block; -webkit-print-color-adjust: exact; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+            th { background-color: #f2f2f2 !important; color: #333; font-weight: 700; border: 1px solid #ccc; padding: 10px; font-size: 13px; -webkit-print-color-adjust: exact; }
+            td { border: 1px solid #eee; padding: 8px 10px; text-align: center; font-size: 12px; }
+            tr:nth-child(even) { background-color: #fafafa; }
+
+            .pdf-footer { position: fixed; bottom: 0; left: 0; width: 100%; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 8px; display: flex; justify-content: space-between; }
+        </style>
+    </head>
+    <body>
+        <div class="pdf-header">
+            <div class="header-info">
+                <h1>سجل الموظف الشامل</h1>
+                <p>ELSEWEDY ELECTRIC | HSE DEPARTMENT</p>
+                <p>Digital HSE Management System</p>
+            </div>
+            <div class="logo-container"><img src="../turnkey.png"></div>
+        </div>
+
+        <div class="emp-profile-box">
+            <div class="emp-details">
+                <div class="detail-item"><strong>الاسم:</strong> ${empData.name}</div>
+                <div class="detail-item"><strong>الكود:</strong> ${empData.id}</div>
+                <div class="detail-item"><strong>الوظيفة:</strong> ${empData.job}</div>
+                <div class="detail-item"><strong>القسم:</strong> ${empData.dept}</div>
+                <div class="detail-item"><strong>المشروع الحالي:</strong> ${empData.proj}</div>
+                <div class="detail-item"><strong>تاريخ التعيين:</strong> ${empData.join}</div>
+            </div>
+            <div class="kpi-summary">
+                <span class="kpi-val">${empData.kpi}</span>
+                <span class="kpi-label">معدل الأداء العام</span>
+            </div>
+        </div>
+
+        ${tablesHtml}
+
+        <div class="pdf-footer">
+            <span>تم استخراج هذا التقرير بواسطة نظام الأرشفة الرقمي لقطاع المشروعات</span>
+            <span>تاريخ الطباعة: ${new Date().toLocaleString("ar-EG")}</span>
+        </div>
+
+        <script>
+            window.onload = function() { setTimeout(() => { window.print(); }, 500); };
+        <\/script>
+    </body>
+    </html>`;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlTemplate);
+  printWindow.document.close();
 };

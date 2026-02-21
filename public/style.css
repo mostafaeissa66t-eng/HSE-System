@@ -2195,3 +2195,124 @@ body {
         margin-left: 0 !important;
     }
 }
+
+
+/* تنسيقات التقرير اليومي V2 */
+.card-step {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.step-title {
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.step-num {
+    background: var(--primary-color);
+    color: #fff;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.compact-input-row {
+    display: flex;
+    flex-wrap: wrap; /* للسماح بالالتفاف في الشاشات الصغيرة */
+    gap: 12px;
+    padding: 12px;
+    background: #fdfdfd;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    justify-content: flex-start;
+}
+
+.input-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 65px; /* توسيع المساحة لمنع التآكل */
+}
+
+.input-unit small {
+    font-size: 11px;
+    font-weight: 700;
+    color: #444;
+    margin-bottom: 5px;
+    white-space: nowrap;
+}
+
+.input-unit input {
+    width: 55px !important;
+    height: 35px !important;
+    text-align: center;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* تنسيق خاص للكمبيوتر */
+@media (min-width: 1024px) {
+    .input-unit { min-width: 80px; }
+    .input-unit input { width: 65px !important; }
+    .compact-input-row { gap: 15px; }
+}
+
+.highlight-security {
+    background: #fff3f3;
+    border: 1px solid #ffcccc;
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.label-red {
+    display: block;
+    color: #c8102e;
+    font-weight: 800;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.alert-box-red {
+    border-right: 6px solid #dc3545;
+    background-color: #fff5f5;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #28a745;
+}
+
+.report-viewer {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.report-viewer .results-table {
+    min-width: 1000px; /* لضمان عدم عصر الأعمدة */
+}
+
+.report-header-info p {
+    margin: 5px 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}

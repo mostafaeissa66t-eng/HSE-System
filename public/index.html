@@ -4075,6 +4075,606 @@
                         </div>
                     </div>
                 </section>
+                <section
+                    id="DailyHseReport"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <div class="section-header-box">
+                        <h2>
+                            <i class="fas fa-calendar-check"></i> التقرير اليومي
+                            للموقع
+                        </h2>
+                    </div>
+
+                    <div
+                        id="daily-time-warning"
+                        class="error-message"
+                        style="
+                            background: #fff3cd;
+                            color: #856404;
+                            padding: 15px;
+                            border-radius: 8px;
+                            border: 1px solid #ffeeba;
+                            margin-bottom: 20px;
+                            display: none;
+                        "
+                    >
+                        <i class="fas fa-clock"></i>
+                        <span
+                            >عفواً، التسجيل متاح فقط من 9 صباحاً حتى 9
+                            مساءً.</span
+                        >
+                    </div>
+
+                    <form id="daily-report-form" class="app-form">
+                        <div class="card-step">
+                            <h3 class="step-title">
+                                <span class="step-num">1</span> إحصائيات الموقع
+                                والقوى البشرية
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="required">المشروع:</label>
+                                    <select
+                                        id="dr-project"
+                                        required
+                                        onchange="window.updateDrContractors()"
+                                    ></select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="required">التاريخ:</label>
+                                    <input type="date" id="dr-date" required />
+                                </div>
+                                <div class="form-group">
+                                    <label class="required"
+                                        >ساعات الوردية:</label
+                                    >
+                                    <select id="dr-shift" required>
+                                        <option value="8">8 ساعات</option>
+                                        <option value="12">12 ساعة</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>موظفي السويدي:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-total-sewedy"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>العمالة الداخلية:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-total-internal"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>عمال المقاولين:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-total-contractors"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group highlight-security">
+                                    <label>إجمالي الأمن (12س):</label>
+                                    <input
+                                        type="number"
+                                        id="dr-total-security"
+                                        value="0"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="form-row grid-4">
+                                <div class="form-group">
+                                    <label>Issued PTW:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-ptw"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>Hazard Rep.:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-hazards"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>Site Obs.:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-total-obs"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>Equip. Insp.:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-equip"
+                                        value="0"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="form-row grid-4">
+                                <div class="form-group">
+                                    <label>Internal Audit:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-int-audit"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>External Audit:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-ext-audit"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>Weekly Walkdown:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-weekly-walk"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>Monthly Tour:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-monthly-tour"
+                                        value="0"
+                                    />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Accommodation Inspection:</label
+                                ><input
+                                    type="number"
+                                    id="dr-acc-insp"
+                                    value="0"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="card-step">
+                            <h3 class="step-title">
+                                <span class="step-num">2</span> سجل الأداء (شركة
+                                السويدي)
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Training:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-sw-train"
+                                        value="0"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>Induction:</label
+                                    ><input
+                                        type="number"
+                                        id="dr-sw-induct"
+                                        value="0"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="safety-flex-container">
+                                <div class="grid-box full-width">
+                                    <label class="label-red"
+                                        >الملاحظات (Observations):</label
+                                    >
+                                    <div class="compact-input-row">
+                                        <div class="input-unit">
+                                            <small>UA</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-ua"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>UC</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-uc"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>Env</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-env"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>Pos</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-pos"
+                                                value="0"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="grid-box full-width">
+                                    <label class="label-red"
+                                        >الحوادث (Incidents):</label
+                                    >
+                                    <div class="compact-input-row">
+                                        <div class="input-unit">
+                                            <small>Fatal</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-fatal"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>LTI</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-lti"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>MTC</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-mtc"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>FAC</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-fac"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>NM</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-nm"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>PD</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-pd"
+                                                value="0"
+                                            />
+                                        </div>
+                                        <div class="input-unit">
+                                            <small>Env</small
+                                            ><input
+                                                type="number"
+                                                id="dr-sw-env-inc"
+                                                value="0"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-step">
+                            <h3 class="step-title">
+                                <span class="step-num">3</span> تفاصيل أداء
+                                المقاولين
+                            </h3>
+
+                            <div
+                                id="entity-input-box"
+                                class="contractor-entry-box"
+                            >
+                                <div class="form-group">
+                                    <label class="required">اسم المقاول:</label>
+                                    <select
+                                        id="dr-ent-name"
+                                        class="modern-select"
+                                    ></select>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="required"
+                                            >عدد موظفي المقاول:</label
+                                        ><input
+                                            type="number"
+                                            id="dr-ent-manpower"
+                                            value="0"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Training:</label
+                                        ><input
+                                            type="number"
+                                            id="dr-ent-train"
+                                            value="0"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Induction:</label
+                                        ><input
+                                            type="number"
+                                            id="dr-ent-induct"
+                                            value="0"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="safety-flex-container">
+                                    <div class="grid-box">
+                                        <label class="label-red"
+                                            >الملاحظات:</label
+                                        >
+                                        <div class="compact-input-row">
+                                            <div class="input-unit">
+                                                <small>UA</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-ua"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>UC</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-uc"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>Env</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-env"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>Pos</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-pos"
+                                                    value="0"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="grid-box">
+                                        <label class="label-red"
+                                            >الحوادث:</label
+                                        >
+                                        <div
+                                            class="compact-input-row scrollable"
+                                        >
+                                            <div class="input-unit">
+                                                <small>Fat</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-fatal"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>LTI</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-lti"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>MTC</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-mtc"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>FAC</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-fac"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>NM</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-nm"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>PD</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-pd"
+                                                    value="0"
+                                                />
+                                            </div>
+                                            <div class="input-unit">
+                                                <small>Env</small
+                                                ><input
+                                                    type="number"
+                                                    id="dr-ent-env-inc"
+                                                    value="0"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    onclick="window.addEntityToDailyReport()"
+                                >
+                                    <i class="fas fa-plus-circle"></i> إضافة
+                                    المقاول للقائمة
+                                </button>
+                            </div>
+
+                            <div
+                                id="added-entities-container"
+                                style="margin-top: 20px"
+                            >
+                                <table
+                                    class="results-table"
+                                    style="font-size: 0.85em"
+                                >
+                                    <thead>
+                                        <tr>
+                                            <th>المقاول</th>
+                                            <th>الموظفين</th>
+                                            <th>ساعات العمل</th>
+                                            <th>ملاحظات</th>
+                                            <th>حوادث</th>
+                                            <th>حذف</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dr-entities-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>ملاحظات إضافية:</label>
+                            <textarea
+                                id="dr-notes"
+                                rows="2"
+                                placeholder="اكتب أي ملاحظات أخرى هنا..."
+                            ></textarea>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="dr-submit-btn"
+                            class="btn btn-primary main-submit"
+                        >
+                            <i class="fas fa-paper-plane"></i> إرسال التقرير
+                            النهائي للاعتماد
+                        </button>
+                    </form>
+                </section>
+                <section
+                    id="DailyApprovals"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-check-double"></i> إدارة واعتماد
+                        التقارير اليومية
+                    </h2>
+
+                    <div class="app-form">
+                        <h4>تقارير بانتظار المراجعة</h4>
+                        <div
+                            id="pending-reports-container"
+                            class="results-table-container"
+                        >
+                            <p style="text-align: center">
+                                جاري فحص التقارير المعلقة...
+                            </p>
+                        </div>
+                    </div>
+                </section>
+                <section
+                    id="MonitorDailyReports"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-folder-open"></i> سجل التقارير اليومية
+                    </h2>
+                    <div class="app-form">
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>اختر المشروع:</label>
+                                <select id="mon-dr-project">
+                                    <option value="ALL_ACCESSIBLE">
+                                        كل المشاريع المتاحة
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>من تاريخ:</label>
+                                    <input type="date" id="mon-dr-from" />
+                                </div>
+                                <div class="form-group">
+                                    <label>إلى تاريخ:</label>
+                                    <input type="date" id="mon-dr-to" />
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                id="mon-dr-btn"
+                                class="btn"
+                                style="width: 100%; margin-top: 10px"
+                            >
+                                <i class="fas fa-search"></i> عرض السجلات
+                            </button>
+                        </div>
+                        <div id="mon-dr-results" style="margin-top: 25px"></div>
+                    </div>
+                </section>
+
+                <div id="report-details-modal" class="modal">
+                    <div class="modal-content" style="max-width: 900px">
+                        <span class="close" onclick="closeReportModal()"
+                            >&times;</span
+                        >
+                        <h3 id="modal-report-title">تفاصيل التقرير اليومي</h3>
+                        <div
+                            id="report-details-body"
+                            class="report-viewer"
+                        ></div>
+                        <div class="modal-footer-btns">
+                            <button
+                                class="btn btn-success"
+                                id="btn-approve-final"
+                            >
+                                اعتماد وقبول
+                            </button>
+                            <button
+                                class="btn btn-danger"
+                                id="btn-reject-final"
+                            >
+                                رفض مع ملاحظات
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <div
                     id="attendees-modal"

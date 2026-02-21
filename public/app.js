@@ -4,6 +4,7 @@
 
 // API endpoint on the same server (points to api/index.js or server.js via proxy)
 // --- التعريفات العالمية (Global Scope) ---
+let initialData = null; // <--- ضيف السطر ده هنا
 let evaluatedEmpIds = [];
 let currentUser = null;
 const API_URL = "/api";
@@ -52,6 +53,17 @@ async function callApi(action, payload) {
     throw error;
   }
 }
+
+// جعل دالة تعبئة القوائم مرئية للجميع
+window.fillSelect = function (element, dataArray) {
+  if (!element) return;
+  element.innerHTML = '<option value="">-- اختر --</option>';
+  if (dataArray && Array.isArray(dataArray)) {
+    dataArray.forEach((item) => {
+      element.add(new Option(item, item));
+    });
+  }
+};
 // --- Run when DOM is ready ---
 document.addEventListener("DOMContentLoaded", function () {
   // --- GLOBAL STATE ---
@@ -213,6 +225,9 @@ document.addEventListener("DOMContentLoaded", function () {
     AccidentReport: "fas fa-car-crash",
     MonitorAccidents: "fas fa-file-medical-alt",
     MYAccidents: "fas fa-folder-open",
+    DailyHseReport: "fas fa-calendar-check",
+    DailyApprovals: "fas fa-check-double",
+    MonitorDailyReports: "fas fa-file-archive",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -241,6 +256,9 @@ document.addEventListener("DOMContentLoaded", function () {
     MonitorAccidents: "تقارير مفتوحة",
     NewNearMiss: "Near Miss", // Example
     MYAccidents: "سجل الحوادث",
+    DailyHseReport: "تسجيل التقارير اليومية",
+    DailyApprovals: "اعتماد التقارير اليومية",
+    MonitorDailyReports: "سجل التقارير اليومية",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -320,6 +338,12 @@ document.addEventListener("DOMContentLoaded", function () {
       title: "إدارة الحوادث",
       icon: "fas fa-ambulance", // أيقونة المجموعة
       children: ["AccidentReport", "MonitorAccidents", "MYAccidents"],
+    },
+    {
+      type: "group",
+      title: "إدارة التقارير اليومية",
+      icon: "fas fa-chart-line",
+      children: ["DailyHseReport", "DailyApprovals", "MonitorDailyReports"], // سنضيف قسم الاعتماد والسجل لاحقاً هنا
     },
   ];
 
@@ -713,6 +737,14 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "AccidentReport") initAccidentPage();
       if (sectionId === "MonitorAccidents") loadUserOpenAccidents();
       if (sectionId === "MYAccidents") initMonitorAccidentsPage();
+      if (sectionId === "DailyHseReport") {
+        initDailyHseReportPage(); // استدعاء دالة التهيئة التي برمجناها في الرد السابق
+      }
+      if (sectionId === "DailyApprovals") {
+        initDailyApprovalsPage();
+      }
+      if (sectionId === "MonitorDailyReports")
+        window.initMonitorDailyReportsPage();
     } else {
       console.error(`Section "#${sectionId}" not found.`);
       const db = document.getElementById("Dashboard");
@@ -798,7 +830,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const now = new Date();
     const currentHour = now.getHours();
 
-    // الشرط: لو الساعة أكبر من أو تساوي 8 (يعني من 8:00 وأنت طالع)
+    // الشرط: لو الساعة .�كبر من أو تساوي 8 (يعني من 8:00 وأنت طالع)
     // يمكنك تعديل الشرط لو عايزها بعد 8:30 مثلاً
     if (currentHour >= 8) {
       delayGroup.style.display = "block";
@@ -1447,7 +1479,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ppeItemsGroup.style.display = "none";
     ppeSaveBtn.disabled = true;
 
-    // مسح كل الرسائل
+    // مسح كل اt�رسائل
     showMessage(ppeMainMessage, "", true);
     showMessage(ppeSaveMessage, "", true);
 
@@ -3152,7 +3184,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
     }
-    // تعيين اسم المستخدم (المصدر)
+    // تعيين اسم اB�مستخدم (المصدر)
     if (document.getElementById("haz-issuer") && currentUser) {
       document.getElementById("haz-issuer").value = currentUser.username;
     }
@@ -3831,7 +3863,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (document.getElementById("ncr-issuer") && currentUser)
       document.getElementById("ncr-issuer").value = currentUser.username;
 
-    // 3. التأكد من جلب بيانات الموظفين وتخزينها في window لكي يراها المودال
+    // 3. التأكد من جلب h�يانات الموظفين وتخزينها في window لكي يراها المودال
     if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
       try {
         const r = await callApi("getInventoryInitData", {
@@ -4288,12 +4320,12 @@ document.addEventListener("DOMContentLoaded", function () {
           ncrForm.reset();
           initNcrPage(); // يعيد ضبط الصفحة والوقت
           vioCart = [];
-          updateVioCartUI(); // تصفير سلة الجزاءات
+          updateVioCartUI(); // تصفير سلة الجزاءr�ت
         } catch (err) {
           showMessage(ncrSaveMsg, err.message, false);
         } finally {
           ncrSaveBtn.disabled = false;
-          ncrSaveBtn.innerHTML = "حفظ المخالفة"; // إعادة نص الزر حسب السياق
+          ncrSaveBtn.innerHTML = "حفظ المخالفة"; // إعا:�e� نص الزر حسب السياق
         }
       }
     });
@@ -4944,7 +4976,7 @@ document.addEventListener("DOMContentLoaded", function () {
   async function initContractorAnalyticsPage() {
     console.log("Analytics Page Init...");
 
-    // 1. ضبط الشهر الحالي
+    // 1. ضبط الشهر اi�حالي
     if (anaMonth && !anaMonth.value) {
       const d = new Date();
       anaMonth.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}`;
@@ -5378,7 +5410,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // الطباعة
   if (empPrintBtn) {
     empPrintBtn.addEventListener("click", () => {
-      // 1. تجميع بيانات الموظف من العناصر الموجودة في الصفحة
+      // 1. تw�ميع بيانات الموظف من العناصر الموجودة في الصفحة
       const empData = {
         name: document.getElementById("r-emp-name").textContent,
         id: document.getElementById("r-emp-id").textContent,
@@ -6475,7 +6507,7 @@ window.selectEmployee = function (id, name, company) {
   };
 };
 
-////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////واحد
 // --- END DOMContentLoaded ---
 
 window.buildKpiForm = function (kpis) {
@@ -6655,7 +6687,7 @@ window.filterKpiEmpList = function () {
   renderKpiEmpsInModal(filtered);
 };
 
-// 2. دالة اختيار الموظف من البوب أب (تعديل الربط مع التصميم الجديد)
+// 2. دالة اختيار المو-�ف من البوب أب (تعديل الربط مع التصميم الجديد)
 window.selectKpiEmployee = function (id, name, job, project) {
   // تعبئة الحقول الظاهرة والمخفية
   const nameInput = document.getElementById("kpi-emp-name-display");
@@ -6665,7 +6697,7 @@ window.selectKpiEmployee = function (id, name, job, project) {
   if (nameInput) nameInput.value = name;
   if (idInput) idInput.value = id;
 
-  // إظهار المسمى الوظيفي والمشروع في "شريط المعلومات" الجديد
+  // إظهار المسمى الوظيh�T� والمشروع في "شريط المعلومات" الجديد
   if (jobTitleEl) {
     jobTitleEl.innerHTML = `
             <span><i class="fas fa-briefcase"></i> ${job || "موظف"}</span> | 
@@ -6886,7 +6918,7 @@ window.calculateObservationStats = function (data) {
 };
 // دالة الطباعة الشاملة
 // =================================================================
-// نظام توليد PDF الاحترافي المنفصل (V2.0)
+// نظام توليد PDF الاحترافي المنفصiun�ؽؽٽؽ (V2.0)
 // =================================================================
 window.generateProfessionalPDF = function (title, contentHtml) {
   const printWindow = window.open("", "_blank", "width=1000,height=800");
@@ -7145,4 +7177,1820 @@ window.generateEmployeeProfilePDF = function (empData, tablesHtml) {
   printWindow.document.open();
   printWindow.document.write(htmlTemplate);
   printWindow.document.close();
+};
+
+/* =================================================================
+   وحدة التقارير اليومية (Daily HSE Report Module)
+   ================================================================= */
+
+/* --- كود وحدة التقرير اليومي --- */
+let drAddedEntities = [];
+
+window.initDailyHseReportPage = async function () {
+  const drForm = document.getElementById("daily-report-form");
+  if (document.getElementById("dr-date")) {
+    document.getElementById("dr-date").valueAsDate = new Date();
+  }
+
+  // --- التعديل الجذري لتحميل المشاريع ---
+  const drProjectSelect = document.getElementById("dr-project");
+  if (drProjectSelect && drProjectSelect.options.length <= 1) {
+    drProjectSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+    try {
+      // نطلب المشاريع من السيرفر لضمان وجودها
+      const r = await callApi("getInventoryInitData", {
+        userInfo: currentUser,
+      });
+      if (r.status === "success") {
+        ppeLocations = r.locations; // تحديث المتغير العالمي
+        const userProj = (currentUser.projects || "").toString();
+        const acc =
+          userProj === "ALL"
+            ? r.locations
+            : r.locations.filter((p) => userProj.includes(p));
+        window.fillSelect(drProjectSelect, acc);
+      } else {
+        drProjectSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+      }
+    } catch (e) {
+      console.error("Error loading projects:", e);
+      drProjectSelect.innerHTML = '<option value="">خطأ اتصال</option>';
+    }
+  }
+
+  // فحص صلاحية الوقت
+  const hour = new Date().getHours();
+  const submitBtn = document.getElementById("dr-submit-btn");
+  const warningDiv = document.getElementById("daily-time-warning");
+
+  if (hour < 9 || hour >= 21) {
+    if (warningDiv) warningDiv.style.display = "block";
+    if (submitBtn) submitBtn.disabled = true;
+  }
+
+  drAddedEntities = [];
+  if (typeof renderDrEntitiesTable === "function") renderDrEntitiesTable();
+
+  // استدعاء التنبيهات للمشرف إذا كان لديه تقارير مرفوضة
+  if (typeof loadRejectedReportsAlert === "function")
+    loadRejectedReportsAlert();
+};
+
+window.updateDrContractors = async function () {
+  const proj = document.getElementById("dr-project").value;
+  const entSelect = document.getElementById("dr-ent-name");
+  if (!proj) return;
+
+  try {
+    const r = await callApi("getContractorsForProject", { projectName: proj });
+    entSelect.innerHTML = '<option value="">-- اختر المقاول --</option>';
+    if (r.contractors) {
+      r.contractors.forEach((c) => {
+        if (c !== "ذاتي") entSelect.add(new Option(c, c));
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+// 1. دالة إضافة المقاول للسلة (تجميع 11 تصنيف للمقاول)
+window.addEntityToDailyReport = function () {
+  const entName = document.getElementById("dr-ent-name").value;
+  const manpower = document.getElementById("dr-ent-manpower").value;
+
+  if (!entName || !manpower || manpower <= 0) {
+    alert("الرجاء اختيار المقاول وإدخال عدد العمالة");
+    return;
+  }
+
+  const entity = {
+    name: entName,
+    workersCount: manpower,
+    trainingRegular: document.getElementById("dr-ent-train").value || 0,
+    induction: document.getElementById("dr-ent-induct").value || 0,
+    // الملاحظات الـ 4
+    ua: document.getElementById("dr-ent-ua").value || 0,
+    uc: document.getElementById("dr-ent-uc").value || 0,
+    envImpact: document.getElementById("dr-ent-env").value || 0,
+    positiveObs: document.getElementById("dr-ent-pos").value || 0,
+    // الحوادث الـ 7
+    fatality: document.getElementById("dr-ent-fatal").value || 0,
+    lti: document.getElementById("dr-ent-lti").value || 0,
+    mtc: document.getElementById("dr-ent-mtc").value || 0,
+    fac: document.getElementById("dr-ent-fac").value || 0,
+    nm: document.getElementById("dr-ent-nm").value || 0,
+    pd: document.getElementById("dr-ent-pd").value || 0,
+    envIncident: document.getElementById("dr-ent-env-inc").value || 0,
+  };
+
+  // منع تكرار المقاول في نفس اليوم
+  if (drAddedEntities.find((e) => e.name === entName)) {
+    alert("هذا المقاول مضاف بالفعل في القائمة");
+    return;
+  }
+
+  drAddedEntities.push(entity);
+  renderDrEntitiesTable();
+
+  // تصفير خانات المقاول فقط لتسهيل إدخال المقاول التالي
+  document.getElementById("dr-ent-manpower").value = 0;
+  document.getElementById("dr-ent-name").value = "";
+};
+
+// الإرسال النهائي
+// =================================================================
+// دالة إرسال التقرير اليومي - النسخة النهائية الموحدة
+// =================================================================
+// الإرسال النهائي للتقرير اليومي للاعتماد
+document.getElementById("daily-report-form").onsubmit = async function (e) {
+  e.preventDefault();
+
+  // --- التعديل هنا: جعل إضافة المقاول اختيارية ---
+  if (drAddedEntities.length === 0) {
+    // تنبيه بسيط للتأكيد فقط وليس للمنع
+    const confirmSolo = confirm("هل تريد إرسال تقرير (طاقم السويدي) فقط ؟");
+    if (!confirmSolo) return; // لو داس Cancel يوقف عشان يضيف مقاولين
+  }
+
+  // 1. تجميع البيانات العالمية للموقع
+  const globalData = {
+    projectName: document.getElementById("dr-project").value,
+    reportDate: document.getElementById("dr-date").value,
+    shiftHours: document.getElementById("dr-shift").value,
+    sewedyStaffCount: document.getElementById("dr-total-sewedy").value || 0,
+    internalManpowerCount:
+      document.getElementById("dr-total-internal").value || 0,
+    contractorsManpowerCount:
+      document.getElementById("dr-total-contractors").value || 0,
+    securityTotalCount: document.getElementById("dr-total-security").value || 0,
+    ptwCount: document.getElementById("dr-ptw").value || 0,
+    hazardReports: document.getElementById("dr-hazards").value || 0,
+    totalObs: document.getElementById("dr-total-obs").value || 0,
+    equipInspection: document.getElementById("dr-equip").value || 0,
+    internalAudit: document.getElementById("dr-int-audit").value || 0,
+    externalAudit: document.getElementById("dr-ext-audit").value || 0,
+    accInspection: document.getElementById("dr-acc-insp").value || 0,
+    weeklyWalkdown: document.getElementById("dr-weekly-walk").value || 0,
+    monthlySiteTour: document.getElementById("dr-monthly-tour").value || 0,
+  };
+
+  // 2. تجميع أداء :�ركة السويدي
+  const sewedyPerformance = {
+    trainingRegular: document.getElementById("dr-sw-train").value || 0,
+    induction: document.getElementById("dr-sw-induct").value || 0,
+    ua: document.getElementById("dr-sw-ua").value || 0,
+    uc: document.getElementById("dr-sw-uc").value || 0,
+    envImpact: document.getElementById("dr-sw-env").value || 0,
+    positiveObs: document.getElementById("dr-sw-pos").value || 0,
+    fatality: document.getElementById("dr-sw-fatal").value || 0,
+    lti: document.getElementById("dr-sw-lti").value || 0,
+    mtc: document.getElementById("dr-sw-mtc").value || 0,
+    fac: document.getElementById("dr-sw-fac").value || 0,
+    nm: document.getElementById("dr-sw-nm").value || 0,
+    pd: document.getElementById("dr-sw-pd").value || 0,
+    envIncident: document.getElementById("dr-sw-env-inc").value || 0,
+  };
+
+  // 3. تجهيز الـ Payload (سواء المصفوفة فيها مقاولين أو فاضية)
+  const finalPayload = {
+    globalData: globalData,
+    sewedyData: sewedyPerformance,
+    entitiesArray: drAddedEntities, // لو المصفوفة فاضية، السيرفر هيسجل السويدي بس
+    userInfo: currentUser,
+  };
+
+  // 4. الإرسال للسيرفر
+  try {
+    const response = await callApi("saveDailyHseReport", finalPayload);
+    if (response.status === "success") {
+      alert("✅ " + response.message);
+      location.reload();
+    } else {
+      alert("❌ فشل الإرسال: " + response.message);
+    }
+  } catch (err) {
+    console.error("Submission Error:", err);
+    alert("❌ حدث خطأ فني أثناء الإرسال: " + err.message);
+  }
+};
+
+function renderDrEntitiesTable() {
+  const tbody = document.getElementById("dr-entities-body");
+  tbody.innerHTML = drAddedEntities
+    .map(
+      (ent, i) => `
+        <tr>
+            <td><strong>${ent.name}</strong></td>
+            <td>${ent.workersCount}</td>
+            <td style="color:#0056b3">حساب تلقائي</td>
+            <td style="text-align:center;"><i class="fas fa-eye"></i></td>
+            <td style="text-align:center;"><i class="fas fa-exclamation-triangle"></i></td>
+            <td><button type="button" class="btn-small btn-danger" onclick="removeDrEntity(${i})">X</button></td>
+        </tr>
+    `,
+    )
+    .join("");
+}
+
+window.removeDrEntity = (i) => {
+  drAddedEntities.splice(i, 1);
+  renderDrEntitiesTable();
+};
+
+function saveDailyHseReport(payload, userInfo) {
+  try {
+    // 1. تحقق أمان: التأكد من وصول بيانات المستخدم
+    if (!userInfo || !userInfo.username) {
+      throw new Error("لم يتم التعرف على المستخدم. يرجى إعادة تسجيل الدخول.");
+    }
+
+    const { globalData, sewedyData, entitiesArray } = payload;
+
+    // 2. فحص صلاحية الوقت
+    const access = checkDailySubmissionAccess(
+      userInfo.username,
+      globalData.projectName,
+    );
+    if (!access.allowed) throw new Error(access.message);
+
+    const pendingSheet = getDailyReportsSheet(DAILY_PENDING_SHEET);
+    const reportId = "REP-" + new Date().getTime();
+    const rowsToAdd = [];
+
+    // 3. بناء سطر السويدي
+    const sewedyRow = buildRowForEntity(
+      reportId,
+      "Sewedy",
+      "شركة السويدي",
+      globalData.sewedyStaffCount,
+      sewedyData,
+      globalData,
+      userInfo,
+      access.isLate,
+    );
+    rowsToAdd.push(sewedyRow);
+
+    // 4. بناء أسطر المقاولين
+    if (entitiesArray && entitiesArray.length > 0) {
+      entitiesArray.forEach((ent) => {
+        const contractorRow = buildRowForEntity(
+          reportId,
+          "Contractor",
+          ent.name,
+          ent.workersCount,
+          ent,
+          globalData,
+          userInfo,
+          access.isLate,
+        );
+        rowsToAdd.push(contractorRow);
+      });
+    }
+
+    // 5. الحفظ الفعلي
+    pendingSheet
+      .getRange(
+        pendingSheet.getLastRow() + 1,
+        1,
+        rowsToAdd.length,
+        rowsToAdd[0].length,
+      )
+      .setValues(rowsToAdd);
+
+    return {
+      status: "success",
+      message: `تم إرسال التقرير بنجاح للاعتماد. رقم المرجع: ${reportId}`,
+    };
+  } catch (e) {
+    Logger.log(`!!! saveDailyHseReport Error: ${e.message}`);
+    return { status: "error", message: e.message };
+  }
+}
+let currentPendingReports = [];
+
+// --- دالة تشغيل صفحة الاعتمادات ومراقبة التأخير ---
+/**
+ /**
+  * دالة تهيئة صفحة الاعتمادات وإدارة التقارير المتأخرة والمعلقة
+  */
+async function initDailyApprovalsPage() {
+  const container = document.getElementById("pending-reports-container");
+  if (!container) return;
+
+  // 1. إظهار مؤشر التحميل
+  container.innerHTML = `
+         <div style="text-align:center; padding:20px;">
+             <i class="fas fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i>
+             <p style="margin-top:10px;">جاري فحص حالة التقارير والمشاريع من أول الشهر...</p>
+         </div>`;
+
+  try {
+    // 2. جلب البيانات من السيرفر (التأخيرات + التقارير المعلقة)
+    // طلب ملخص الأيام المفقودة
+    const resSummary = await callApi("getDelayedReportsSummary", {
+      userInfo: currentUser,
+    });
+    // طلب التقارير التي تنتظر الاعتماد
+    const resPending = await callApi("getPendingReports", {
+      userInfo: currentUser,
+    });
+
+    container.innerHTML = ""; // تفريغ الحاوية للبدء في الرسم
+
+    // --- الجزء الأول: لوحة المشاريع المتأخرة (Missing Reports Dashboard) ---
+    if (resSummary.status === "success" && resSummary.summary.length > 0) {
+      let summaryHtml = `
+                 <div class="alert-box-red" style="margin-bottom:20px;">
+                     <h4 style="margin-bottom:15px; color:#856404;">
+                         <i class="fas fa-exclamation-triangle"></i> تنبيه: مشاريع لم تكتمل سجلاتها اليومية هذا الشهر
+                     </h4>
+                     <div class="delayed-projects-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+             `;
+
+      resSummary.summary.forEach((item) => {
+        // تحويل مصفوفة التواريخ لنص JSON مؤمن لإرساله للبوب أب
+        const datesJson = encodeURIComponent(JSON.stringify(item.missingDates));
+
+        summaryHtml += `
+                     <div class="delay-card" onclick="window.handleMissingCardClick('${item.projectName}', '${datesJson}')" 
+                          style="cursor:pointer; background:#fff; border:1px solid #ffeeba; padding:15px; border-radius:10px; border-right:6px solid #ffc107; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition:0.3s;">
+                         <div style="font-weight:bold; font-size:1.1rem; margin-bottom:5px; color:#2C2A29;">${item.projectName}</div>
+                         <div style="display:flex; justify-content:space-between; align-items:center;">
+                             <span class="badge" style="background:#fff3cd; color:#856404; font-size:0.9rem;">
+                                 <i class="fas fa-calendar-times"></i> ${item.missingCount} أيام مفقودة
+                             </span>
+                             <i class="fas fa-chevron-left" style="color:#ccc;"></i>
+                         </div>
+                     </div>
+                 `;
+      });
+      container.innerHTML =
+        summaryHtml +
+        `</div></div><hr style="border:0; border-top:1px solid #eee; margin: 30px 0;">`;
+    }
+
+    // --- الجزء الثاني: جدول التقارير المعلقة (Pending for Approval) ---
+    container.insertAdjacentHTML(
+      "beforeend",
+      `
+             <h4 style="margin-bottom:15px; color:#555;">
+                 <i class="fas fa-clipboard-check"></i> تقارير مرفوعة بانتظار المراجعة والاعتماد:
+             </h4>`,
+    );
+
+    if (resPending.status === "success") {
+      const reports = resPending.reports || [];
+      // تحديث المتغير العالمي للتقارير المعلقة لسهولة الوصول إليه عند الفلترة
+      currentPendingReports = reports;
+
+      if (reports.length === 0) {
+        container.insertAdjacentHTML(
+          "beforeend",
+          `
+                     <div class="empty-state" style="text-align:center; padding:40px; color:#28a745; background:#f6fff6; border-radius:10px;">
+                         <i class="fas fa-check-double fa-4x"></i>
+                         <p style="margin-top:15px; font-weight:bold; font-size:1.1rem;">ممتاز! لا توجد تقارير معلقة حالياً.</p>
+                     </div>`,
+        );
+      } else {
+        let tableHtml = `
+                     <div class="results-table-container">
+                         <table class="results-table">
+                             <thead>
+                                 <tr>
+                                     <th>التاريخ</th>
+                                     <th>المشروع</th>
+                                     <th>المشرف</th>
+                                     <th style="text-align:center;">إجراء</th>
+                                 </tr>
+                             </thead>
+                             <tbody>`;
+
+        reports.forEach((rep) => {
+          tableHtml += `
+                         <tr>
+                             <td style="white-space:nowrap;">${rep.date}</td>
+                             <td><strong>${rep.projectName}</strong></td>
+                             <td>${rep.supervisor}</td>
+                             <td style="text-align:center;">
+                                 <button class="btn-small btn-secondary" 
+                                         onclick="viewDailyReportDetails('${rep.logId}')">
+                                     <i class="fas fa-search"></i> مراجعة
+                                 </button>
+                             </td>
+                         </tr>`;
+        });
+        container.insertAdjacentHTML(
+          "beforeend",
+          tableHtml + "</tbody></table></div>",
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Critical Render Error:", err);
+    container.innerHTML = `<div class="error-message" style="display:block;">حدث خطأ في معالجة البيانات: ${err.message}</div>`;
+  }
+}
+
+/**
+ * دالة مساعدة للتعامل مع الضغط على كرت التأخير (تفكيك البيانات وفتح المودال)
+ */
+window.handleMissingCardClick = function (projName, encodedDates) {
+  const dates = JSON.parse(decodeURIComponent(encodedDates));
+  if (typeof window.showMissingDatesDetail === "function") {
+    window.showMissingDatesDetail(projName, dates);
+  } else {
+    console.error("Function showMissingDatesDetail not found!");
+  }
+};
+
+/**
+ * دالة فتح تفاصيل الأيام المتأخرة لمشروع معين
+ */
+window.viewDailyReportDetails = function (logId) {
+  const report = currentPendingReports.find((r) => r.logId === logId);
+  if (!report) return;
+
+  const firstEntity = report.entities[0];
+
+  // استخراج البيانات العامة
+  const stats = {
+    ptw: firstEntity[21],
+    hazards: firstEntity[22],
+    obs: firstEntity[23],
+    equip: firstEntity[24],
+    intAudit: firstEntity[25],
+    extAudit: firstEntity[26],
+    accInsp: firstEntity[27],
+    weekly: firstEntity[28],
+    monthly: firstEntity[29],
+    security: firstEntity[20],
+  };
+
+  // 1. ضبط المربع الأبيض الكبير (Modal Content) عشان ميخرجش بره الشاشة أبداً
+  const modalContent = document.querySelector(
+    "#report-details-modal .modal-content",
+  );
+  if (modalContent) {
+    modalContent.style.display = "flex";
+    modalContent.style.flexDirection = "column";
+    modalContent.style.maxHeight = "90vh"; // أقصى طول 90% من الشاشة
+    modalContent.style.overflow = "hidden"; // منع السكرول الخارجي
+  }
+
+  const body = document.getElementById("report-details-body");
+
+  // 2. تصميم المحتوى الداخلي فقط (بدون أزرار)
+  let html = `
+    <div style="background: #f8f9fa; border-right: 4px solid #007bff; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; font-size: 0.85rem;">
+            <div><span style="color:#666;">المشروع:</span> <br><strong>${report.projectName}</strong></div>
+            <div><span style="color:#666;">التاريخ:</span> <br><strong>${report.date}</strong></div>
+            <div><span style="color:#666;">المشرف:</span> <br><strong>${report.supervisor}</strong></div>
+            <div><span style="color:#666;">الوردية:</span> <br><strong>${firstEntity[4]} ساعات</strong></div>
+            <div><span style="color:#666;">أفراد الأمن:</span> <br><strong>${stats.security}</strong></div>
+        </div>
+    </div>
+
+    <h4 style="color: #28a745; margin-bottom: 10px; font-size: 0.95rem;"><i class="fas fa-chart-pie"></i> المؤشرات الاستباقية (Proactive)</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; margin-bottom: 15px;">
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Hazards</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#d32f2f;">${stats.hazards}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Site Obs.</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#f57c00;">${stats.obs}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">PTW</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#1976d2;">${stats.ptw}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Eqp Insp</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#388e3c;">${stats.equip}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Int Audit</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#555;">${stats.intAudit}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Ext Audit</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#555;">${stats.extAudit}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Week Walk</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#673ab7;">${stats.weekly}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Month Tour</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#673ab7;">${stats.monthly}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Acc Insp</div>
+            <div style="font-size:1.1rem; font-weight:bold; color:#009688;">${stats.accInsp}</div>
+        </div>
+    </div>
+
+    <h4 style="color: #333; margin-bottom: 10px; font-size: 0.95rem;"><i class="fas fa-users"></i> تفاصيل العمالة، التدريب، والإصابات</h4>
+    <div style="font-size:0.7rem; color:#856404; background:#fff3cd; padding:5px; margin-bottom:5px; border-radius:4px; text-align:center;">
+        <i class="fas fa-arrows-alt-h"></i> اسحب الجدول لليمين واليسار لرؤية باقي الأعمدة
+    </div>
+
+    <div class="results-table-container" style="overflow-x: auto; border:1px solid #eee; border-radius:5px;">
+        <table class="results-table" style="font-size: 0.75rem; min-width: 900px; margin:0;">
+            <thead>
+                <tr style="background:#333; color:white;">
+                    <th>الجهة</th>
+                    <th>عمالة</th>
+                    <th>ساعات</th>
+                    <th style="background:#17a2b8;">Train</th>
+                    <th style="background:#17a2b8;">Induct</th>
+                    <th>UA</th>
+                    <th>UC</th>
+                    <th>Env.I</th>
+                    <th>Pos</th>
+                    <th style="background:#4a0000;">Fatal</th>
+                    <th style="background:#4a0000;">LTI</th>
+                    <th style="background:#4a0000;">MTC</th>
+                    <th style="background:#4a0000;">FAC</th>
+                    <th style="background:#4a0000;">NM</th>
+                    <th style="background:#4a0000;">PD</th>
+                    <th style="background:#4a0000;">Env.Inc</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+  report.entities.forEach((row) => {
+    let bg = "#fff";
+    if (row[5] === "Sewedy") bg = "#f0f8ff";
+    if (row[5] === "Security") bg = "#fff8e1";
+
+    let train = row[34] || "0";
+    let induct = row[35] || "0";
+
+    html += `
+        <tr style="background:${bg}; text-align:center;">
+            <td style="font-weight:bold; text-align:right; white-space:nowrap;">${row[6]}</td> 
+            <td style="font-weight:bold;">${row[7]}</td>  
+            <td>${row[8]}</td>  
+            <td style="font-weight:bold; color:#17a2b8;">${train}</td>
+            <td style="font-weight:bold; color:#17a2b8;">${induct}</td>
+            <td>${row[9]}</td>  
+            <td>${row[10]}</td> 
+            <td>${row[11]}</td> 
+            <td style="color:green;">${row[12]}</td> 
+            <td style="font-weight:bold; color:red;">${row[13]}</td> 
+            <td style="color:red;">${row[14]}</td> 
+            <td style="color:red;">${row[15]}</td> 
+            <td style="color:red;">${row[16]}</td> 
+            <td style="color:red;">${row[17]}</td> 
+            <td style="color:red;">${row[18]}</td> 
+            <td style="color:red;">${row[19]}</td> 
+        </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  body.innerHTML = html;
+
+  // 3. ضبط السكرول ليكون للمحتوى فقط (Body)
+  body.style.flexGrow = "1";
+  body.style.overflowY = "auto";
+  body.style.padding = "10px";
+
+  // 4. إظهار وتنسيق الأزرار في ذيل المودال (Footer) بشكل ثابت
+  const footerBtns = document.querySelector(".modal-footer-btns");
+  if (footerBtns) {
+    footerBtns.style.display = "flex";
+    footerBtns.style.flexWrap = "wrap";
+    footerBtns.style.gap = "10px";
+    footerBtns.style.padding = "15px 10px";
+    footerBtns.style.borderTop = "1px solid #eee";
+    footerBtns.style.backgroundColor = "#fff"; // عشان لو طلعت فوق الجدول
+  }
+
+  // 5. ربط وضبط الأزرار نفسها
+  const btnApprove = document.getElementById("btn-approve-final");
+  const btnReject = document.getElementById("btn-reject-final");
+
+  if (btnApprove) {
+    btnApprove.innerHTML = '<i class="fas fa-check-circle"></i> اعتماد التقرير';
+    btnApprove.style.flex = "1 1 45%"; // يأخذ نص الشاشة أو كاملها حسب الحجم
+    btnApprove.style.minWidth = "140px";
+    btnApprove.onclick = () => finalizeAction(logId, "APPROVE");
+  }
+  if (btnReject) {
+    btnReject.innerHTML = '<i class="fas fa-times-circle"></i> رفض التقرير';
+    btnReject.style.flex = "1 1 45%";
+    btnReject.style.minWidth = "140px";
+    btnReject.onclick = () => finalizeAction(logId, "REJECT");
+  }
+
+  // إظهار المودال
+  document.getElementById("report-details-modal").style.display = "flex";
+};
+
+async function finalizeAction(logId, action) {
+  let notes = "";
+  if (action === "REJECT") {
+    notes = prompt("اذكر سبب الرفض ليظهر للمشرف:");
+    if (notes === null) return; // لو كنسل الـ Prompt
+  }
+
+  showLoader(action === "APPROVE" ? "جاري الاعتماد..." : "جاري الرفض...");
+
+  try {
+    const res = await callApi("processReportAction", {
+      reportId: logId,
+      action: action,
+      notes: notes,
+      userInfo: currentUser,
+    });
+
+    // تم تغيير r إلى res هنا
+    alert(res.message);
+
+    // 1. إخفاء المودال
+    document.getElementById("report-details-modal").style.display = "none";
+
+    // 2. تحديث قائمة التقارير المعلقة فوراً دون إعادة تحميل الصفحة
+    await initDailyApprovalsPage();
+  } catch (err) {
+    console.error("Action Error:", err);
+    alert("❌ حدث خطأ: " + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+// دالة فتح التمديد
+window.openExtensionModal = async function () {
+  const supervisor = prompt("ادخل اسم المستخدم للمشرف (Username):");
+  const proj = prompt("ادخل اسم المشروع:");
+  const reason = prompt("سبب فتح التمديد:");
+  if (supervisor && proj && reason) {
+    const res = await callApi("grantExtension", {
+      supervisor,
+      proj,
+      reason,
+      userInfo: currentUser,
+    });
+    alert(res.message);
+  }
+};
+// دالة تسجيل الإجازة عند الضغط على زر "إجازة" في التنبيهات
+window.registerProjectHoliday = function (projectName, date) {
+  if (
+    confirm(
+      `هل أنت متأكد من تسجيل يوم ${date} كإجازة لمشروع [${projectName}]؟ سيتم نقله للسجل النهائي فوراً.`,
+    )
+  ) {
+    callApi("markDayAsHoliday", {
+      project: projectName,
+      date: date,
+      userInfo: currentUser,
+    }).then((res) => {
+      alert(res.message);
+      initDailyApprovalsPage(); // تحديث الصفحة لإخفاء التنبيه
+    });
+  }
+};
+
+// دالة تسجيل الإجازة العامة (من الزر الأزرق العلوي)
+window.markHolidayPrompt = function () {
+  const proj = prompt("ادخل اسم المشروع المراد تسجيل إجازة له:");
+  const date = document.getElementById("dr-date").value;
+  if (proj && date) {
+    window.registerProjectHoliday(proj, date);
+  }
+};
+
+// دالة إغلاق المودال الخاص بالتفاصيل
+window.closeReportModal = function () {
+  document.getElementById("report-details-modal").style.display = "none";
+};
+
+// 1. متغير عالمي مؤقت لحفظ قائمة المشرفين عشان نهرب من مشكلة الـ JSON في الـ HTML
+let tempSupervisorsList = [];
+
+/**
+ * دالة فتح تفاصيل الأيام المتأخرة لمشروع معين
+ */
+window.showMissingDatesDetail = async function (projectName, dates) {
+  showLoader("جاري تحميل قائمة المشرفين للمشروع...");
+  try {
+    // التعديل هنا: نرسل اسم المشروع كـ payload للسيرفر ليقوم بالفلترة
+    const resSup = await callApi("getSupervisorsList", {
+      projectName: projectName,
+    });
+
+    // حفظ القائمة المفلترة في المتغير العالمي لاستخدامها في البوب أب التالي
+    tempSupervisorsList = resSup.list || [];
+
+    if (tempSupervisorsList.length === 0) {
+      alert(
+        `تنبيه: لا يوجد مشرفين مسجلين مسموح لهم بالوصول لمشروع [${projectName}] في قاعدة البيانات.`,
+      );
+      // اختياري: يمكنك العودة أو الاستمرار لعرض الجدول حتى لو القائمة فارغة
+    }
+
+    let html = `
+            <div style="text-align:right; direction:rtl; padding:10px;">
+                <p style="margin-bottom:15px; font-size:1.1rem;">
+                    إدارة أيام التأخير لمشروع: <strong style="color:var(--primary-color);">${projectName}</strong>
+                </p>
+                <div class="results-table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>تاريخ اليوم المتأخر</th>
+                                <th>إجراء سريع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+
+    dates.forEach((date) => {
+      html += `
+                <tr>
+                    <td style="font-weight:bold;">${date}</td>
+                    <td>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-small" style="background:#28a745; color:white;" onclick="window.registerProjectHoliday('${projectName}', '${date}')">
+                                <i class="fas fa-umbrella-beach"></i> إجازة
+                            </button>
+                            <button class="btn-small" style="background:#007bff; color:white;" onclick="window.promptExtensionForDate('${projectName}', '${date}')">
+                                <i class="fas fa-clock"></i> تمديد لمشرف
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+    });
+
+    html += `</tbody></table></div></div>`;
+
+    const body = document.getElementById("report-details-body");
+    if (body) {
+      body.innerHTML = html;
+      document.getElementById("modal-report-title").innerText =
+        "تفاصيل الأيام غير المسجلة";
+      document.getElementById("report-details-modal").style.display = "block";
+      const footerBtns = document.querySelector(".modal-footer-btns");
+      if (footerBtns) footerBtns.style.display = "none";
+    }
+  } catch (e) {
+    alert("خطأ في تحميل البيانات: " + e.message);
+  } finally {
+    hideLoader();
+  }
+};
+
+/**
+ * دالة عرض واجهة اختيار المشرف (تستخدم المتغير العالمي tempSupervisorsList)
+ */
+window.promptExtensionForDate = function (proj, date) {
+  if (tempSupervisorsList.length === 0) {
+    alert("تنبيه: قائمة المشرفين فارغة.");
+    return;
+  }
+
+  let options = tempSupervisorsList
+    .map((s) => `<option value="${s}">${s}</option>`)
+    .join("");
+
+  const modalBody = document.getElementById("report-details-body");
+  modalBody.innerHTML = `
+        <div style="padding: 10px; text-align: right; direction: rtl;">
+            <h4 style="color: var(--primary-color); margin-bottom: 20px;">
+                <i class="fas fa-user-clock"></i> تمديد الصلاحية
+            </h4>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-right: 5px solid #ffc107; margin-bottom: 20px;">
+                <p>المشروع: <strong>${proj}</strong> | التاريخ: <strong>${date}</strong></p>
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>اختر المشرف:</label>
+                <select id="selected-supervisor" class="modern-input" style="width:100%; padding:10px;">
+                    ${options}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label>سبب التمديد:</label>
+                <input type="text" id="extension-reason" class="modern-input" style="width:100%; padding:10px;" placeholder="اكتب السبب هنا...">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="window.executeExtension('${proj}', '${date}')" style="flex:2">تأكيد التمديد</button>
+                <button class="btn" onclick="initDailyApprovalsPage()" style="background:#666; flex:1">رجوع</button>
+            </div>
+        </div>
+    `;
+};
+
+/**
+ * تنفيذ عملية التمديد النهائية
+ */
+window.executeExtension = async function (proj, date) {
+  const supervisor = document.getElementById("selected-supervisor").value;
+  const reason = document.getElementById("extension-reason").value;
+
+  if (!reason) {
+    alert("يرجى كتابة سبب التمديد.");
+    return;
+  }
+
+  showLoader("جاري الإرسال...");
+  try {
+    const res = await callApi("grantExtension", {
+      proj,
+      supervisor,
+      reason,
+      userInfo: currentUser,
+    });
+    alert(res.message);
+    document.getElementById("report-details-modal").style.display = "none";
+    initDailyApprovalsPage(); // تحديث الصفحة الرئيسية للاعتمادات
+  } catch (err) {
+    alert("خطأ: " + err.message);
+  } finally {
+    hideLoader();
+  }
+};
+
+// بوب أب لاختيار المشرف وعمل تمديد
+window.promptExtension = function (proj, date, supervisors) {
+  let options = supervisors
+    .map((s) => `<option value="${s}">${s}</option>`)
+    .join("");
+
+  let container = document.getElementById("report-details-body");
+  container.innerHTML = `
+      <div style="padding:20px; text-align:right;">
+          <h4>تمديد صلاحية التسجيل</h4>
+          <p>مشروع: ${proj} | تاريخ: ${date}</p>
+          <hr>
+          <div class="form-group">
+              <label>اختر المشرف المسؤول:</label>
+              <select id="selected-supervisor" class="modern-input">${options}</select>
+          </div>
+          <div class="form-group">
+              <label>سبب التمديد:</label>
+              <input type="text" id="extension-reason" class="modern-input" placeholder="مثال: عطل في الشبكة">
+          </div>
+          <div style="margin-top:20px; display:flex; gap:10px;">
+              <button class="btn" onclick="executeExtension('${proj}', '${date}')">تأكيد التمديد</button>
+              <button class="btn" style="background:#666;" onclick="window.closeReportModal()">إلغاء</button>
+          </div>
+      </div>
+  `;
+};
+
+/**
+ * تنفيذ عملية التمديد وإرسالها للسيرفر
+ */
+window.executeExtension = async function (proj, date) {
+  const supervisor = document.getElementById("selected-supervisor").value;
+  const reason = document.getElementById("extension-reason").value;
+
+  if (!reason) {
+    alert("يرجى ذكر سبب التمديد أولاً");
+    return;
+  }
+
+  showLoader("جاري منح الصلاحية...");
+  try {
+    const res = await callApi("grantExtension", {
+      proj: proj,
+      supervisor: supervisor,
+      reason: reason,
+      targetDate: date, // تأكد إن السطر ده موجود هنا
+      userInfo: currentUser,
+    });
+
+    alert(res.message);
+    document.getElementById("report-details-modal").style.display = "none";
+    initDailyApprovalsPage(); // تحديث الصفحة
+  } catch (err) {
+    alert("خطأ: " + err.message);
+  } finally {
+    hideLoader();
+  }
+};
+// جلب وعرض التنبيهات للتقارير المرفوضة
+// جلب وعرض التنبيهات للتقارير المرفوضة (نسخة متوافقة تماماً مع الموبايل)
+async function loadRejectedReportsAlert() {
+  const section = document.getElementById("DailyHseReport");
+  let alertDiv = document.getElementById("rejected-alerts");
+
+  // إنشاء صندوق التنبيهات لو مش موجود
+  if (!alertDiv) {
+    alertDiv = document.createElement("div");
+    alertDiv.id = "rejected-alerts";
+    // نضعه قبل الفورم مباشرة
+    const form = document.getElementById("daily-report-form");
+    section.insertBefore(alertDiv, form);
+  }
+  alertDiv.innerHTML = ""; // مسح القديم
+
+  try {
+    const res = await callApi("getMyRejectedReports", {
+      userInfo: currentUser,
+    });
+
+    if (res.status === "success" && res.rejected.length > 0) {
+      let html = `
+            <div style="background: #fff5f5; color: #721c24; border: 2px solid #f5c6cb; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; box-sizing: border-box;">
+
+                <h4 style="margin: 0 0 15px 0; color: #c8102e; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; line-height: 1.4;">
+                    <i class="fas fa-exclamation-triangle fa-lg"></i> 
+                    <span>تقارير مرفوضة (تحتاج إعادة تسجيل)</span>
+                </h4>
+
+                <ul style="padding: 0; margin: 0; list-style: none; display: flex; flex-direction: column; gap: 15px;">`;
+
+      res.rejected.forEach((r) => {
+        html += `
+                <li style="background: #ffffff; border: 1px solid #f5c6cb; border-radius: 6px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 0.9rem;">
+                        <span style="background: #f8f9fa; padding: 5px 10px; border-radius: 4px; border: 1px solid #ddd; flex-grow: 1;">
+                            <i class="fas fa-project-diagram" style="color: #c8102e;"></i> <strong>المشروع:</strong> ${r.projectName}
+                        </span>
+                        <span style="background: #f8f9fa; padding: 5px 10px; border-radius: 4px; border: 1px solid #ddd; flex-grow: 1;">
+                            <i class="far fa-calendar-alt" style="color: #c8102e;"></i> <strong>التاريخ:</strong> ${r.date}
+                        </span>
+                    </div>
+
+                    <div style="background: #fdf5f6; border-right: 4px solid #c8102e; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 0.95rem;">
+                        <strong style="color: #c8102e;"><i class="fas fa-comment-dots"></i> سبب الرفض/الملاحظات:</strong> 
+                        <p style="margin: 5px 0 0 0; color: #333; line-height: 1.5; word-break: break-word;">${r.rejectionNote}</p>
+                    </div>
+
+                    <button type="button" class="btn btn-danger" 
+                            style="width: 100%; white-space: normal; padding: 12px 10px; font-size: 0.95rem; line-height: 1.4; display: flex; align-items: center; justify-content: center; gap: 8px;" 
+                            onclick="deleteRejectedReportFront('${r.logId}')">
+                        <i class="fas fa-trash-alt fa-lg"></i>
+                        <span>مسح التقرير</span>
+                    </button>
+
+                </li>`;
+      });
+
+      html += `</ul></div>`;
+      alertDiv.innerHTML = html;
+    }
+  } catch (e) {
+    console.error("Failed to load rejected reports", e);
+  }
+}
+
+// دالة مسح التقرير المرفوض
+window.deleteRejectedReportFront = async function (logId) {
+  if (
+    confirm(
+      "هل أنت متأكد من مسح التقرير المرفوض لتبدأ في تسجيله من جديد؟\n(يجب عليك إعادة ملء الفورم بنفس التاريخ)",
+    )
+  ) {
+    showLoader("جاري المسح...");
+    try {
+      const res = await callApi("deleteRejectedReport", {
+        logId: logId,
+        userInfo: currentUser,
+      });
+      alert(res.message);
+      loadRejectedReportsAlert(); // تحديث التنبيهات (ستختفي الرسالة إذا لم يتبق تقارير)
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      hideLoader();
+    }
+  }
+};
+// =================================================================
+// --- وحدة سجل التقارير اليومية المعتمدة (Daily Reports Archive) - GLOBAL ---
+// =================================================================
+
+// متغير عالمي لتخزين التقارير المجلوبة وعرضها في الطباعة
+window.loadedFinalReports = [];
+
+window.initMonitorDailyReportsPage = async function () {
+  const monDrProject = document.getElementById("mon-dr-project");
+  const monDrResults = document.getElementById("mon-dr-results");
+  const monDrBtn = document.getElementById("mon-dr-btn");
+
+  // ربط الزرار بدالة البحث
+  if (monDrBtn) {
+    monDrBtn.onclick = window.searchFinalDailyReports;
+
+    // --- إضافة زر التقرير المجمع برمجياً تحت زر البحث ---
+    if (!document.getElementById("mon-dr-consolidated-btn")) {
+      const consBtn = document.createElement("button");
+      consBtn.id = "mon-dr-consolidated-btn";
+      consBtn.type = "button";
+      consBtn.className = "btn";
+      consBtn.style.cssText =
+        "width: 100%; margin-top: 10px; background-color: #ff9800; color: white;";
+      consBtn.innerHTML =
+        '<i class="fas fa-chart-pie"></i> استخراج تقرير مُجمّع';
+      consBtn.onclick = window.generateConsolidatedDailyReport;
+      monDrBtn.parentNode.insertBefore(consBtn, monDrBtn.nextSibling);
+    }
+  }
+
+  // تعبئة المشاريع من السيرفر
+  if (monDrProject && monDrProject.options.length <= 1) {
+    monDrProject.innerHTML =
+      '<option value="ALL_ACCESSIBLE">جاري التحميل...</option>';
+    try {
+      const r = await callApi("getInventoryInitData", {
+        userInfo: currentUser,
+      });
+      if (r.status === "success") {
+        monDrProject.innerHTML =
+          '<option value="ALL_ACCESSIBLE">كل المشاريع المتاحة</option>';
+        const userProj = (currentUser.projects || "").toString();
+        const acc =
+          userProj === "ALL"
+            ? r.locations
+            : r.locations.filter((p) => userProj.includes(p));
+        acc.forEach((p) => monDrProject.add(new Option(p, p)));
+      }
+    } catch (e) {
+      console.error("Error loading projects for archive:", e);
+      monDrProject.innerHTML =
+        '<option value="ALL_ACCESSIBLE">خطأ في التحميل</option>';
+    }
+  }
+
+  // تصفير شاشة النتائج
+  if (monDrResults && monDrResults.innerHTML.trim() === "") {
+    monDrResults.innerHTML =
+      '<p style="text-align:center; padding:20px; color:#666;">حدد معايير البحث واضغط عرض السجلات...</p>';
+  }
+};
+
+window.searchFinalDailyReports = async function () {
+  const monDrProject = document.getElementById("mon-dr-project");
+  const monDrFrom = document.getElementById("mon-dr-from");
+  const monDrTo = document.getElementById("mon-dr-to");
+  const monDrResults = document.getElementById("mon-dr-results");
+
+  if (!monDrResults) return;
+  monDrResults.innerHTML =
+    '<div class="loader-small">جاري البحث وجمع البيانات...</div>';
+
+  const filters = {
+    project: monDrProject ? monDrProject.value : "ALL_ACCESSIBLE",
+    fromDate: monDrFrom ? monDrFrom.value : "",
+    toDate: monDrTo ? monDrTo.value : "",
+  };
+
+  try {
+    // نستخدم المتغيرات بشكل مباشر بدون window.
+    const res = await callApi("getFinalDailyReports", {
+      filters,
+      userInfo: currentUser,
+    });
+    if (res.status === "success") {
+      window.loadedFinalReports = res.reports;
+      window.renderFinalDailyReportsTable(res.reports);
+    } else {
+      monDrResults.innerHTML = `<p class="error-message">${res.message}</p>`;
+    }
+  } catch (e) {
+    monDrResults.innerHTML = `<p class="error-message">خطأ في الاتصال: ${e.message}</p>`;
+  }
+};
+
+window.renderFinalDailyReportsTable = function (reports) {
+  const monDrResults = document.getElementById("mon-dr-results");
+  if (!monDrResults) return;
+
+  if (!reports || reports.length === 0) {
+    monDrResults.innerHTML =
+      '<p style="text-align:center; padding:20px; color:#c8102e; font-weight:bold;">لا توجد تقارير معتمدة لهذه المعايير.</p>';
+    return;
+  }
+
+  let html = `
+    <div class="results-table-container" style="overflow-x: auto;">
+        <table class="results-table" style="font-size:0.9rem; min-width: 600px;">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>المشروع</th>
+                    <th>المشرف</th>
+                    <th style="text-align:center;">إجمالي العمالة</th>
+                    <th style="text-align:center;">إجمالي الساعات</th>
+                    <th style="text-align:center;">عرض وطباعة (PDF)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+  reports.forEach((rep) => {
+    let totalManpower = 0;
+    let totalHours = 0;
+
+    if (rep.isHoliday) {
+      totalManpower = "-";
+      totalHours = "-";
+    } else {
+      rep.entities.forEach((ent) => {
+        totalManpower += parseFloat(ent.manpower || 0);
+        totalHours += parseFloat(ent.hours || 0);
+      });
+    }
+
+    html += `
+            <tr>
+                <td style="font-weight:bold; white-space:nowrap;">${rep.date}</td>
+                <td>${rep.projectName}</td>
+                <td>${rep.supervisor}</td>
+                <td style="text-align:center; font-weight:bold;">${totalManpower}</td>
+                <td style="text-align:center; color:#0056b3;">${totalHours}</td>
+                <td style="text-align:center;">
+                    ${
+                      rep.isHoliday
+                        ? `<span class="badge bg-warning" style="color:#856404; background:#fff3cd; border:1px solid #ffeeba;">إجازة / عطلة</span>`
+                        : `<button class="btn-small btn-secondary" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:4px; cursor:pointer;" onclick="window.printDailyReportPDF('${rep.logId}')">
+                            <i class="fas fa-file-pdf"></i> استخراج التقرير
+                         </button>`
+                    }
+                </td>
+            </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  monDrResults.innerHTML = html;
+};
+
+// =================================================================
+// دالة توليد الـ PDF الاحترافي للتقرير اليومي (مفصّل ومصمم بعناية - داخل نافذة منبثقة)
+// =================================================================
+window.printDailyReportPDF = function (logId) {
+  const report = window.loadedFinalReports.find((r) => r.logId === logId);
+  if (!report) {
+    alert("لم يتم العثور على التقرير المطلوب للطباعة.");
+    return;
+  }
+
+  const g = report.globalStats;
+
+  let entitiesHtml = "";
+
+  // كائن لجمع كل الإجماليات
+  let totals = {
+    manpower: 0,
+    hours: 0,
+    train: 0,
+    induct: 0,
+    ua: 0,
+    uc: 0,
+    env: 0,
+    pos: 0,
+    fatal: 0,
+    lti: 0,
+    mtc: 0,
+    fac: 0,
+    nm: 0,
+    pd: 0,
+    envInc: 0,
+  };
+
+  report.entities.forEach((ent) => {
+    // جمع الأرقام
+    totals.manpower += parseFloat(ent.manpower || 0);
+    totals.hours += parseFloat(ent.hours || 0);
+    totals.train += parseFloat(ent.train || 0);
+    totals.induct += parseFloat(ent.induct || 0);
+    totals.ua += parseFloat(ent.ua || 0);
+    totals.uc += parseFloat(ent.uc || 0);
+    totals.env += parseFloat(ent.env || 0);
+    totals.pos += parseFloat(ent.pos || 0);
+    totals.fatal += parseFloat(ent.fatal || 0);
+    totals.lti += parseFloat(ent.lti || 0);
+    totals.mtc += parseFloat(ent.mtc || 0);
+    totals.fac += parseFloat(ent.fac || 0);
+    totals.nm += parseFloat(ent.nm || 0);
+    totals.pd += parseFloat(ent.pd || 0);
+    totals.envInc += parseFloat(ent.envInc || 0);
+
+    let bg = "#fff";
+    if (ent.category === "Sewedy") bg = "#f0f8ff";
+    if (ent.category === "Security") bg = "#fff8e1";
+
+    entitiesHtml += `
+        <tr style="background-color: ${bg}; text-align:center;">
+            <td style="text-align:right; font-weight:bold;">${ent.name}</td>
+            <td style="font-weight:bold;">${ent.manpower}</td>
+            <td>${ent.hours}</td>
+            <td style="color:#17a2b8; font-weight:bold;">${ent.train}</td>
+            <td style="color:#17a2b8; font-weight:bold;">${ent.induct}</td>
+            <td>${ent.ua}</td>
+            <td>${ent.uc}</td>
+            <td>${ent.env}</td>
+            <td style="color:green; font-weight:bold;">${ent.pos}</td>
+            <td style="background:#fff5f5; color:red; font-weight:bold;">${ent.fatal}</td>
+            <td style="background:#fff5f5; color:red;">${ent.lti}</td>
+            <td style="background:#fff5f5; color:red;">${ent.mtc}</td>
+            <td style="background:#fff5f5; color:red;">${ent.fac}</td>
+            <td style="background:#fff5f5; color:red;">${ent.nm}</td>
+            <td style="background:#fff5f5; color:red;">${ent.pd}</td>
+            <td style="background:#fff5f5; color:red;">${ent.envInc}</td>
+        </tr>`;
+  });
+
+  const printerUser = window.currentUser
+    ? window.currentUser.username
+    : "النظام";
+
+  // قالب الـ HTML للتقرير
+  const htmlTemplate = `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <title>Daily HSE Report - ${report.projectName}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            @page { size: A4 landscape; margin: 1cm; }
+            body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; color: #2C2A29; line-height: 1.4; font-size: 12px; }
+
+            .pdf-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid #C8102E; padding-bottom: 10px; margin-bottom: 15px; }
+            .header-info h1 { color: #C8102E; margin: 0; font-size: 22px; font-weight: 800; text-transform: uppercase; }
+            .header-info p { margin: 3px 0 0 0; font-size: 13px; color: #555; font-weight: 600; }
+            .logo-container img { height: 60px; }
+
+            .info-bar { background-color: #f8f9fa; padding: 10px 15px; border-radius: 6px; border-right: 5px solid #007bff; margin-bottom: 15px; display: flex; justify-content: space-between; border: 1px solid #eee; }
+            .info-bar div { display: flex; flex-direction: column; }
+            .info-bar span { color: #666; font-size: 11px; }
+            .info-bar strong { font-size: 14px; color: #333; }
+
+            .section-title { background: #333; color: #fff; padding: 5px 10px; font-size: 14px; border-radius: 4px; margin: 15px 0 10px 0; -webkit-print-color-adjust: exact; display:inline-block; }
+
+            .stats-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; margin-bottom: 20px; }
+            .stat-box { border: 1px solid #ddd; padding: 8px 5px; text-align: center; border-radius: 4px; background: #fff; }
+            .stat-box .title { font-size: 10px; color: #666; font-weight: bold; margin-bottom: 5px; }
+            .stat-box .val { font-size: 18px; font-weight: 800; color: #C8102E; }
+
+            table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px; }
+            th { background-color: #e9ecef !important; color: #333; font-weight: bold; border: 1px solid #ccc; padding: 8px 5px; text-align: center; -webkit-print-color-adjust: exact; }
+            td { border: 1px solid #ddd; padding: 6px 5px; text-align: center; }
+            .table-totals { background-color: #2C2A29 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+            .table-totals td { border-color: #555; }
+
+            .pdf-footer { position: fixed; bottom: 0; left: 0; width: 100%; font-size: 10px; color: #888; border-top: 1px dashed #ccc; padding-top: 5px; display: flex; justify-content: space-between; }
+        </style>
+    </head>
+    <body>
+        <div class="pdf-header">
+            <div class="header-info">
+                <h1>HSE Daily Report</h1>
+                <p>التقرير اليومي للسلامة والصحة المهنية والبيئة</p>
+            </div>
+            <div class="logo-container"><img src="../turnkey.png"></div>
+        </div>
+
+        <div class="info-bar">
+            <div><span>المشروع (Project)</span><strong>${report.projectName}</strong></div>
+            <div><span>التاريخ (Date)</span><strong>${report.date}</strong></div>
+            <div><span>مشرف السلامة (HSE Supervisor)</span><strong>${report.supervisor}</strong></div>
+            <div><span>ساعات الوردية (Shift)</span><strong>${report.shift} ساعات</strong></div>
+        </div>
+
+        <div class="section-title">المؤشرات الاستباقية (Proactive Indicators)</div>
+        <div class="stats-grid">
+            <div class="stat-box"><div class="title">PTW</div><div class="val" style="color:#1976d2">${g.ptw}</div></div>
+            <div class="stat-box"><div class="title">Hazards</div><div class="val">${g.hazards}</div></div>
+            <div class="stat-box"><div class="title">Observations</div><div class="val" style="color:#f57c00">${g.obs}</div></div>
+            <div class="stat-box"><div class="title">Equip. Insp.</div><div class="val" style="color:#388e3c">${g.equip}</div></div>
+            <div class="stat-box"><div class="title">Internal Audit</div><div class="val" style="color:#555">${g.intAudit}</div></div>
+            <div class="stat-box"><div class="title">External Audit</div><div class="val" style="color:#555">${g.extAudit}</div></div>
+            <div class="stat-box"><div class="title">Accomp. Insp.</div><div class="val" style="color:#009688">${g.accInsp}</div></div>
+            <div class="stat-box"><div class="title">Weekly Walk</div><div class="val" style="color:#673ab7">${g.weekly}</div></div>
+            <div class="stat-box"><div class="title">Monthly Tour</div><div class="val" style="color:#673ab7">${g.monthly}</div></div>
+            <div class="stat-box"><div class="title">Security</div><div class="val" style="color:#000">${g.security}</div></div>
+        </div>
+
+        <div class="section-title">تفاصيل العمالة والإصابات والملاحظات (Entities Breakdown)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width:20%">الجهة (Entity)</th>
+                    <th rowspan="2">Manpower</th>
+                    <th rowspan="2">Hours</th>
+                    <th colspan="2" style="background:#d1ecf1 !important;">Training</th>
+                    <th colspan="4">Observations</th>
+                    <th colspan="7" style="background:#f8d7da !important; color:#721c24;">Incidents</th>
+                </tr>
+                <tr>
+                    <th style="background:#d1ecf1 !important;">Reg</th>
+                    <th style="background:#d1ecf1 !important;">Ind</th>
+                    <th>UA</th><th>UC</th><th>Env</th><th>Pos</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">Fat</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">LTI</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">MTC</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">FAC</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">NM</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">PD</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">Env.Inc</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${entitiesHtml}
+                <tr class="table-totals">
+                    <td style="text-align:right;">الإجمالي الكلي (Grand Total)</td>
+                    <td>${totals.manpower}</td>
+                    <td>${totals.hours}</td>
+                    <td>${totals.train}</td>
+                    <td>${totals.induct}</td>
+                    <td>${totals.ua}</td>
+                    <td>${totals.uc}</td>
+                    <td>${totals.env}</td>
+                    <td>${totals.pos}</td>
+                    <td style="color:#ff6b6b;">${totals.fatal}</td>
+                    <td style="color:#ff6b6b;">${totals.lti}</td>
+                    <td style="color:#ff6b6b;">${totals.mtc}</td>
+                    <td style="color:#ff6b6b;">${totals.fac}</td>
+                    <td style="color:#ff6b6b;">${totals.nm}</td>
+                    <td style="color:#ff6b6b;">${totals.pd}</td>
+                    <td style="color:#ff6b6b;">${totals.envInc}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="pdf-footer">
+            <span>HSE Digitalization System - Turnkey Projects</span>
+            <span>مستخرج بواسطة: ${printerUser}</span>
+            <span>تاريخ الطباعة: ${new Date().toLocaleString("ar-EG")}</span>
+        </div>
+
+        <script>
+            // تفعيل الطباعة التلقائية بمجرد فتح النافذة
+            window.onload = function() { setTimeout(() => { window.print(); }, 500); };
+        <\/script>
+    </body>
+    </html>`;
+
+  // -------------------------------------------------------------
+  // منطق النافذة المنبثقة (Modal/Iframe) لعرض التقرير
+  // -------------------------------------------------------------
+
+  // 1. البحث عن النافذة المنبثقة، ولو مش موجودة نصنعها
+  let printModal = document.getElementById("dr-pdf-modal");
+  if (!printModal) {
+    printModal = document.createElement("div");
+    printModal.id = "dr-pdf-modal";
+    printModal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+            flex-direction: column; backdrop-filter: blur(4px);
+        `;
+
+    printModal.innerHTML = `
+            <div style="width: 95%; max-width: 1200px; background: #fff; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; height: 90vh; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+
+                <div style="background: #C8102E; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.2rem; font-family: 'Cairo', sans-serif;"><i class="fas fa-file-pdf"></i> معاينة التقرير للطباعة</h3>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <button onclick="document.getElementById('dr-pdf-iframe').contentWindow.print()" style="background: #fff; color: #C8102E; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: 'Cairo', sans-serif; transition: 0.2s;">
+                            <i class="fas fa-print"></i> طباعة الآن
+                        </button>
+                        <button onclick="document.getElementById('dr-pdf-modal').style.display='none'" style="background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; line-height: 1;">&times;</button>
+                    </div>
+                </div>
+
+                <iframe id="dr-pdf-iframe" style="width: 100%; height: 100%; border: none; flex-grow: 1; background: #fdfdfd;"></iframe>
+            </div>
+        `;
+    document.body.appendChild(printModal);
+  }
+
+  // 2. إظهار النافذة المنبثقة
+  printModal.style.display = "flex";
+
+  // 3. كتابة كود الـ HTML بداخل الـ iframe
+  const iframe = document.getElementById("dr-pdf-iframe");
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(htmlTemplate);
+  doc.close();
+};
+// =================================================================
+// دالة إنشاء التقرير اليومي المُجمّع لكل المشاريع (Consolidated Report)
+// (تم تعديل حساب العمالة: حساب Max/Avg لكل مشروع على حدة ثم جمع النواتج)
+// =================================================================
+window.generateConsolidatedDailyReport = function () {
+  const reports = window.loadedFinalReports;
+
+  if (!reports || reports.length === 0) {
+    alert(
+      "الرجاء الضغط على 'عرض السجلات' أولاً لجلب البيانات للفترة المطلوبة.",
+    );
+    return;
+  }
+
+  // 1. كائنات لتجميع البيانات
+  let aggGlobal = {
+    security: 0,
+    ptw: 0,
+    hazards: 0,
+    obs: 0,
+    equip: 0,
+    intAudit: 0,
+    extAudit: 0,
+    accInsp: 0,
+    weekly: 0,
+    monthly: 0,
+  };
+
+  let aggEntities = {
+    Sewedy: {
+      name: "إجمالي السويدي",
+      manpower: 0,
+      hours: 0,
+      train: 0,
+      induct: 0,
+      ua: 0,
+      uc: 0,
+      env: 0,
+      pos: 0,
+      fatal: 0,
+      lti: 0,
+      mtc: 0,
+      fac: 0,
+      nm: 0,
+      pd: 0,
+      envInc: 0,
+      bg: "#f0f8ff",
+    },
+    Contractors: {
+      name: "إجمالي مقاولي الباطن",
+      manpower: 0,
+      hours: 0,
+      train: 0,
+      induct: 0,
+      ua: 0,
+      uc: 0,
+      env: 0,
+      pos: 0,
+      fatal: 0,
+      lti: 0,
+      mtc: 0,
+      fac: 0,
+      nm: 0,
+      pd: 0,
+      envInc: 0,
+      bg: "#fff",
+    },
+    Security: {
+      name: "إجمالي طاقم الأمن",
+      manpower: 0,
+      hours: 0,
+      train: 0,
+      induct: 0,
+      ua: 0,
+      uc: 0,
+      env: 0,
+      pos: 0,
+      fatal: 0,
+      lti: 0,
+      mtc: 0,
+      fac: 0,
+      nm: 0,
+      pd: 0,
+      envInc: 0,
+      bg: "#fff8e1",
+    },
+  };
+
+  let totalProjectsSet = new Set();
+
+  // (*** الجديد ***): كائن لتخزين إحصائيات العمالة لكل مشروع بشكل منفصل
+  let projectManpowerStats = {};
+
+  // 2. عملية التجميع الدقيقة
+  reports.forEach((r) => {
+    if (r.isHoliday) return; // تخطي أيام الإجازات من الحسابات
+
+    const proj = r.projectName;
+    totalProjectsSet.add(proj);
+
+    // تجهيز ذاكرة المشروع لو مش موجودة
+    if (!projectManpowerStats[proj]) {
+      projectManpowerStats[proj] = {
+        daysCount: 0,
+        maxSewedy: 0,
+        sumContractors: 0,
+        sumSecurity: 0,
+      };
+    }
+
+    projectManpowerStats[proj].daysCount++;
+
+    // تجميع المؤشرات (تراكمي عادي)
+    aggGlobal.ptw += parseFloat(r.globalStats.ptw || 0);
+    aggGlobal.hazards += parseFloat(r.globalStats.hazards || 0);
+    aggGlobal.obs += parseFloat(r.globalStats.obs || 0);
+    aggGlobal.equip += parseFloat(r.globalStats.equip || 0);
+    aggGlobal.intAudit += parseFloat(r.globalStats.intAudit || 0);
+    aggGlobal.extAudit += parseFloat(r.globalStats.extAudit || 0);
+    aggGlobal.accInsp += parseFloat(r.globalStats.accInsp || 0);
+    aggGlobal.weekly += parseFloat(r.globalStats.weekly || 0);
+    aggGlobal.monthly += parseFloat(r.globalStats.monthly || 0);
+    aggGlobal.security += parseFloat(r.globalStats.security || 0);
+
+    let dailySewedy = 0;
+    let dailyContractors = 0;
+    let dailySecurity = 0;
+
+    // تجميع الساعات والحوادث (تراكمي عادي) وحساب عمالة اليوم
+    r.entities.forEach((ent) => {
+      let target = aggEntities.Contractors;
+      let val = parseFloat(ent.manpower || 0);
+
+      if (ent.category === "Sewedy") {
+        target = aggEntities.Sewedy;
+        dailySewedy += val;
+      } else if (ent.category === "Security") {
+        target = aggEntities.Security;
+        dailySecurity += val;
+      } else {
+        dailyContractors += val;
+      }
+
+      // تجميع الساعات وباقي الأرقام كمجموع تراكمي
+      target.hours += parseFloat(ent.hours || 0);
+      target.train += parseFloat(ent.train || 0);
+      target.induct += parseFloat(ent.induct || 0);
+      target.ua += parseFloat(ent.ua || 0);
+      target.uc += parseFloat(ent.uc || 0);
+      target.env += parseFloat(ent.env || 0);
+      target.pos += parseFloat(ent.pos || 0);
+      target.fatal += parseFloat(ent.fatal || 0);
+      target.lti += parseFloat(ent.lti || 0);
+      target.mtc += parseFloat(ent.mtc || 0);
+      target.fac += parseFloat(ent.fac || 0);
+      target.nm += parseFloat(ent.nm || 0);
+      target.pd += parseFloat(ent.pd || 0);
+      target.envInc += parseFloat(ent.envInc || 0);
+    });
+
+    // (*** الجديد ***): تحديث أرقام المشروع الواحد
+    if (dailySewedy > projectManpowerStats[proj].maxSewedy) {
+      projectManpowerStats[proj].maxSewedy = dailySewedy;
+    }
+    projectManpowerStats[proj].sumContractors += dailyContractors;
+    projectManpowerStats[proj].sumSecurity += dailySecurity;
+  });
+
+  // 3. (*** الجديد ***): حساب العمالة النهائية بتجميع نتائج المشاريع
+  let finalSewedyManpower = 0;
+  let finalContractorsManpower = 0;
+  let finalSecurityManpower = 0;
+
+  Object.values(projectManpowerStats).forEach((pStats) => {
+    // جمع (Max) السويدي لكل المشاريع
+    finalSewedyManpower += pStats.maxSewedy;
+
+    // جمع (Average) المقاولين والأمن لكل المشاريع
+    if (pStats.daysCount > 0) {
+      finalContractorsManpower += Math.round(
+        pStats.sumContractors / pStats.daysCount,
+      );
+      finalSecurityManpower += Math.round(
+        pStats.sumSecurity / pStats.daysCount,
+      );
+    }
+  });
+
+  aggEntities.Sewedy.manpower = finalSewedyManpower;
+  aggEntities.Contractors.manpower = finalContractorsManpower;
+  aggEntities.Security.manpower = finalSecurityManpower;
+
+  // 4. بناء صفوف الجدول والـ Grand Total
+  let entitiesHtml = "";
+  let grandTotals = {
+    manpower: 0,
+    hours: 0,
+    train: 0,
+    induct: 0,
+    ua: 0,
+    uc: 0,
+    env: 0,
+    pos: 0,
+    fatal: 0,
+    lti: 0,
+    mtc: 0,
+    fac: 0,
+    nm: 0,
+    pd: 0,
+    envInc: 0,
+  };
+
+  Object.values(aggEntities).forEach((ent) => {
+    if (ent.manpower === 0 && ent.hours === 0) return;
+
+    Object.keys(grandTotals).forEach((key) => (grandTotals[key] += ent[key]));
+
+    // توضيح طريقة الحساب جنب الرقم
+    let calcNote = ent.name.includes("السويدي")
+      ? '<span style="font-size:8px; color:#888;">(مجموع Max)</span>'
+      : '<span style="font-size:8px; color:#888;">(مجموع Avg)</span>';
+
+    entitiesHtml += `
+        <tr style="background-color: ${ent.bg}; text-align:center;">
+            <td style="text-align:right; font-weight:bold;">${ent.name}</td>
+            <td style="font-weight:bold; font-size:1.1em;">${ent.manpower} ${calcNote}</td>
+            <td>${ent.hours}</td>
+            <td style="color:#17a2b8; font-weight:bold;">${ent.train}</td>
+            <td style="color:#17a2b8; font-weight:bold;">${ent.induct}</td>
+            <td>${ent.ua}</td>
+            <td>${ent.uc}</td>
+            <td>${ent.env}</td>
+            <td style="color:green; font-weight:bold;">${ent.pos}</td>
+            <td style="background:#fff5f5; color:red; font-weight:bold;">${ent.fatal}</td>
+            <td style="background:#fff5f5; color:red;">${ent.lti}</td>
+            <td style="background:#fff5f5; color:red;">${ent.mtc}</td>
+            <td style="background:#fff5f5; color:red;">${ent.fac}</td>
+            <td style="background:#fff5f5; color:red;">${ent.nm}</td>
+            <td style="background:#fff5f5; color:red;">${ent.pd}</td>
+            <td style="background:#fff5f5; color:red;">${ent.envInc}</td>
+        </tr>`;
+  });
+
+  // 5. إعدادات الطباعة والقالب
+  const projSelect = document.getElementById("mon-dr-project");
+  const titleProject =
+    projSelect.value === "ALL_ACCESSIBLE"
+      ? `مُجمّع لـ (${totalProjectsSet.size}) مشاريع`
+      : projSelect.value;
+
+  let dateRange = "الفترة المحددة";
+  const dFrom = document.getElementById("mon-dr-from").value;
+  const dTo = document.getElementById("mon-dr-to").value;
+  if (dFrom && dTo) dateRange = `من ${dFrom} إلى ${dTo}`;
+  else if (dFrom) dateRange = `بدءاً من ${dFrom}`;
+  else if (dTo) dateRange = `حتى ${dTo}`;
+
+  const printerUser = window.currentUser
+    ? window.currentUser.username
+    : "النظام";
+
+  const htmlTemplate = `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <title>Consolidated HSE Report</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            @page { size: A4 landscape; margin: 1cm; }
+            body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; color: #2C2A29; line-height: 1.4; font-size: 12px; }
+            .pdf-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid #ff9800; padding-bottom: 10px; margin-bottom: 15px; }
+            .header-info h1 { color: #ff9800; margin: 0; font-size: 22px; font-weight: 800; text-transform: uppercase; }
+            .header-info p { margin: 3px 0 0 0; font-size: 13px; color: #555; font-weight: 600; }
+            .logo-container img { height: 60px; }
+            .info-bar { background-color: #fff9f0; padding: 10px 15px; border-radius: 6px; border-right: 5px solid #ff9800; margin-bottom: 15px; display: flex; justify-content: space-between; border: 1px solid #ffeeba; }
+            .info-bar div { display: flex; flex-direction: column; }
+            .info-bar span { color: #666; font-size: 11px; }
+            .info-bar strong { font-size: 14px; color: #333; }
+            .section-title { background: #333; color: #fff; padding: 5px 10px; font-size: 14px; border-radius: 4px; margin: 15px 0 10px 0; -webkit-print-color-adjust: exact; display:inline-block; }
+            .stats-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; margin-bottom: 20px; }
+            .stat-box { border: 1px solid #ddd; padding: 8px 5px; text-align: center; border-radius: 4px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+            .stat-box .title { font-size: 10px; color: #666; font-weight: bold; margin-bottom: 5px; }
+            .stat-box .val { font-size: 18px; font-weight: 800; color: #ff9800; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px; }
+            th { background-color: #e9ecef !important; color: #333; font-weight: bold; border: 1px solid #ccc; padding: 8px 5px; text-align: center; -webkit-print-color-adjust: exact; }
+            td { border: 1px solid #ddd; padding: 6px 5px; text-align: center; }
+            .table-totals { background-color: #2C2A29 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+            .table-totals td { border-color: #555; }
+            .pdf-footer { position: fixed; bottom: 0; left: 0; width: 100%; font-size: 10px; color: #888; border-top: 1px dashed #ccc; padding-top: 5px; display: flex; justify-content: space-between; }
+        </style>
+    </head>
+    <body>
+        <div class="pdf-header">
+            <div class="header-info">
+                <h1 style="color:#ff9800;">CONSOLIDATED HSE REPORT</h1>
+                <p>التقرير التجميعي للسلامة والصحة المهنية والبيئة</p>
+            </div>
+            <div class="logo-container"><img src="../turnkey.png"></div>
+        </div>
+
+        <div class="info-bar">
+            <div><span>نطاق المشاريع</span><strong>${titleProject}</strong></div>
+            <div><span>الفترة الزمنية</span><strong>${dateRange}</strong></div>
+            <div><span>إجمالي التقارير المدمجة</span><strong>${reports.length} تقارير</strong></div>
+        </div>
+
+        <div class="section-title">إجمالي المؤشرات الاستباقية خلال الفترة (Proactive Indicators)</div>
+        <div class="stats-grid">
+            <div class="stat-box"><div class="title">PTW</div><div class="val" style="color:#1976d2">${aggGlobal.ptw}</div></div>
+            <div class="stat-box"><div class="title">Hazards</div><div class="val">${aggGlobal.hazards}</div></div>
+            <div class="stat-box"><div class="title">Observations</div><div class="val" style="color:#f57c00">${aggGlobal.obs}</div></div>
+            <div class="stat-box"><div class="title">Equip. Insp.</div><div class="val" style="color:#388e3c">${aggGlobal.equip}</div></div>
+            <div class="stat-box"><div class="title">Internal Audit</div><div class="val" style="color:#555">${aggGlobal.intAudit}</div></div>
+            <div class="stat-box"><div class="title">External Audit</div><div class="val" style="color:#555">${aggGlobal.extAudit}</div></div>
+            <div class="stat-box"><div class="title">Accomp. Insp.</div><div class="val" style="color:#009688">${aggGlobal.accInsp}</div></div>
+            <div class="stat-box"><div class="title">Weekly Walk</div><div class="val" style="color:#673ab7">${aggGlobal.weekly}</div></div>
+            <div class="stat-box"><div class="title">Monthly Tour</div><div class="val" style="color:#673ab7">${aggGlobal.monthly}</div></div>
+            <div class="stat-box"><div class="title">Security</div><div class="val" style="color:#000">${aggGlobal.security}</div></div>
+        </div>
+
+        <div class="section-title">إجمالي العمالة والإصابات والملاحظات خلال الفترة</div>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width:20%">الجهة (Category)</th>
+                    <th rowspan="2">Total Manpower</th>
+                    <th rowspan="2">Total Hours</th>
+                    <th colspan="2" style="background:#d1ecf1 !important;">Training</th>
+                    <th colspan="4">Observations</th>
+                    <th colspan="7" style="background:#f8d7da !important; color:#721c24;">Incidents</th>
+                </tr>
+                <tr>
+                    <th style="background:#d1ecf1 !important;">Reg</th>
+                    <th style="background:#d1ecf1 !important;">Ind</th>
+                    <th>UA</th><th>UC</th><th>Env</th><th>Pos</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">Fat</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">LTI</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">MTC</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">FAC</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">NM</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">PD</th>
+                    <th style="background:#f8d7da !important; color:#721c24;">Env.Inc</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${entitiesHtml}
+                <tr class="table-totals">
+                    <td style="text-align:right;">الإجمالي الكلي (Grand Total)</td>
+                    <td>${grandTotals.manpower}</td>
+                    <td>${grandTotals.hours}</td>
+                    <td>${grandTotals.train}</td>
+                    <td>${grandTotals.induct}</td>
+                    <td>${grandTotals.ua}</td>
+                    <td>${grandTotals.uc}</td>
+                    <td>${grandTotals.env}</td>
+                    <td>${grandTotals.pos}</td>
+                    <td style="color:#ff6b6b;">${grandTotals.fatal}</td>
+                    <td style="color:#ff6b6b;">${grandTotals.lti}</td>
+                    <td style="color:#ff6b6b;">${grandTotals.mtc}</td>
+                    <td style="color:#ff6b6b;">${grandTotals.fac}</td>
+                    <td style="color:#ff6b6b;">${grandTotals.nm}</td>
+                    <td style="color:#ff6b6b;">${grandTotals.pd}</td>
+                    <td style="color:#ff6b6b;">${grandTotals.envInc}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="pdf-footer">
+            <span>HSE Digitalization System - Turnkey Projects</span>
+            <span>مستخرج بواسطة: ${printerUser}</span>
+            <span>تاريخ الطباعة: ${new Date().toLocaleString("ar-EG")}</span>
+        </div>
+
+        <script>
+            window.onload = function() { setTimeout(() => { window.print(); }, 500); };
+        <\/script>
+    </body>
+    </html>`;
+
+  // 6. عرض في النافذة المنبثقة
+  let printModal = document.getElementById("dr-pdf-modal");
+  if (!printModal) {
+    printModal = document.createElement("div");
+    printModal.id = "dr-pdf-modal";
+    printModal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+            flex-direction: column; backdrop-filter: blur(4px);
+        `;
+    document.body.appendChild(printModal);
+  }
+
+  printModal.innerHTML = `
+        <div style="width: 95%; max-width: 1200px; background: #fff; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; height: 90vh; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="background: #ff9800; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;" id="dr-pdf-modal-header">
+                <h3 style="margin: 0; font-size: 1.2rem; font-family: 'Cairo', sans-serif;"><i class="fas fa-chart-pie"></i> معاينة التقرير المُجمّع</h3>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <button onclick="document.getElementById('dr-pdf-iframe').contentWindow.print()" style="background: #fff; color: #ff9800; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: 'Cairo', sans-serif; transition: 0.2s;" id="dr-pdf-print-btn">
+                        <i class="fas fa-print"></i> طباعة الآن
+                    </button>
+                    <button onclick="document.getElementById('dr-pdf-modal').style.display='none'" style="background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; line-height: 1;">&times;</button>
+                </div>
+            </div>
+            <iframe id="dr-pdf-iframe" style="width: 100%; height: 100%; border: none; flex-grow: 1; background: #fdfdfd;"></iframe>
+        </div>
+    `;
+
+  printModal.style.display = "flex";
+  const iframe = document.getElementById("dr-pdf-iframe");
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(htmlTemplate);
+  doc.close();
 };

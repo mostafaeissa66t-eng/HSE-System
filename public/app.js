@@ -1041,22 +1041,36 @@ document.addEventListener("DOMContentLoaded", function () {
   function onOpenPermitsLoaded(response) {
     const lc = document.getElementById("open-permits-list");
     if (!lc) return;
+
     if (response.permits && response.permits.length === 0) {
-      lc.innerHTML = "<p>لا توجد تصاريح مفتوحة.</p>";
+      lc.innerHTML =
+        "<p style='text-align:center; padding:20px; color:#666;'>لا توجد تصاريح مفتوحة.</p>";
       return;
     }
+
     if (response.permits) {
       lc.innerHTML = "";
       response.permits.forEach((p) => {
         const card = document.createElement("div");
         card.className = "permit-card";
-        card.innerHTML = `<div class="permit-info"><p><strong>المشروع:</strong> ${p.project || "-"}</p><p><strong>النوع:</strong> ${p.type || "-"}</p><p><strong>التاريخ:</strong> ${p.date || "-"}</p><p><strong>الوصف:</strong> ${p.description || "-"}</p><p><strong>ID:</strong> ${p.id || "-"}</p></div><button class="btn-close" data-id="${p.id}"><i class="fas fa-check-circle"></i> إغلاق</button>`;
+        card.innerHTML = `
+          <div class="permit-info">
+            <p><strong>المشروع:</strong> ${p.project || "-"}</p>
+            <p><strong>النوع:</strong> ${p.type || "-"}</p>
+            <p><strong>التاريخ:</strong> ${p.date || "-"}</p>
+            <p><strong>الوصف:</strong> ${p.description || "-"}</p>
+            <p><strong>ID:</strong> ${p.id || "-"}</p>
+          </div>
+          <button class="btn-close" data-id="${p.id}">
+            <i class="fas fa-check-circle"></i> إغلاق
+          </button>
+        `;
+
         const btn = card.querySelector(".btn-close");
         if (btn) {
           btn.addEventListener("click", function () {
-            if (confirm(`إغلاق ${this.dataset.id}؟`)) {
-              handleClosePermit(this.dataset.id);
-            }
+            // شيلنا الـ confirm المزعج من هنا، وبنستدعي النافذة المنبثقة فوراً
+            window.handleClosePermit(this.dataset.id);
           });
         }
         lc.appendChild(card);
@@ -1065,20 +1079,124 @@ document.addEventListener("DOMContentLoaded", function () {
       lc.innerHTML = `<p class="error-message" style="display:block;">${(response && response.message) || "فشل تحميل."}</p>`;
     }
   }
+
   function onOpenPermitsLoadFailure(e) {
     const lc = document.getElementById("open-permits-list");
     if (lc)
       lc.innerHTML = `<p class="error-message" style="display:block;">${e.message}</p>`;
   }
-  async function handleClosePermit(id) {
+  // =================================================================
+  // دالة إغلاق التصريح مع النافذة المنبثقة الاحترافية (Custom Modal)
+  // =================================================================
+  let currentClosingPermitId = null;
+
+  window.handleClosePermit = function (id) {
     if (!id) return;
-    try {
-      const r = await callApi("closePermit", { permitId: id });
-      onPermitClosed(r);
-    } catch (e) {
-      onPermitCloseFailure(e);
+    currentClosingPermitId = id; // حفظ الـ ID عشان نستخدمه وقت الحفظ
+
+    // 1. البحث عن النافذة، لو مش موجودة نصنعها
+    let closeModal = document.getElementById("custom-close-permit-modal");
+
+    if (!closeModal) {
+      closeModal = document.createElement("div");
+      closeModal.id = "custom-close-permit-modal";
+      closeModal.className = "modal";
+      // تنسيق النافذة (خلفية شفافة وتوسيط)
+      closeModal.style.cssText =
+        "display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(4px);";
+
+      closeModal.innerHTML = `
+              <div class="modal-content" style="background: #fff; padding: 25px; border-radius: 12px; max-width: 450px; width: 90%; text-align: center; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: slideDown 0.3s ease-out;">
+
+                  <button onclick="document.getElementById('custom-close-permit-modal').style.display='none'" style="position: absolute; top: 15px; left: 15px; background: transparent; border: none; font-size: 1.8rem; color: #aaa; cursor: pointer; line-height: 1;">&times;</button>
+
+                  <h3 style="color: #c8102e; margin-top: 0; margin-bottom: 15px; font-size: 1.4rem; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                      <i class="fas fa-clipboard-check"></i> إغلاق التصريح
+                  </h3>
+
+                  <p style="font-size: 1rem; color: #444; margin-bottom: 20px;">
+                      تصريح رقم: <strong id="modal-permit-id-display" style="color: #0056b3; font-size: 1.1rem;"></strong><br>
+                      هل ترغب في تحديث عدد العمال الفعلي قبل الإغلاق؟
+                  </p>
+
+                  <div class="form-group" style="text-align: right; margin-bottom: 25px;">
+                      <label style="font-weight: 600; color: #555; margin-bottom: 8px; display: block;">العدد الفعلي للعمال (اختياري):</label>
+                      <input type="number" id="custom-close-workers-input" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1.1rem; text-align: center; outline: none; transition: 0.3s;" placeholder="اكتب العدد الجديد هنا..." min="1" onfocus="this.style.borderColor='#c8102e'" onblur="this.style.borderColor='#ddd'">
+                  </div>
+
+                  <div style="display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap;">
+                      <button onclick="window.executeClosePermit(true)" class="btn" style="flex: 1; background: #28a745; color: #fff; padding: 12px; font-size: 1rem; border: none; border-radius: 6px; cursor: pointer;">
+                          <i class="fas fa-check-circle"></i> تحديث وإغلاق
+                      </button>
+                      <button onclick="window.executeClosePermit(false)" class="btn" style="flex: 1; background: #6c757d; color: #fff; padding: 12px; font-size: 1rem; border: none; border-radius: 6px; cursor: pointer;">
+                          <i class="fas fa-times-circle"></i> إغلاق كما هو
+                      </button>
+                  </div>
+              </div>
+          `;
+      document.body.appendChild(closeModal);
     }
-  }
+
+    // 2. تصفير الحقل ووضع رقم التصريح
+    document.getElementById("modal-permit-id-display").textContent = id;
+    document.getElementById("custom-close-workers-input").value = "";
+
+    // 3. إظهار النافذة
+    closeModal.style.display = "flex";
+  };
+
+  // دالة التنفيذ التي يتم استدعاؤها من أزرار النافذة المنبثقة
+  window.executeClosePermit = async function (withUpdate) {
+    const id = currentClosingPermitId;
+    if (!id) return;
+
+    let newWorkersCount = null;
+
+    // لو المستخدم اختار "تحديث وإغلاق"
+    if (withUpdate) {
+      const inputVal = document.getElementById(
+        "custom-close-workers-input",
+      ).value;
+      const parsedCount = parseInt(inputVal, 10);
+
+      if (isNaN(parsedCount) || parsedCount <= 0) {
+        alert("الرجاء إدخال رقم صحيح لعدد العمال، أو اختر 'إغلاق كما هو'.");
+        document.getElementById("custom-close-workers-input").focus();
+        return; // نوقفه عشان ميكملش
+      }
+      newWorkersCount = parsedCount;
+    }
+
+    // إخفاء النافذة المنبثقة
+    document.getElementById("custom-close-permit-modal").style.display = "none";
+
+    // تشغيل اللودر وإرسال الطلب للسيرفر
+    if (typeof showLoader === "function") showLoader("جاري إغلاق التصريح...");
+
+    try {
+      const r = await callApi("closePermit", {
+        permitId: id,
+        updatedWorkers: newWorkersCount,
+      });
+
+      // استدعاء دالة النجاح لتحديث القائمة وإظهار الرسالة
+      if (typeof onPermitClosed === "function") {
+        onPermitClosed(r);
+      } else {
+        alert(r.message);
+        if (typeof loadOpenPermits === "function") loadOpenPermits();
+      }
+    } catch (e) {
+      if (typeof onPermitCloseFailure === "function") {
+        onPermitCloseFailure(e);
+      } else {
+        alert("خطأ: " + e.message);
+      }
+    } finally {
+      if (typeof hideLoader === "function") hideLoader();
+    }
+  };
+
   function onPermitClosed(r) {
     showMessage(closePermitMsg, r ? r.message : "تم.", true);
     loadOpenPermits();
@@ -1528,7 +1646,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type === "مقاول" ? "block" : "none";
 
     if (type === "موظف") {
-      // حذفنا استدعاء updateEmployeeDropdown() لأنه لم يعد هناك قائمة منسدلة
+      // حذفنo� استدعاء updateEmployeeDropdown() لأنه لم يعد هناك قائمة منسدلة
       console.log(
         "تم اختيار نوع المستلم: موظف. بانتظار فتح النافذة المنبثقة للاختيار.",
       );
@@ -3372,7 +3490,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const empId = document.getElementById("haz-emp-id-hidden").value;
         const empName = document.getElementById("haz-emp-name-display").value;
 
-        // اr�تحقق من أن المستخدم اختار موظفاً بالفعل من البوب أب
+        // اrٿ�تحقق من أن المستخدم اختار موظفاً بالفعل من البوب أب
         if (!empId || !empName) {
           alert("الرجاء الضغط على خانة الاسم واختيار الموظف من القائمة");
           return;

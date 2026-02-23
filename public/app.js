@@ -4877,33 +4877,41 @@ document.addEventListener("DOMContentLoaded", function () {
                   <th>الكود</th>
                   <th>التاريخ</th>
                   <th>المشروع</th>
-                  <th>المصدر</th> <th style="width:30%;">الوصف</th>
-                  <th>الحالة</th>
+                  <th>المصدر</th> 
+                  <th style="width:30%;">الوصف</th>
+                  <th>إجراء / طباعة</th>
               </tr>
           </thead>
           <tbody>`;
 
     data.forEach((row) => {
-      // تمييز النوع بألوان
-      const typeBadge =
-        row.type === "NCR"
-          ? '<span class="badge bg-warning" style="color:#856404; background:#fff3cd;">NCR</span>'
-          : '<span class="badge bg-danger" style="color:#fff; background:#dc3545;">Violation</span>';
+      const isNCR = row.type === "NCR";
+      const typeBadge = isNCR
+        ? '<span class="badge bg-warning" style="color:#856404; background:#fff3cd;">NCR</span>'
+        : '<span class="badge bg-danger" style="color:#fff; background:#dc3545;">Violation</span>';
 
-      // تنسيق التاريخ
       let dateDisplay = row.date;
       try {
         const d = new Date(row.date);
         dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       } catch (e) {}
 
+      // تحديد الزر المناسب (لو NCR هيجيب إغلاق أو حالته، لو مخالفة هيجيب زرار طباعة PDF)
+      let actionCell = `<span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span>`;
+      if (!isNCR) {
+        actionCell = `<button class="btn-small btn-secondary" style="background:#C8102E; border:none;" onclick="window.printViolationPDF('${row.id}')">
+                              <i class="fas fa-file-pdf"></i> استخراج التقرير
+                            </button>`;
+      }
+
       html += `<tr>
               <td>${typeBadge}</td>
               <td style="font-weight:bold;">${row.id}</td>
               <td style="white-space:nowrap;">${dateDisplay}</td>
               <td>${row.project}</td>
-              <td style="color:#0056b3; font-weight:600;">${row.issuer || "-"}</td> <td class="desc-cell">${row.desc}</td>
-              <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
+              <td style="color:#0056b3; font-weight:600;">${row.issuer || "-"}</td> 
+              <td class="desc-cell">${row.desc}</td>
+              <td style="text-align:center;">${actionCell}</td>
           </tr>`;
     });
     html += `</tbody></table>`;
@@ -9111,4 +9119,314 @@ window.generateConsolidatedDailyReport = function () {
   doc.open();
   doc.write(htmlTemplate);
   doc.close();
+};
+
+// =================================================================
+// دالة طباعة تقرير المخالفات (HSE Violation Report - Formal PDF)
+// =================================================================
+window.printViolationPDF = async function (vioId) {
+  showLoader("جاري تجهيز التقرير للطباعة...");
+
+  try {
+    const response = await callApi("getViolationFullDetails", { vioId: vioId });
+
+    if (response.status !== "success") {
+      throw new Error(response.message);
+    }
+
+    const data = response.data;
+
+    // تجهيز علامات الصح بناءً على مستوى المخالفة (☑ للنشط، ☐ للغير نشط)
+    const checkLvl1 = data.level === "Level 1" ? "☑" : "☐";
+    const checkLvl2 = data.level === "Level 2" ? "☑" : "☐";
+    const checkLvl3 = data.level === "Level 3" ? "☑" : "☐";
+
+    // تجهيز جدول الجزاءات (يظهر فقط إذا كان هناك جزاءات Level 3)
+    let penaltyTableHtml = "";
+    if (data.level === "Level 3") {
+      let rowsHtml = "";
+      let unitLabel =
+        data.type === "موظف" || data.type === "Employee" ? "يوم" : "جنيه";
+
+      // إذا كان هناك بنود مفصلة من السيرفر
+      if (data.items && data.items.length > 0) {
+        data.items.forEach((item, index) => {
+          let actionText =
+            parseFloat(item.appliedValue) > 0
+              ? `خصم (${item.appliedValue}) ${unitLabel}`
+              : "إجراء إداري";
+          rowsHtml += `
+                    <tr>
+                        <td style="text-align:center; font-weight:bold;">${index + 1}</td>
+                        <td style="text-align:center; font-weight:bold; color:#c8102e;">${actionText}</td>
+                        <td style="text-align:right; padding-right: 10px;">${item.appliedText}</td>
+                    </tr>`;
+        });
+      } else {
+        // بديل في حالة عدم وجود بنود مفصلة (للتقارير القديمة)
+        rowsHtml = `
+                <tr>
+                    <td style="text-align:center; font-weight:bold;">1</td>
+                    <td style="text-align:center; font-weight:bold; color:#c8102e;">
+                        ${data.totalValue > 0 ? "خصم (" + data.totalValue + ") " + unitLabel : "إجراء إداري"}
+                    </td>
+                    <td style="text-align:right; padding-right: 10px;">${data.detailsText || "-"}</td>
+                </tr>`;
+      }
+
+      // تجميع الجدول مع صف الإجمالي
+      penaltyTableHtml = `
+                <table class="form-table penalty-table" style="margin-top: 15px;">
+                    <tr class="header-row">
+                        <td style="width: 5%;">#</td>
+                        <td style="width: 35%;">The Disciplinary Actions<br>الجزاء الإداري المطبق</td>
+                        <td style="width: 60%;">Penalty List Clause<br>بند لائحة الجزاءات المطبق</td>
+                    </tr>
+                    ${rowsHtml}
+                    <tr style="background-color: #f1f1f1;">
+                        <td colspan="2" style="text-align:left; font-weight:bold; padding-left: 15px; color:#c8102e; font-size: 14px;">الإجمالي الكلي للخصم (Total Penalty)</td>
+                        <td style="text-align:center; font-weight:bold; color:#c8102e; font-size: 15px;">
+                            ${data.totalValue > 0 ? data.totalValue + " " + unitLabel : "إجراء إداري فقط"}
+                        </td>
+                    </tr>
+                </table>
+            `;
+    }
+
+    // بناء قالب الـ HTML المطابق تماماً للملف الرسمي
+    const htmlTemplate = `
+        <!DOCTYPE html>
+        <html lang="ar" dir="rtl">
+        <head>
+            <meta charset="UTF-8">
+            <title>HSE Violation Report - ${data.id}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+            <style>
+                @page { size: A4 portrait; margin: 1cm; }
+                body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; color: #000; font-size: 13px; line-height: 1.5; }
+
+                /* Header Styles */
+                .header-container { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #C8102E; padding-bottom: 15px; margin-bottom: 20px; }
+                .logo-container { text-align: left; }
+                .logo { height: 75px; }
+                .title-container { text-align: right; flex-grow: 1; }
+                .title-en { font-size: 22px; font-weight: 800; text-transform: uppercase; margin: 0; color: #C8102E; }
+                .title-ar { font-size: 20px; font-weight: 800; margin: 5px 0; color: #000; }
+                .report-num { font-size: 14px; font-weight: bold; background: #eee; padding: 5px 15px; border-radius: 4px; display: inline-block; border: 1px solid #ccc; margin-top: 5px; }
+
+                /* Form Tables Styles */
+                .form-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                .form-table td { border: 1px solid #000; padding: 8px 10px; vertical-align: middle; }
+                .label-cell-en { font-weight: bold; text-align: left; background-color: #f8f9fa; width: 25%; font-size: 12px; }
+                .label-cell-ar { font-weight: bold; text-align: right; background-color: #f8f9fa; width: 25%; font-size: 14px; }
+                .value-cell { text-align: center; font-weight: bold; width: 50%; font-size: 14px; color: #C8102E; }
+
+                /* Data Blocks */
+                .data-block { border: 1px solid #000; margin-bottom: 15px; }
+                .data-block-header { display: flex; justify-content: space-between; background-color: #f8f9fa; border-bottom: 1px solid #000; padding: 5px 10px; font-weight: bold; font-size: 14px; }
+                .data-block-content { padding: 15px; min-height: 40px; font-size: 13px; font-weight: 600; white-space: pre-wrap; }
+
+                /* Checkboxes Grid */
+                .levels-grid { display: flex; width: 100%; border: 1px solid #000; margin-bottom: 15px; text-align: center; }
+                .level-col { flex: 1; border-left: 1px solid #000; padding: 10px; }
+                .level-col:last-child { border-left: none; }
+                .level-title { font-weight: bold; font-size: 14px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 10px; color: #C8102E; }
+                .checkbox-item { font-size: 14px; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 600; }
+                .checkbox-item span.box { font-size: 18px; margin-top: -3px; }
+
+                /* Penalty Table */
+                .penalty-table th, .penalty-table td { text-align: center; border: 1px solid #000; }
+                .header-row td { background-color: #e9ecef; font-weight: bold; text-align: center; font-size: 13px; }
+
+                /* Signatures Section */
+                .signatures-title { background: #e9ecef; border: 1px solid #000; padding: 5px; font-weight: bold; text-align: center; font-size: 14px; margin-bottom: 0; border-bottom: none; }
+                .signatures-container { display: flex; border: 1px solid #000; border-top: 1px solid #000; }
+                .sig-box { flex: 1; border-left: 1px solid #000; padding: 10px; }
+                .sig-box:last-child { border-left: none; }
+                .sig-header { text-align: center; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 15px; font-size: 13px; }
+                .sig-line { display: flex; align-items: center; margin-bottom: 15px; font-size: 13px; }
+                .sig-line span { width: 65px; font-weight: bold; }
+                .sig-line div { flex-grow: 1; border-bottom: 1px dotted #000; height: 18px; }
+
+                /* Footer */
+                .pdf-footer { position: fixed; bottom: 0; left: 0; width: 100%; border-top: 2px solid #C8102E; padding-top: 5px; display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #555; }
+
+                /* ---------------------------------------------------- */
+                /* Smart Page Break Rules (منع قص العناصر بين الصفحات) */
+                /* ---------------------------------------------------- */
+                .data-block, 
+                .levels-grid, 
+                .penalty-table, 
+                .signatures-title, 
+                .signatures-container {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header-container">
+                <div class="title-container">
+                    <h1 class="title-en">HSE Violations Report</h1>
+                    <h2 class="title-ar">تقرير مخالفة قواعد السلامة والصحة المهنية</h2>
+                    <div class="report-num">Report # ${data.id}</div>
+                </div>
+                <div class="logo-container">
+                    <img src="../turnkey.png" alt="Elsewedy Turnkey" class="logo">
+                </div>
+            </div>
+
+            <table class="form-table">
+                <tr>
+                    <td class="label-cell-en">Project Name:</td>
+                    <td class="value-cell" dir="auto">${data.project}</td>
+                    <td class="label-cell-ar">اسم المشروع</td>
+                </tr>
+                <tr>
+                    <td class="label-cell-en">Employee/contractor Name:</td>
+                    <td class="value-cell" dir="auto">${data.name}</td>
+                    <td class="label-cell-ar">أسم الموظف / المقاول</td>
+                </tr>
+                <tr>
+                    <td class="label-cell-en">Date:</td>
+                    <td class="value-cell">${data.date}</td>
+                    <td class="label-cell-ar">التاريخ</td>
+                </tr>
+                <tr>
+                    <td class="label-cell-en">Company Name:</td>
+                    <td class="value-cell" dir="auto">${data.company}</td>
+                    <td class="label-cell-ar">أسم الشركة</td>
+                </tr>
+            </table>
+
+            <div class="data-block">
+                <div class="data-block-header">
+                    <span>وصف المخالفة</span>
+                    <span dir="ltr">Description of Violation</span>
+                </div>
+                <div class="data-block-content">${data.desc}</div>
+            </div>
+
+            <div class="data-block">
+                <div class="data-block-header">
+                    <span>ملاحظة مسؤول السلامة</span>
+                    <span dir="ltr">HSE Observation</span>
+                </div>
+                <div class="data-block-content">${data.hseStmt}</div>
+            </div>
+
+            <div class="data-block">
+                <div class="data-block-header">
+                    <span>أقوال الموظف / المقاول</span>
+                    <span dir="ltr">Employee/contractor Statement</span>
+                </div>
+                <div class="data-block-content">${data.violatorStmt}</div>
+            </div>
+
+            <div class="data-block">
+                <div class="data-block-header">
+                    <span>الإجراء المتخذ</span>
+                    <span dir="ltr">Action Taken</span>
+                </div>
+                <div class="data-block-content">${data.actionTaken}</div>
+            </div>
+
+            <div class="levels-grid">
+                <div class="level-col">
+                    <div class="level-title">Level One</div>
+                    <div class="checkbox-item"><span class="box">${checkLvl1}</span> First warning</div>
+                    <div class="checkbox-item"><span class="box">${checkLvl1}</span> Re-induction</div>
+                </div>
+                <div class="level-col">
+                    <div class="level-title">Level Two</div>
+                    <div class="checkbox-item"><span class="box">${checkLvl2}</span> Second warning</div>
+                    <div class="checkbox-item"><span class="box">${checkLvl2}</span> Contractor Notification</div>
+                </div>
+                <div class="level-col">
+                    <div class="level-title">Level Three</div>
+                    <div class="checkbox-item"><span class="box">${checkLvl3}</span> Disciplinary Actions</div>
+                </div>
+            </div>
+
+            ${penaltyTableHtml}
+
+            <div class="signatures-title">
+                I have read this warning notice and understand it. لقد قرأت و فهمت ذلك التحذير<br>
+                Signatures التوقيعات
+            </div>
+            <div class="signatures-container">
+                <div class="sig-box">
+                    <div class="sig-header">Employee/contractor<br>الموظف / المقاول الموقعة عليه المخالفة</div>
+                    <div class="sig-line"><span>Name:</span> <div></div></div>
+                    <div class="sig-line"><span>Title:</span> <div></div></div>
+                    <div class="sig-line"><span>Signature:</span> <div></div></div>
+                    <div class="sig-line"><span>Date:</span> <div></div></div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-header">HSE Department<br>إدارة السلامة والصحة المهنية</div>
+                    <div class="sig-line"><span>Name:</span> <div></div></div>
+                    <div class="sig-line"><span>Title:</span> <div></div></div>
+                    <div class="sig-line"><span>Signature:</span> <div></div></div>
+                    <div class="sig-line"><span>Date:</span> <div></div></div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-header">Project Manager<br>مدير المشروع</div>
+                    <div class="sig-line"><span>Name:</span> <div></div></div>
+                    <div class="sig-line"><span>Title:</span> <div></div></div>
+                    <div class="sig-line"><span>Signature:</span> <div></div></div>
+                    <div class="sig-line"><span>Date:</span> <div></div></div>
+                </div>
+            </div>
+
+            <div class="pdf-footer">
+                <span>ECTSF.07/REV.02/Issue Date: ${new Date().toLocaleDateString("en-GB")}</span>
+                <span>Page 1 of 1</span>
+            </div>
+
+            <script>
+                window.onload = function() { setTimeout(() => { window.print(); }, 500); };
+            <\/script>
+        </body>
+        </html>`;
+
+    // استدعاء نافذة العرض المنبثقة الشيك
+    let printModal = document.getElementById("dr-pdf-modal");
+    if (!printModal) {
+      printModal = document.createElement("div");
+      printModal.id = "dr-pdf-modal";
+      printModal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); z-index: 9999;
+                display: none; align-items: center; justify-content: center;
+                flex-direction: column; backdrop-filter: blur(4px);
+            `;
+      document.body.appendChild(printModal);
+    }
+
+    printModal.innerHTML = `
+            <div style="width: 95%; max-width: 1000px; background: #fff; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; height: 95vh; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <div style="background: #C8102E; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.2rem; font-family: 'Cairo', sans-serif;"><i class="fas fa-file-pdf"></i> طباعة نموذج المخالفة الرسمي</h3>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <button onclick="document.getElementById('dr-pdf-iframe').contentWindow.print()" style="background: #fff; color: #C8102E; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: 'Cairo', sans-serif; transition: 0.2s;">
+                            <i class="fas fa-print"></i> طباعة الآن
+                        </button>
+                        <button onclick="document.getElementById('dr-pdf-modal').style.display='none'" style="background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; line-height: 1;">&times;</button>
+                    </div>
+                </div>
+                <iframe id="dr-pdf-iframe" style="width: 100%; height: 100%; border: none; flex-grow: 1; background: #525659;"></iframe>
+            </div>
+        `;
+
+    printModal.style.display = "flex";
+    const iframe = document.getElementById("dr-pdf-iframe");
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlTemplate);
+    doc.close();
+  } catch (error) {
+    alert("حدث خطأ أثناء إعداد الطباعة: " + error.message);
+  } finally {
+    hideLoader();
+  }
 };

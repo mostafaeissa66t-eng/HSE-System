@@ -7344,15 +7344,12 @@ window.initDailyHseReportPage = async function () {
     }
   }
 
-  // فحص صلاحية الوقت
-  const hour = new Date().getHours();
+ // تم إلغاء حظر الوقت ليصبح التسجيل متاحاً طوال اليوم
   const submitBtn = document.getElementById("dr-submit-btn");
   const warningDiv = document.getElementById("daily-time-warning");
 
-  if (hour < 9 || hour >= 21) {
-    if (warningDiv) warningDiv.style.display = "block";
-    if (submitBtn) submitBtn.disabled = true;
-  }
+  if (warningDiv) warningDiv.style.display = "none";
+  if (submitBtn) submitBtn.disabled = false;
 
   drAddedEntities = [];
   if (typeof renderDrEntitiesTable === "function") renderDrEntitiesTable();

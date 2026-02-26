@@ -1,58 +1,78 @@
 // =================================== */
-// CLIENT-SIDE LOGIC (app.js - Final V7 - All Modules Included)
+// CLIENT-SIDE LOGIC (app.js - Secured V8)
 // =================================== */
 
-// API endpoint on the same server (points to api/index.js or server.js via proxy)
 // --- التعريفات العالمية (Global Scope) ---
-let initialData = null; // <--- ضيف السطر ده هنا
+let initialData = null;
 let evaluatedEmpIds = [];
 let currentUser = null;
 const API_URL = "/api";
 
-// جعل دوال اللودر عالمية لأن callApi تعتمد عليها
-function showLoader(message = "جاري التحميل...") {
-  const loader = document.getElementById("loader-overlay");
-  const loaderText = loader ? loader.querySelector("p") : null;
-  if (loaderText) loaderText.textContent = message;
-  if (loader) loader.style.display = "flex";
-}
-function showMessage(element, text, isSuccess) {
+// 1. جعل دوال اللودر عالمية ومستقلة (عشان متعملش إيرور قبل التحميل)
+window.showLoader = function (message = "جاري التحميل...") {
+  const loaderEl = document.getElementById("loader-overlay");
+  if (loaderEl) {
+    const loaderText = loaderEl.querySelector("p");
+    if (loaderText) loaderText.textContent = message;
+    loaderEl.style.display = "flex";
+  }
+};
+// =================================================================
+// --- وحدة الحماية العالمية: تعقيم البيانات (Global XSS Sanitizer) ---
+// =================================================================
+
+// دالة لتحويل الرموز الخطيرة إلى نصوص آمنة
+window.escapeHTML = function (str) {
+  if (typeof str !== "string") return str;
+  return str.replace(/[&<>'"]/g, function (match) {
+    const escapeMap = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "'": "&#39;",
+      '"': "&quot;",
+    };
+    return escapeMap[match];
+  });
+};
+
+// دالة ذكية تلف على كل الداتا (مهما كان حجمها أو تعقيدها) وتعقمها
+window.sanitizeData = function (data) {
+  if (typeof data === "string") {
+    return window.escapeHTML(data);
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => window.sanitizeData(item));
+  }
+  if (data !== null && typeof data === "object") {
+    const sanitizedObj = {};
+    for (const key in data) {
+      sanitizedObj[key] = window.sanitizeData(data[key]);
+    }
+    return sanitizedObj;
+  }
+  return data; // الأرقام والبيانات الفارغة ترجع كما هي
+};
+
+window.hideLoader = function () {
+  const loaderEl = document.getElementById("loader-overlay");
+  if (loaderEl) {
+    setTimeout(() => {
+      loaderEl.style.display = "none";
+    }, 100);
+  }
+};
+
+window.showMessage = function (element, text, isSuccess) {
   if (element) {
     element.textContent = text;
     element.className = isSuccess ? "success-message" : "error-message";
     element.style.display = "block";
     setTimeout(() => {
-      if (element) element.style.display = "none";
+      element.style.display = "none";
     }, 5000);
   }
-}
-function hideLoader() {
-  const loader = document.getElementById("loader-overlay");
-  setTimeout(() => {
-    if (loader) loader.style.display = "none";
-  }, 100);
-}
-
-// الدالة الأهم: جعل callApi عالمية لكي تراها كل الصفحات والبوب أب
-async function callApi(action, payload) {
-  showLoader(`جاري ${action}...`);
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: action, payload: payload }),
-    });
-    const responseText = await response.text();
-    hideLoader();
-    const result = JSON.parse(responseText);
-    if (result && result.status === "error") throw new Error(result.message);
-    return result;
-  } catch (error) {
-    hideLoader();
-    console.error(`API Error (${action}):`, error);
-    throw error;
-  }
-}
+};
 
 // جعل دالة تعبئة القوائم مرئية للجميع
 window.fillSelect = function (element, dataArray) {
@@ -60,39 +80,69 @@ window.fillSelect = function (element, dataArray) {
   element.innerHTML = '<option value="">-- اختر --</option>';
   if (dataArray && Array.isArray(dataArray)) {
     dataArray.forEach((item) => {
-      element.add(new Option(item, item));
+      if (typeof item === "string" || typeof item === "number") {
+        element.add(new Option(item, item));
+      } else if (item.id && item.name) {
+        element.add(new Option(item.name, item.id));
+      }
     });
+  }
+};
+
+// 2. الدالة الأهم: جعل callApi عالمية وتأمينها
+window.callApi = async function (action, payload = {}) {
+  let loaderMessage = `جاري ${action}...`;
+  if (action === "checkLogin") loaderMessage = "جاري تسجيل الدخول...";
+  if (action === "getInitialData") loaderMessage = "جاري تحميل البيانات...";
+  if (action === "verifySession") loaderMessage = "جاري التحقق من الأمان...";
+
+  window.showLoader(loaderMessage);
+
+  // إرفاق التوكن مع كل طلب للسيرفر ما عدا تسجيل الدخول
+  if (action !== "checkLogin") {
+    const token = localStorage.getItem("hse_user_token");
+    if (token) payload.token = token;
+  }
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: action, payload: payload }),
+    });
+
+    const responseText = await response.text();
+    window.hideLoader();
+
+    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+    const result = JSON.parse(responseText);
+
+    if (result && result.status === "error") {
+      // حماية متقدمة: لو السيرفر رفض التوكن يطرد المستخدم
+      if (result.message.includes("Access Denied")) {
+        localStorage.removeItem("hse_user_token");
+        // لا تظهر رسالة الطرد إذا كنا فقط نتحقق من الجلسة في البداية
+        if (action !== "verifySession") {
+          alert(
+            "انتهت الجلسة أو تم تغيير الصلاحيات. يرجى تسجيل الدخول من جديد.",
+          );
+          location.reload();
+        }
+      }
+      throw new Error(result.message);
+    }
+    return window.sanitizeData(result);
+  } catch (error) {
+    window.hideLoader();
+    console.error(`API Error (${action}):`, error);
+    throw error;
   }
 };
 // --- Run when DOM is ready ---
 document.addEventListener("DOMContentLoaded", function () {
   // --- GLOBAL STATE ---
-
-  // ============================================================
-  // (*** جديد ***) التحقق من وجود جلسة محفوظة
-  // ============================================================
-  const savedSession = localStorage.getItem("hse_user_session");
-  if (savedSession) {
-    try {
-      // استرجاع البيانات
-      const parsedUser = JSON.parse(savedSession);
-
-      // محاكاة عملية نجاح الدخول عشان نشغل الموقع علطول
-      // (بنستخدم setTimeout عشان نضمن إن الدوال التانية اتحملت)
-      setTimeout(() => {
-        if (typeof onLoginSuccess === "function") {
-          console.log("تم استعادة الجلسة للمستخدم:", parsedUser.username);
-          onLoginSuccess({ userInfo: parsedUser });
-        }
-      }, 100);
-    } catch (e) {
-      console.error("خطأ في استعادة الجلسة", e);
-      localStorage.removeItem("hse_user_session"); // مسح البيانات التالفة
-    }
-  }
-
-  // --- SELECTORS ---
-  // (Ensure these IDs match your public/index.html)
+  // 1. تعريف العناصر أولاً (SELECTORS) عشان ميعملش خطأ TDZ
   const loader = document.getElementById("loader-overlay");
   const loginScreen = document.getElementById("login-screen");
   const appWrapper = document.getElementById("app-wrapper");
@@ -103,6 +153,36 @@ document.addEventListener("DOMContentLoaded", function () {
   const content = document.getElementById("content");
   const sidebarMenu = document.getElementById("sidebar-menu");
   const logoutBtn = document.getElementById("logout-btn");
+
+  // ============================================================
+  // 2. (التحديث الأمني) التحقق من وجود توكن صالح من السيرفر
+  // ============================================================
+  const savedToken = localStorage.getItem("hse_user_token");
+  if (savedToken) {
+    // نطلب من السيرفر يتأكد من التوكن ويرجع بيانات المستخدم الموثوقة
+    window
+      .callApi("verifySession", {})
+      .then((res) => {
+        if (res.status === "success") {
+          console.log(
+            "تم استعادة الجلسة بأمان للمستخدم:",
+            res.userInfo.username,
+          );
+          onLoginSuccess({ userInfo: res.userInfo, isRestore: true });
+        }
+      })
+      .catch((e) => {
+        console.error("فشل التحقق من الجلسة:", e);
+        localStorage.removeItem("hse_user_token");
+        // إظهار شاشة الدخول لو التوكن غير صالح
+        if (loginScreen) loginScreen.style.display = "flex";
+        if (appWrapper) appWrapper.style.display = "none";
+      });
+  } else {
+    // إظهار شاشة الدخول لو مفيش توكن خالص
+    if (loginScreen) loginScreen.style.display = "flex";
+    if (appWrapper) appWrapper.style.display = "none";
+  }
 
   // Form & Message Selectors
   const permitForm = document.getElementById("permit-form");
@@ -377,85 +457,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // --- API Call Function (Defined AFTER utilities) ---
-  async function callApi(action, payload) {
-    let loaderMessage = `جاري ${action}...`;
-    if (action === "checkLogin") loaderMessage = "جاري تسجيل الدخول...";
-    if (action === "getInitialData") loaderMessage = "جاري تحميل البيانات...";
-    if (action === "savePermit") loaderMessage = "جاري حفظ التصريح...";
-    if (action === "saveObservation") loaderMessage = "جاري حفظ الملاحظة...";
-    if (action === "getOpenPermits") loaderMessage = "جاري تحميل التصاريح...";
-    if (action === "closePermit") loaderMessage = "جاري إغلاق التصريح...";
-    if (action === "searchPermits") loaderMessage = "جاري البحث...";
-    if (action === "getEmployeesToEvaluate")
-      loaderMessage = "جاري تحميل الموظفين...";
-    if (action === "getKPIsForEmployee")
-      loaderMessage = "جاري تحميل المؤشرات...";
-    if (action === "saveEvaluations") loaderMessage = "جاري حفظ التقييم...";
-
-    // (جديد) رسائل المخزن
-    if (action === "getInventoryInitData")
-      loaderMessage = "جاري تحميل بيانات المخزن...";
-    if (action === "getRecipientByNID")
-      loaderMessage = "جاري البحث بالرقم القومي...";
-    if (action === "checkStockBalance") loaderMessage = "جاري فحص الرصيد...";
-    if (action === "saveTransaction") loaderMessage = "جاري حفظ الحركة...";
-    if (action === "getProjectStockReport")
-      loaderMessage = "جاري تحميل التقرير...";
-
-    showLoader(loaderMessage);
-
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: action, payload: payload }),
-      });
-      const responseText = await response.text();
-      hideLoader();
-
-      if (!response.ok) {
-        console.error(
-          `API Error Response (${response.status}) for action ${action}:`,
-          responseText,
-        );
-        let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-        try {
-          const ed = JSON.parse(responseText);
-          if (ed.message) errorMsg = ed.message;
-        } catch (e) {
-          /* ignore */
-        }
-        throw new Error(errorMsg);
-      }
-      try {
-        const result = JSON.parse(responseText);
-        if (result && result.status === "error") {
-          console.error(
-            `Google Script Error for action ${action}:`,
-            result.message,
-          );
-          throw new Error(result.message || "خطأ من السيرفر.");
-        }
-        return result;
-      } catch (parseError) {
-        console.error(
-          `JSON Parse Error for action ${action}:`,
-          parseError,
-          "Raw:",
-          responseText,
-        );
-        throw new Error(
-          `Received invalid response: ${responseText.substring(0, 100)}...`,
-        );
-      }
-    } catch (error) {
-      hideLoader(); // Ensure hidden on error
-      console.error(`callApi Error for action ${action}:`, error);
-      throw new Error(`فشل الاتصال بالخادم (${action}): ${error.message}`);
-    }
-  }
-
   // --- =================================== ---
   // --- START APPLICATION LOGIC (Defined AFTER helpers)
   // --- =================================== ---
@@ -483,22 +484,24 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function onLoginSuccess(response) {
-    // حفظ الجلسة
-    localStorage.setItem("hse_user_session", JSON.stringify(response.userInfo));
+    // حفظ التوكن السري فقط (لو الدخول جديد)
+    if (!response.isRestore && response.token) {
+      localStorage.setItem("hse_user_token", response.token);
+    }
 
+    // (*** التعديل الجذري هنا: تحديث المتغيرين لضمان الرؤية في كل أجزاء الكود ***)
     currentUser = response.userInfo;
+    window.currentUser = response.userInfo;
 
     // إخفاء اللوجن وإظهار التطبيق
     if (loginScreen) loginScreen.style.display = "none";
     if (appWrapper) appWrapper.style.display = "flex";
 
-    // (1) تحديث بيانات السايد بار (القديم)
     const wu = document.getElementById("welcome-user");
     const ur = document.getElementById("user-role");
     if (wu) wu.textContent = `أهلاً، ${currentUser.username}`;
     if (ur) ur.textContent = currentUser.role;
 
-    // (2) تحديث لوحة التحكم الجديدة (Dashboard)
     const dashWelcome = document.getElementById("dash-welcome");
     const dashRoleVal = document.getElementById("dash-role-val");
     const dashDateVal = document.getElementById("dash-date-val");
@@ -507,7 +510,6 @@ document.addEventListener("DOMContentLoaded", function () {
       dashWelcome.textContent = `مرحباً بك، ${currentUser.username}`;
     if (dashRoleVal) dashRoleVal.textContent = currentUser.role;
 
-    // وضع تاريخ اليوم بالعربي أو الإنجليزي
     if (dashDateVal) {
       const options = {
         weekday: "long",
@@ -518,11 +520,8 @@ document.addEventListener("DOMContentLoaded", function () {
       dashDateVal.textContent = new Date().toLocaleDateString("ar-EG", options);
     }
 
-    // تشغيل باقي النظام
     buildSidebar(currentUser.sections);
     loadInitialData();
-
-    // التوجيه للداشبورد
     showSection("Dashboard");
   }
   function onLoginFailure(error) {
@@ -540,7 +539,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", function (e) {
       e.preventDefault();
-      localStorage.removeItem("hse_user_session");
+      localStorage.removeItem("hse_user_token"); // مسح التوكن
       showLoader("تسجيل الخروج...");
       location.reload();
     });
@@ -2535,7 +2534,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const r = await callApi("getTrainingInitData", { userInfo: currentUser });
 
       if (r.status === "success") {
-        // (هام جداً) تعبئة المصفوفة العالمية للموظفين ليراها المودال
+        // (هام جداً) تعبئة المصفوفة العالمية للموظفg�ن ليراها المودال
         window.ppeEmployees = r.employees;
 
         // تعبئة المشاريع والمواضيع والمقاولين في القوائم المنسدلة
@@ -5114,7 +5113,7 @@ document.addEventListener("DOMContentLoaded", function () {
       anaProject.innerHTML =
         '<option value="ALL_ACCESSIBLE">كل المشاريع</option>';
 
-      // محاولة استخدام البيانات المحملة مسبقاً
+      // محاولة استخدام البيانات المح��لة ��سبقاً
       let projectsSource = [];
       if (
         initialData &&
@@ -5973,7 +5972,7 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       if (!confirm("هل أنت متأكد من حفظ التقرير؟")) return;
 
-      // 1. تحديد نوع الحادث أولاً لمعرفة هل نحتاج بيانات ضحية أم لا
+      // 1. تحديد نوع ال �ادث أولاً لمعرفة هل نحتاج b�يانات ضحية أم لا
       const classification = accClass.value;
       const noVictimTypes = [
         "Property Damage",
@@ -6813,7 +6812,7 @@ window.filterKpiEmpList = function () {
   renderKpiEmpsInModal(filtered);
 };
 
-// 2. دالة اختيار المو-�ف من البوب أب (تعديل الربط مع التصميم الجديد)
+// 2. دالة اختيار المو-�ف من البوب أب (تعديل الربط مع التصميم اo�جديد)
 window.selectKpiEmployee = function (id, name, job, project) {
   // تعبئة الحقول الظاهرة والمخفية
   const nameInput = document.getElementById("kpi-emp-name-display");
@@ -6823,7 +6822,7 @@ window.selectKpiEmployee = function (id, name, job, project) {
   if (nameInput) nameInput.value = name;
   if (idInput) idInput.value = id;
 
-  // إظهار المسمى الوظيh�T� والمشروع في "شريط المعلومات" الجديد
+  // إظهار المسمى الوظيh�T� والمشروع في " �ريط المعلومات" الجديد
   if (jobTitleEl) {
     jobTitleEl.innerHTML = `
             <span><i class="fas fa-briefcase"></i> ${job || "موظف"}</span> | 
@@ -7344,7 +7343,7 @@ window.initDailyHseReportPage = async function () {
     }
   }
 
- // تم إلغاء حظر الوقت ليصبح التسجيل متاحاً طوال اليوم
+  // تم إلغاء حظر الوقت ليصبح التسجيل متاحاً طوال اليوم
   const submitBtn = document.getElementById("dr-submit-btn");
   const warningDiv = document.getElementById("daily-time-warning");
 

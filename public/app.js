@@ -308,6 +308,7 @@ document.addEventListener("DOMContentLoaded", function () {
     DailyHseReport: "fas fa-calendar-check",
     DailyApprovals: "fas fa-check-double",
     MonitorDailyReports: "fas fa-file-archive",
+    MonitorKPIs: "fas fa-chart-bar",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -339,6 +340,7 @@ document.addEventListener("DOMContentLoaded", function () {
     DailyHseReport: "تسجيل التقارير اليومية",
     DailyApprovals: "اعتماد التقارير اليومية",
     MonitorDailyReports: "سجل التقارير اليومية",
+    MonitorKPIs: "سجل تقييمات الموظفين", // <--- أضف هذا السطر
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -391,7 +393,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type: "group",
       title: "نظام التقييم (KPIs)",
       icon: "fas fa-chart-line",
-      children: ["KpiEvaluation", "ContractorEvaluation"],
+      children: ["KpiEvaluation", "MonitorKPIs", "ContractorEvaluation"],
     },
     {
       type: "group",
@@ -742,6 +744,9 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "DailyApprovals") {
         initDailyApprovalsPage();
       }
+      if (sectionId === "MonitorKPIs") {
+        window.initMonitorKpiPage();
+      }
       if (sectionId === "MonitorDailyReports")
         window.initMonitorDailyReportsPage();
     } else {
@@ -830,7 +835,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const currentHour = now.getHours();
 
     // الشرط: لو الساعة .�كبر من أو تساوي 8 (يعني من 8:00 وأنت طالع)
-    // يمكنك تعديل الشرط لو عايزها بعد 8:30 مثلاً
+    // يمكنك تعديل ا ���شرط لو عايزها بعد 8:30 مثلاً
     if (currentHour >= 8) {
       delayGroup.style.display = "block";
       delayReason.required = true; // اجباري
@@ -6635,11 +6640,30 @@ window.selectEmployee = function (id, name, company) {
 ////////////////////////////////////////////////////////////واحد
 // --- END DOMContentLoaded ---
 
+// =================================================================
+// دالة بناء فورم التقييم (مع إضافة زر لم يتواجد N/A)
+// =================================================================
 window.buildKpiForm = function (kpis) {
   const listContainer = document.getElementById("kpi-list-container");
   if (!listContainer) return;
   listContainer.innerHTML = "";
 
+  // 1. إضافة بوكس "لم يتواجد (N/A)"
+  const naDiv = document.createElement("div");
+  naDiv.style.cssText =
+    "background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffeeba; display: flex; align-items: center; gap: 10px; font-weight: bold;";
+  naDiv.innerHTML = `
+      <input type="checkbox" id="kpi-na-checkbox" style="width: 22px; height: 22px; cursor: pointer;">
+      <label for="kpi-na-checkbox" style="cursor: pointer; font-size: 1.1rem;">الموظف لم يتواجد في موقعي خلال هذه الفترة (N/A)</label>
+  `;
+  listContainer.appendChild(naDiv);
+
+  // 2. حاوية للكروت عشان نقدر نخفيها ونظهرها مع بعض
+  const cardsContainer = document.createElement("div");
+  cardsContainer.id = "kpi-cards-wrapper";
+  listContainer.appendChild(cardsContainer);
+
+  // 3. رسم الكروت
   kpis.forEach((kpi, index) => {
     const card = document.createElement("div");
     card.className = "kpi-card";
@@ -6654,13 +6678,23 @@ window.buildKpiForm = function (kpis) {
                 <div class="score-group">
                     <label>الدرجة:</label>
                     <input type="number" class="kpi-score-input" 
-                           value="${kpi.scoreAchieved || ""}" 
+                           value="${kpi.scoreAchieved && kpi.scoreAchieved !== "N/A" ? kpi.scoreAchieved : ""}" 
                            min="0" max="${kpi.maxScore || 0}" step="0.5" placeholder="0">
                 </div>
                 <input type="text" class="kpi-notes-input" 
                        value="${kpi.notes || ""}" placeholder="ملاحظات (اختياري)...">
             </div>`;
-    listContainer.appendChild(card);
+    cardsContainer.appendChild(card);
+  });
+
+  // 4. برمجة البوكس (لو علم صح، يخفي الكروت)
+  const naCheckbox = document.getElementById("kpi-na-checkbox");
+  naCheckbox.addEventListener("change", function () {
+    if (this.checked) {
+      cardsContainer.style.display = "none";
+    } else {
+      cardsContainer.style.display = "block";
+    }
   });
 };
 
@@ -6848,21 +6882,20 @@ window.closeKpiEmpSelector = function () {
 };
 // --- دالة حفظ التقييم العالمية (تمنع إعادة التحميل وتؤمن البيانات) ---
 // --- دالة حفظ التقييم العالمية (تمنع إعادة التحميل وتضمن استقرار البيانات) ---
+// =================================================================
+// دالة حفظ التقييم (تدعم حالة N/A)
+// =================================================================
 window.handleKpiSave = async function (event) {
-  // 1. منع إعادة تحميل الصفحة فوراً
   if (event) {
     event.preventDefault();
     event.stopPropagation();
   }
 
-  // 2. جلب العناصر مباشرة بالـ ID لضمان الوصول إليها
   const saveBtn = document.getElementById("kpi-save-btn");
   const kpiListContainer = document.getElementById("kpi-list-container");
   const empIdInput = document.getElementById("kpi-emp-id-hidden");
   const periodSelect = document.getElementById("kpi-period-select");
-  const msgArea = document.getElementById("kpi-message-area");
 
-  // 3. التحقق من وجود المستخدم (العالمي) والبيانات الأساسية
   if (!currentUser || !currentUser.username) {
     alert("انتهت الجلسة، يرجى إعادة تسجيل الدخول.");
     return;
@@ -6876,41 +6909,54 @@ window.handleKpiSave = async function (event) {
     return;
   }
 
-  // 4. تجميع الدرجات من الكروت
   const scoresToSave = [];
-  const kpiCards = kpiListContainer.querySelectorAll(".kpi-card");
-  let validationError = false;
 
-  kpiCards.forEach((card) => {
-    const kpiId = card.dataset.kpiId;
-    const maxScore = parseFloat(card.dataset.maxScore);
-    const scoreInput = card.querySelector(".kpi-score-input");
-    const score = scoreInput.value;
-    const scoreNum = parseFloat(score);
+  // (*** التعديل هنا: فحص زر N/A ***)
+  const isNaChecked = document.getElementById("kpi-na-checkbox")?.checked;
 
-    if (score !== "" && (scoreNum < 0 || scoreNum > maxScore)) {
-      scoreInput.style.borderColor = "red";
-      validationError = true;
-    } else {
-      scoreInput.style.borderColor = "";
-    }
-
+  if (isNaChecked) {
+    // لو الموظف لم يحضر، نرسل سجل واحد يخبر السيرفر بذلك
     scoresToSave.push({
-      kpiId: kpiId,
-      score: score === "" ? null : scoreNum,
-      maxScore: maxScore,
-      notes: card.querySelector(".kpi-notes-input")?.value || "",
+      kpiId: "N/A",
+      score: "N/A",
+      maxScore: 0,
+      notes: "لم يتواجد بالمشروع",
     });
-  });
+  } else {
+    // التقييم العادي (لو لم يتم تفعيل N/A)
+    let validationError = false;
+    const kpiCards = kpiListContainer.querySelectorAll(".kpi-card");
 
-  if (validationError) {
-    alert("الدرجات المدخلة غير صحيحة، يرجى مراجعة الحقول الحمراء.");
-    return;
+    kpiCards.forEach((card) => {
+      const kpiId = card.dataset.kpiId;
+      const maxScore = parseFloat(card.dataset.maxScore);
+      const scoreInput = card.querySelector(".kpi-score-input");
+      const score = scoreInput.value;
+      const scoreNum = parseFloat(score);
+
+      if (score !== "" && (scoreNum < 0 || scoreNum > maxScore)) {
+        scoreInput.style.borderColor = "red";
+        validationError = true;
+      } else {
+        scoreInput.style.borderColor = "";
+      }
+
+      scoresToSave.push({
+        kpiId: kpiId,
+        score: score === "" ? null : scoreNum,
+        maxScore: maxScore,
+        notes: card.querySelector(".kpi-notes-input")?.value || "",
+      });
+    });
+
+    if (validationError) {
+      alert("الدرجات المدخلة غير صحيحة، يرجى مراجعة الحقول الحمراء.");
+      return;
+    }
   }
 
   if (!confirm("هل أنت متأكد من حفظ هذا التقييم؟")) return;
 
-  // 5. الإرسال للسيرفر
   if (saveBtn) {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
@@ -6922,7 +6968,6 @@ window.handleKpiSave = async function (event) {
       userInfo: currentUser,
     });
 
-    // 6. استدعاء دالة النجاح
     window.onSaveEvaluationSuccess(response);
   } catch (error) {
     alert("خطأ أثناء الحفظ: " + error.message);
@@ -9425,4 +9470,117 @@ window.printViolationPDF = async function (vioId) {
   } finally {
     hideLoader();
   }
+};
+
+// =================================================================
+// --- وحدة سجل تقييمات الموظفين (Monitor KPIs) ---
+// =================================================================
+
+window.initMonitorKpiPage = function () {
+  const projSelect = document.getElementById("mon-kpi-project");
+  const fromMonth = document.getElementById("mon-kpi-from");
+  const toMonth = document.getElementById("mon-kpi-to");
+  const tableContainer = document.getElementById("mon-kpi-results");
+
+  // تصفير الواجهة
+  if (tableContainer)
+    tableContainer.innerHTML =
+      '<p style="text-align:center; padding:20px; color:#666;">حدد معايير البحث واضغط عرض السجل...</p>';
+
+  // تعيين الشهر الحالي كافتراضي
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  if (fromMonth) fromMonth.value = currentMonthStr;
+  if (toMonth) toMonth.value = currentMonthStr;
+
+  // تعبئة المشاريع بصلاحيات المستخدم (إعادة استخدام متغير initialData)
+  if (projSelect && projSelect.options.length <= 1) {
+    projSelect.innerHTML =
+      '<option value="ALL_ACCESSIBLE">كل المشاريع المتاحة</option>';
+    if (initialData && initialData.projects) {
+      initialData.projects.forEach((p) => projSelect.add(new Option(p, p)));
+    } else if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+      const userProj = (currentUser.projects || "").toString();
+      const acc =
+        userProj === "ALL"
+          ? ppeLocations
+          : ppeLocations.filter((p) => userProj.includes(p));
+      acc.forEach((p) => projSelect.add(new Option(p, p)));
+    }
+  }
+
+  // ربط زر البحث
+  const searchBtn = document.getElementById("mon-kpi-search-btn");
+  if (searchBtn) {
+    searchBtn.onclick = async function () {
+      if (!tableContainer) return;
+      tableContainer.innerHTML =
+        '<div class="loader-small">جاري حساب السجل النهائي...</div>';
+
+      const filters = {
+        project: projSelect.value,
+        fromMonth: fromMonth.value,
+        toMonth: toMonth.value,
+      };
+
+      try {
+        const r = await callApi("getKpiLogs", {
+          filters,
+          userInfo: currentUser,
+        });
+        window.renderKpiLogsTable(r.data, tableContainer);
+      } catch (e) {
+        tableContainer.innerHTML = `<p class="error-message">خطأ: ${e.message}</p>`;
+      }
+    };
+  }
+};
+
+window.renderKpiLogsTable = function (data, container) {
+  if (!data || data.length === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; font-weight:bold; color:#c8102e; padding:20px;">لا توجد تقييمات نهائية لهذه المعايير.</p>';
+    return;
+  }
+
+  let html = `
+    <table class="results-table">
+        <thead>
+            <tr>
+                <th>الشهر</th>
+                <th>اسم الموظف</th>
+                <th>الكود</th>
+                <th>الوظيفة</th>
+                <th>المشروع</th>
+                <th>المُقيّمون (المديرين)</th>
+                <th style="text-align:center;">النتيجة النهائية</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+  data.forEach((row) => {
+    // استخدمنا النسبة المئوية هنا فقط لتحديد لون المربع (أخضر، أصفر، أحمر)
+    const scorePercent = parseFloat(row.percentage);
+    let badgeClass = "bg-success";
+    if (scorePercent < 70) badgeClass = "bg-danger";
+    else if (scorePercent < 90) badgeClass = "bg-warning";
+
+    html += `
+        <tr>
+            <td style="font-weight:bold; white-space:nowrap;">${row.period}</td>
+            <td style="font-weight:bold; color:#2C2A29;">${row.empName}</td>
+            <td>${row.empId}</td>
+            <td>${row.jobTitle}</td>
+            <td>${row.project}</td>
+            <td style="font-size:0.85em; color:#555;">${row.evaluators}</td>
+            <td style="text-align:center;">
+                <span class="badge ${badgeClass}" style="font-size:1.1em; padding:6px 12px; direction:ltr; display:inline-block;">
+                    ${row.totalScore} / ${row.totalMax}
+                </span>
+            </td>
+        </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
 };

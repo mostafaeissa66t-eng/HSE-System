@@ -340,7 +340,7 @@ document.addEventListener("DOMContentLoaded", function () {
     DailyHseReport: "تسجيل التقارير اليومية",
     DailyApprovals: "اعتماد التقارير اليومية",
     MonitorDailyReports: "سجل التقارير اليومية",
-    MonitorKPIs: "سجل تقييمات الموظفين", // <--- أضف هذا السطر
+    MonitorKPIs: "سجل التقييمات", // <--- أضف هذا السطر
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)

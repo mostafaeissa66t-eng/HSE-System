@@ -4648,7 +4648,67 @@
                         <div id="mon-dr-results" style="margin-top: 25px"></div>
                     </div>
                 </section>
+                <div
+                    id="MonitorKPIs"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-chart-bar"></i> سجل تقييمات
+                            الموظفين النهائي
+                        </h2>
+                        <p>
+                            متابعة التقييمات التراكمية للموظفين في المشاريع
+                            المختلفة (يطبق نظام الدرجة الأكبر)
+                        </p>
+                    </div>
 
+                    <div class="filter-bar">
+                        <div class="form-group">
+                            <label>المشروع:</label>
+                            <select id="mon-kpi-project" class="modern-input">
+                                <option value="ALL_ACCESSIBLE">
+                                    جاري التحميل...
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>من شهر:</label>
+                            <input
+                                type="month"
+                                id="mon-kpi-from"
+                                class="modern-input"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>إلى شهر:</label>
+                            <input
+                                type="month"
+                                id="mon-kpi-to"
+                                class="modern-input"
+                            />
+                        </div>
+                        <div
+                            class="form-group"
+                            style="display: flex; align-items: flex-end"
+                        >
+                            <button
+                                id="mon-kpi-search-btn"
+                                class="btn"
+                                style="width: 100%"
+                            >
+                                <i class="fas fa-search"></i> عرض السجل
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        id="mon-kpi-results"
+                        class="results-table-container"
+                        style="margin-top: 20px"
+                    ></div>
+                </div>
                 <div id="report-details-modal" class="modal">
                     <div class="modal-content" style="max-width: 900px">
                         <span class="close" onclick="closeReportModal()"

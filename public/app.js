@@ -7422,6 +7422,7 @@ window.updateDrContractors = async function () {
 };
 
 // 1. دالة إضافة المقاول للسلة (تجميع 11 تصنيف للمقاول)
+// 1. دالة إضافة المقاول للسلة (تجميع 11 تصنيف للمقاول وتصفير الخانات)
 window.addEntityToDailyReport = function () {
   const entName = document.getElementById("dr-ent-name").value;
   const manpower = document.getElementById("dr-ent-manpower").value;
@@ -7460,9 +7461,30 @@ window.addEntityToDailyReport = function () {
   drAddedEntities.push(entity);
   renderDrEntitiesTable();
 
-  // تصفير خانات المقاول فقط لتسهيل إدخال المقاول التالي
-  document.getElementById("dr-ent-manpower").value = 0;
-  document.getElementById("dr-ent-name").value = "";
+  // =========================================================
+  // --- التعديل هنا: تصفير جميع خانات المقاول بالكامل ---
+  // =========================================================
+  const fieldsToReset = [
+    "dr-ent-manpower",
+    "dr-ent-train",
+    "dr-ent-induct",
+    "dr-ent-ua",
+    "dr-ent-uc",
+    "dr-ent-env",
+    "dr-ent-pos",
+    "dr-ent-fatal",
+    "dr-ent-lti",
+    "dr-ent-mtc",
+    "dr-ent-fac",
+    "dr-ent-nm",
+    "dr-ent-pd",
+    "dr-ent-env-inc",
+  ];
+
+  fieldsToReset.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "0"; // تفريغ الخانة بالكامل لتعود للوضع الافتراضي
+  });
 };
 
 // الإرسال النهائي

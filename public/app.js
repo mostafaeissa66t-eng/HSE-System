@@ -1652,7 +1652,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (type === "موظف") {
       // حذفنo� استدعاء updateEmployeeDropdown() لأنه لم يعد هناك قائمة منسدلة
       console.log(
-        "تم اختيار نوع المستلم: موظف. بانتظار فتح النافذة المنبثقة للاختيار.",
+        "تم اختيار نوع المستلم: موظف. بانتm�ار فتح النافذة المنبثقة للاختيار.",
       );
     } else if (type === "مقاول") {
       if (typeof updatePpeContractorDropdown === "function")
@@ -8030,20 +8030,35 @@ window.openExtensionModal = async function () {
   }
 };
 // دالة تسجيل الإجازة عند الضغط على زر "إجازة" في التنبيهات
-window.registerProjectHoliday = function (projectName, date) {
+// دالة تسجيل الإجازة عند الضغط على زر "إجازة" في التنبيهات
+window.registerProjectHoliday = async function (projectName, date) {
   if (
     confirm(
       `هل أنت متأكد من تسجيل يوم ${date} كإجازة لمشروع [${projectName}]؟ سيتم نقله للسجل النهائي فوراً.`,
     )
   ) {
-    callApi("markDayAsHoliday", {
-      project: projectName,
-      date: date,
-      userInfo: currentUser,
-    }).then((res) => {
+    showLoader("جاري تسجيل الإجازة...");
+    try {
+      const res = await callApi("markDayAsHoliday", {
+        project: projectName,
+        date: date,
+        userInfo: currentUser,
+      });
+
+      // 1. إظهار رسالة النجاح
       alert(res.message);
-      initDailyApprovalsPage(); // تحديث الصفحة لإخفاء التنبيه
-    });
+
+      // 2. إخفاء النافذة المنبثقة (المودال) فوراً
+      const modal = document.getElementById("report-details-modal");
+      if (modal) modal.style.display = "none";
+
+      // 3. تحديث لوحة التنبيهات والاعتمادات في الخلفية (عشان اليوم يختفي من المربعات الحمراء)
+      await initDailyApprovalsPage();
+    } catch (e) {
+      alert("خطأ: " + e.message);
+    } finally {
+      hideLoader();
+    }
   }
 };
 
@@ -9605,4 +9620,178 @@ window.renderKpiLogsTable = function (data, container) {
 
   html += `</tbody></table>`;
   container.innerHTML = html;
+};
+// =================================================================
+// --- وحدة التقييم الجماعي الاحترافية (Real Excel - .xlsx) ---
+// =================================================================
+
+// 1. تحميل القالب المنسق
+window.downloadKpiExcelTemplate = async function () {
+  const periodSelect = document.getElementById("kpi-period-select");
+  const periodValue = periodSelect ? periodSelect.value : "";
+
+  if (!periodValue) {
+    alert("الرجاء اختيار فترة (شهر) التقييم أولاً من الأعلى.");
+    return;
+  }
+
+  showLoader("جاري تصميم وتحميل الإكسيل...");
+  try {
+    const period = `${periodValue}-01`;
+    const response = await callApi("getBulkKpiTemplate", {
+      period: period,
+      userInfo: currentUser,
+    });
+
+    if (response.status === "success" && response.templateData.length > 0) {
+      // تجهيز البيانات بعناوين أعمدة عربية واضحة
+      const excelData = response.templateData.map((row) => ({
+        "كود الموظف": row.empId,
+        "اسم الموظف": row.empName,
+        المشروع: row.project,
+        الوظيفة: row.job,
+        "كود البند": row.kpiId,
+        "وصف البند": row.kpiDesc,
+        "الدرجة القصوى": row.maxScore,
+        "الدرجة المستحقة (اكتب رقم أو N/A)": "", // يسيبها فاضية للمدير
+        "ملاحظات (اختياري)": "",
+      }));
+
+      // تحويل البيانات لورقة عمل (Worksheet)
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // (*** السحر هنا: تظبيط عرض الأعمدة عشان الكلام ميبقاش متاكل ***)
+      const wscols = [
+        { wch: 15 }, // كود الموظف
+        { wch: 35 }, // اسم الموظف
+        { wch: 25 }, // المشروع
+        { wch: 25 }, // الوظيفة
+        { wch: 15 }, // كود البند
+        { wch: 60 }, // وصف البند (عريض جداً عشان الكلام يظهر)
+        { wch: 15 }, // الدرجة القصوى
+        { wch: 35 }, // الدرجة المستحقة
+        { wch: 40 }, // ملاحظات
+      ];
+      worksheet["!cols"] = wscols;
+
+      // إنشاء ملف الإكسيل (Workbook)
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "سجل التقييمات");
+
+      // تحميل الملف بصيغة xlsx الحقيقية
+      XLSX.writeFile(
+        workbook,
+        `KPI_Evaluation_${currentUser.username}_${periodValue}.xlsx`,
+      );
+    } else {
+      alert("لا يوجد موظفين أو بنود تقييم متاحة لك في هذا الشهر.");
+    }
+  } catch (e) {
+    alert("خطأ: " + e.message);
+  } finally {
+    hideLoader();
+  }
+};
+
+// 2. قراءة ملف الـ .xlsx ورفعه
+window.handleKpiBulkUpload = function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const periodSelect = document.getElementById("kpi-period-select");
+  const periodValue = periodSelect ? periodSelect.value : "";
+  if (!periodValue) {
+    alert("الرجاء اختيار فترة التقييم قبل الرفع.");
+    event.target.value = "";
+    return;
+  }
+
+  showLoader("جاري قراءة ملف الإكسيل...");
+
+  const reader = new FileReader();
+  reader.onload = async function (e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      // قراءة الملف باستخدام المكتبة
+      const workbook = XLSX.read(data, { type: "array" });
+
+      // أخذ أول شيت في الملف
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+
+      // تحويل الشيت لمصفوفة جافاسكريبت ذكية (defval بيخلي الخانات الفاضية تبقى "")
+      const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+      const parsedData = [];
+
+      for (let i = 0; i < jsonRows.length; i++) {
+        const row = jsonRows[i];
+
+        // سحب البيانات بناءً على أسماء الأعمدة اللي إحنا حددناها فوق
+        const empId = String(row["كود الموظف"]).trim();
+        const kpiId = String(row["كود البند"]).trim();
+        const maxScore = String(row["الدرجة القصوى"]).trim();
+        const score = String(row["الدرجة المستحقة (اكتب رقم أو N/A)"]).trim();
+        const notes = String(row["ملاحظات (اختياري)"]).trim();
+
+        if (!empId || !kpiId) continue; // لو سطر فاضي نتجاهله
+        if (score === "") continue; // لو المدير مقيمش البند ده، نتجاهله
+
+        // التحقق من صحة الدرجة
+        if (score.toUpperCase() !== "N/A" && isNaN(parseFloat(score))) {
+          alert(
+            `خطأ في الإكسيل (صف رقم ${i + 2}): الدرجة المستحقة للموظف (${row["اسم الموظف"]}) يجب أن تكون رقماً أو N/A. القيمه: ${score}`,
+          );
+          event.target.value = "";
+          hideLoader();
+          return;
+        }
+
+        parsedData.push({
+          empId: empId,
+          kpiId: kpiId,
+          maxScore: maxScore,
+          score: score.toUpperCase() === "N/A" ? "N/A" : parseFloat(score),
+          notes: notes,
+        });
+      }
+
+      if (parsedData.length === 0) {
+        alert(
+          "لم يتم العثور على تقييمات جديدة في الملف، تأكد من تعبئة عمود 'الدرجة المستحقة'.",
+        );
+        event.target.value = "";
+        hideLoader();
+        return;
+      }
+
+      if (
+        !confirm(
+          `تم العثور على درجات لعدد ${parsedData.length} بند. هل تريد الاعتماد والحفظ الآن؟`,
+        )
+      ) {
+        event.target.value = "";
+        hideLoader();
+        return;
+      }
+
+      showLoader("جاري حفظ التقييمات في السيرفر...");
+      const period = `${periodValue}-01`;
+      const response = await callApi("saveBulkKpiEvaluations", {
+        bulkData: { period: period, rows: parsedData },
+        userInfo: currentUser,
+      });
+
+      alert("✅ " + response.message);
+      window.initKpiPage();
+    } catch (err) {
+      alert("❌ حدث خطأ أثناء معالجة الملف: " + err.message);
+    } finally {
+      hideLoader();
+      event.target.value = "";
+    }
+  };
+
+  // نقرأ الملف كـ ArrayBuffer عشان المكتبة تقدر تتعامل معاه
+  reader.readAsArrayBuffer(file);
 };

@@ -958,7 +958,87 @@
                             style="display: none"
                         ></div>
                     </div>
-
+                    <div
+                        style="
+                            background: #e9ecef;
+                            padding: 15px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                            display: flex;
+                            justify-content: space-between;
+                            flex-wrap: wrap;
+                            gap: 10px;
+                            border: 1px solid #ced4da;
+                        "
+                    >
+                        <div style="flex: 1">
+                            <h4 style="margin: 0 0 5px 0; color: #2c2a29">
+                                <i
+                                    class="fas fa-file-excel"
+                                    style="color: #28a745"
+                                ></i>
+                                التقييم السريع (Excel)
+                            </h4>
+                            <p
+                                style="
+                                    margin: 0;
+                                    font-size: 0.85rem;
+                                    color: #666;
+                                "
+                            >
+                                قم بتحميل القالب، أدخل الدرجات (أو اكتب N/A)، ثم
+                                ارفعه مرة أخرى.
+                            </p>
+                        </div>
+                        <div
+                            style="
+                                display: flex;
+                                gap: 10px;
+                                align-items: center;
+                            "
+                        >
+                            <button
+                                type="button"
+                                class="btn"
+                                style="background-color: #17a2b8; color: white"
+                                onclick="window.downloadKpiExcelTemplate()"
+                            >
+                                <i class="fas fa-download"></i> تحميل القالب
+                            </button>
+                            <div
+                                style="
+                                    position: relative;
+                                    overflow: hidden;
+                                    display: inline-block;
+                                "
+                            >
+                                <button
+                                    type="button"
+                                    class="btn"
+                                    style="
+                                        background-color: #28a745;
+                                        color: white;
+                                    "
+                                >
+                                    <i class="fas fa-upload"></i> رفع التقييمات
+                                </button>
+                                <input
+                                    type="file"
+                                    id="kpi-bulk-upload-input"
+                                    accept=".xlsx, .xls"
+                                    style="
+                                        font-size: 100px;
+                                        position: absolute;
+                                        left: 0;
+                                        top: 0;
+                                        opacity: 0;
+                                        cursor: pointer;
+                                    "
+                                    onchange="window.handleKpiBulkUpload(event)"
+                                />
+                            </div>
+                        </div>
+                    </div>
                     <div id="kpi-guidelines-container" class="guidelines-box">
                         <h3>
                             <i class="fas fa-info-circle"></i> دليل حساب نقاط
@@ -4919,6 +4999,7 @@
         </div>
 
         <script src="app.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
         <script>
             function toggleLanguage() {
                 const enDiv = document.getElementById("content-en");

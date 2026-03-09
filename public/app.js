@@ -483,8 +483,8 @@ document.addEventListener("DOMContentLoaded", function () {
     return "جهاز غير معروف";
   }
 
-  // 2. كود تسجيل الدخول الصارم (مع خطة طوارئ PWA / IP Fallback)
-  // 2. كود تسجيل الدخول الصارم (يطلب GPS دقيق فقط ويرفض الدخول بدونه)
+  // 2. كود تسجيل الدخول الهجين (Hybrid Login) - يعالج مشاكل الـ PWA
+  // 2. كود تسجيل الدخول الهجين (Hybrid Login) - يعالج مشاكل الـ PWA
   if (loginForm) {
     loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -495,31 +495,21 @@ document.addEventListener("DOMContentLoaded", function () {
       if (loginError) loginError.style.display = "none";
 
       const deviceInfo = getSimpleDeviceInfo();
-      showLoader("جاري تسجيل الدخول...");
+      showLoader("جاري تحديد الموقع...");
 
-      if (!navigator.geolocation) {
-        hideLoader();
-        onLoginFailure({ message: "متصفحك لا يدعم تحديد الموقع." });
-        return;
-      }
-
-      const geoOptions = {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      };
-
-      function onGeoSuccess(position) {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-
+      // دالة مساعدة لتنفيذ الدخول الفعلي
+      function proceedToLogin(lat, lng, deviceType) {
         showLoader("جاري تسجيل الدخول...");
+        // تحديث المتغير العالمي فوراً
+        window.liveGPS.lat = lat;
+        window.liveGPS.lng = lng;
+
         callApi(
           "checkLogin",
           {
             username: u.value,
             password: p.value,
-            trackingData: { lat: lat, lng: lng, device: deviceInfo },
+            trackingData: { lat: lat, lng: lng, device: deviceType },
           },
           false,
         )
@@ -527,28 +517,56 @@ document.addEventListener("DOMContentLoaded", function () {
           .catch((err) => onLoginFailure(err));
       }
 
-      function onGeoError(error) {
-        hideLoader();
-        let errorMsg =
-          "يجب تفعيل (الموقع/GPS) والموافقة على الصلاحية لتتمكن من الدخول.";
-
-        if (error.code === 1) {
-          errorMsg =
-            "⛔ تم رفض صلاحية الموقع.\n\nللسماح للدخول:\n1. اذهب لإعدادات الهاتف.\n2. ابحث عن إعدادات المتصفح أو التطبيق.\n3. قم بتفعيل إذن (الموقع / Location) واجعله (سماح دائماً).";
-        } else if (error.code === 2) {
-          errorMsg =
-            "⚠️ الـ GPS مغلق في جهازك. يرجى تشغيل (الموقع/Location) من ستارة الهاتف والمحاولة.";
-        } else if (error.code === 3) {
-          errorMsg =
-            "⏳ انتهى وقت البحث عن الموقع. تأكد أنك في مكان مفتوح لتلقط إشارة الـ GPS.";
-        }
-
-        onLoginFailure({ message: errorMsg });
+      // دالة الطوارئ (الخطة ب) في حال رفض المتصفح أو الـ PWA
+      function executeIpFallback() {
+        console.warn("Hardware GPS failed. Using Network GPS.");
+        fetch("https://ipapi.co/json/")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data && data.latitude && data.longitude) {
+              proceedToLogin(
+                data.latitude,
+                data.longitude,
+                deviceInfo + " (Network)",
+              );
+            } else {
+              throw new Error("No GPS Data");
+            }
+          })
+          .catch((err) => {
+            hideLoader();
+            onLoginFailure({
+              message:
+                "فشل تحديد موقعك. يرجى التأكد من اتصالك بالإنترنت وتفعيل الـ GPS.",
+            });
+          });
       }
 
+      // إذا كان المتصفح لا يدعم الـ GPS أصلاً
+      if (!navigator.geolocation) {
+        executeIpFallback();
+        return;
+      }
+
+      // محاولة سحب الـ GPS الدقيق أولاً
+      const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      };
+
       navigator.geolocation.getCurrentPosition(
-        onGeoSuccess,
-        onGeoError,
+        function onGeoSuccess(position) {
+          proceedToLogin(
+            position.coords.latitude,
+            position.coords.longitude,
+            deviceInfo,
+          );
+        },
+        function onGeoError(error) {
+          // لو الموبايل رفض أو علق، شغل الخطة ب (تحديد الموقع بالإنترنت) فوراً
+          executeIpFallback();
+        },
         geoOptions,
       );
     });
@@ -637,44 +655,27 @@ document.addEventListener("DOMContentLoaded", function () {
     showSection("Dashboard");
 
     // ==============================================================
-    // 🚨 المراقبة المستمرة الصارمة للـ GPS (Strict Tracking with Smart Tolerance)
+    // 🚨 المراقبة المستمرة ونبض القلب الذكي (Smart Tracking)
     // ==============================================================
     if (navigator.geolocation) {
-      // 1. المراقبة الحية: تتنصت على حالة الـ GPS في الموبايل
+      // 1. المراقبة الحية (بدون طرد، فقط تحديث الموقع إذا توفر)
       window.gpsWatcher = navigator.geolocation.watchPosition(
         (pos) => {
-          // طول ما هو فاتحه، بنحدث المتغير العالمي بنجاح
           window.liveGPS.lat = pos.coords.latitude;
           window.liveGPS.lng = pos.coords.longitude;
         },
         (err) => {
-          // السحر هنا: التفريق بين سحب الصلاحية وبين ضعف الإشارة المؤقت
-          if (err.code === 1) {
-            // Error Code 1 = Permission Denied (تم سحب الصلاحية عمداً)
-            console.warn("GPS Permission Revoked. Forcing Logout.");
-            alert(
-              "تنبيه أمني صارم ⛔: تم سحب صلاحية الموقع (GPS) من إعدادات الهاتف.\nسيتم تسجيل خروجك فوراً من النظام للحماية.",
-            );
-            localStorage.removeItem("hse_user_token"); // مسح التوكن لطرده
-            location.reload(); // عمل ريفرش ليرميه على شاشة الدخول
-          } else {
-            // Error Code 2 or 3 = Signal lost / Timeout (إشارة ضعيفة داخل مبنى أو لسه بيحمل)
-            console.warn(
-              "GPS signal is weak or warming up (Code: " +
-                err.code +
-                "). Waiting in background...",
-            );
-            // لا نفعل شيء، نتركه يبحث في الخلفية بصمت حتى يلقط الإشارة
-          }
+          // لا نفعل شيء، نكتفي بالاحتفاظ بآخر موقع مسجل (سواء قمر صناعي أو شبكة)
+          console.warn("GPS tracking interrupted: Code " + err.code);
         },
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
       );
 
-      // 2. نبض القلب (Heartbeat): إرسال الإحداثيات للسيرفر كل 3 دقائق ليبقى أونلاين في لوحة المدير
+      // 2. نبض القلب (Heartbeat): إرسال النبضة كل 3 دقائق ليبقى أونلاين
       if (window.heartbeatInterval) clearInterval(window.heartbeatInterval);
       window.heartbeatInterval = setInterval(() => {
         if (window.liveGPS.lat && window.liveGPS.lng) {
-          callApi("heartbeat", { liveGPS: window.liveGPS }, true);
+          callApi("heartbeat", { liveGPS: window.liveGPS }, true); // اتصال صامت
         }
       }, 180000);
     }

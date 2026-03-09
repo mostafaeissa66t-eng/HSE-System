@@ -484,6 +484,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // 2. كود تسجيل الدخول الصارم (مع خطة طوارئ PWA / IP Fallback)
+  // 2. كود تسجيل الدخول الصارم (يطلب GPS دقيق فقط ويرفض الدخول بدونه)
   if (loginForm) {
     loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -494,11 +495,11 @@ document.addEventListener("DOMContentLoaded", function () {
       if (loginError) loginError.style.display = "none";
 
       const deviceInfo = getSimpleDeviceInfo();
-      showLoader("جاري تحديد الموقع...");
+      showLoader("جاري تحديد الموقع الدقيق...");
 
-      // إذا كان المتصفح لا يدعم تحديد الموقع إطلاقاً
       if (!navigator.geolocation) {
-        executeIpFallback(u.value, p.value, deviceInfo);
+        hideLoader();
+        onLoginFailure({ message: "متصفحك لا يدعم تحديد الموقع." });
         return;
       }
 
@@ -527,11 +528,22 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       function onGeoError(error) {
-        console.warn(
-          "Hardware GPS Auto-Blocked (PWA). Switching to Network GPS...",
-        );
-        // (الخطة ب) تشغيل تحديد الموقع عبر الشبكة فوراً عند الرفض
-        executeIpFallback(u.value, p.value, deviceInfo);
+        hideLoader();
+        let errorMsg =
+          "يجب تفعيل (الموقع/GPS) والموافقة على الصلاحية لتتمكن من الدخول.";
+
+        if (error.code === 1) {
+          errorMsg =
+            "⛔ تم رفض صلاحية الموقع.\n\nللسماح للدخول:\n1. اذهب لإعدادات الهاتف.\n2. ابحث عن إعدادات المتصفح أو التطبيق.\n3. قم بتفعيل إذن (الموقع / Location) واجعله (سماح دائماً).";
+        } else if (error.code === 2) {
+          errorMsg =
+            "⚠️ الـ GPS مغلق في جهازك. يرجى تشغيل (الموقع/Location) من ستارة الهاتف والمحاولة.";
+        } else if (error.code === 3) {
+          errorMsg =
+            "⏳ انتهى وقت البحث عن الموقع. تأكد أنك في مكان مفتوح لتلقط إشارة الـ GPS.";
+        }
+
+        onLoginFailure({ message: errorMsg });
       }
 
       navigator.geolocation.getCurrentPosition(
@@ -582,17 +594,20 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function onLoginSuccess(response) {
-    // حفظ التوكن السري فقط (لو الدخول جديد)
+    // 1. حفظ التوكن السري فقط (لو الدخول جديد)
     if (!response.isRestore && response.token) {
       localStorage.setItem("hse_user_token", response.token);
     }
 
+    // 2. تحديث بيانات المستخدم في النظام
     currentUser = response.userInfo;
     window.currentUser = response.userInfo;
 
+    // 3. إخفاء شاشة اللوجن وإظهار التطبيق
     if (loginScreen) loginScreen.style.display = "none";
     if (appWrapper) appWrapper.style.display = "flex";
 
+    // 4. تحديث واجهة المستخدم (الاسم، الصلاحيات، والتاريخ)
     const wu = document.getElementById("welcome-user");
     const ur = document.getElementById("user-role");
     if (wu) wu.textContent = `أهلاً، ${currentUser.username}`;
@@ -616,49 +631,42 @@ document.addEventListener("DOMContentLoaded", function () {
       dashDateVal.textContent = new Date().toLocaleDateString("ar-EG", options);
     }
 
+    // 5. بناء القائمة الجانبية وتحميل البيانات
     buildSidebar(currentUser.sections);
     loadInitialData();
     showSection("Dashboard");
 
     // ==============================================================
-    // 🚨 المراقبة المستمرة ونبض القلب الذكي (Smart Heartbeat)
+    // 🚨 المراقبة المستمرة الصارمة للـ GPS (Strict Tracking)
     // ==============================================================
-
-    // دالة إرسال النبضة (تحاول قمر صناعي أولاً، ولو فشلت أو PWA تستخدم الشبكة بصمت)
-    function sendSmartHeartbeat() {
-      if (!navigator.geolocation) return;
-
-      navigator.geolocation.getCurrentPosition(
+    if (navigator.geolocation) {
+      // 1. المراقبة الحية: تتنصت على حالة الـ GPS في الموبايل
+      window.gpsWatcher = navigator.geolocation.watchPosition(
         (pos) => {
-          // نجاح: تم التقاط قمر صناعي
+          // طول ما هو فاتحه، بنحدث المتغير العالمي بنجاح
           window.liveGPS.lat = pos.coords.latitude;
           window.liveGPS.lng = pos.coords.longitude;
-          callApi("heartbeat", { liveGPS: window.liveGPS }, true);
         },
         (err) => {
-          // فشل: (بسبب حماية الـ PWA أو ضعف الإشارة) -> تشغيل الشبكة بصمت
-          fetch("https://ipapi.co/json/")
-            .then((res) => res.json())
-            .then((data) => {
-              if (data && data.latitude && data.longitude) {
-                window.liveGPS.lat = data.latitude;
-                window.liveGPS.lng = data.longitude;
-                callApi("heartbeat", { liveGPS: window.liveGPS }, true);
-              }
-            })
-            .catch((e) => console.warn("Silent Network GPS failed"));
+          // 🚨 لو قفل الـ GPS من ستارة الموبايل أو سحب الصلاحية أثناء العمل
+          console.warn("GPS Lost or Disabled. Forcing Logout.");
+          alert(
+            "تنبيه أمني صارم ⛔: تم إيقاف خدمة الموقع (GPS) أو سحب الصلاحية.\nسيتم تسجيل خروجك فوراً من النظام.",
+          );
+          localStorage.removeItem("hse_user_token"); // مسح التوكن لطرده
+          location.reload(); // عمل ريفرش ليرميه على شاشة الدخول
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
       );
+
+      // 2. نبض القلب (Heartbeat): إرسال الإحداثيات للسيرفر كل 3 دقائق ليبقى أونلاين في لوحة المدير
+      if (window.heartbeatInterval) clearInterval(window.heartbeatInterval);
+      window.heartbeatInterval = setInterval(() => {
+        if (window.liveGPS.lat && window.liveGPS.lng) {
+          callApi("heartbeat", { liveGPS: window.liveGPS }, true);
+        }
+      }, 180000);
     }
-
-    // 1. إرسال نبضة أولى بعد الدخول بـ 5 ثواني لضمان تحديث الخريطة
-    setTimeout(sendSmartHeartbeat, 5000);
-
-    // 2. إرسال نبضة كل 3 دقائق للحفاظ على حالة (أونلاين 🟢)
-    // لو قفل الموقع، النبض هيقف، والسيرفر هيحوله (أوفلاين ⚪) بعد 5 دقائق لوحده.
-    if (window.heartbeatInterval) clearInterval(window.heartbeatInterval);
-    window.heartbeatInterval = setInterval(sendSmartHeartbeat, 180000);
   }
   function onLoginFailure(error) {
     const errorMessage =
@@ -7058,7 +7066,7 @@ window.handleKpiSave = async function (event) {
       notes: "لم يتواجد بالمشروع",
     });
   } else {
-    // التقييم العادي (لو لم يتم تفعيل N/A)
+    // ال:�قييم العادي (لو لم يتم تفعيل N/A)
     let validationError = false;
     const kpiCards = kpiListContainer.querySelectorAll(".kpi-card");
 
@@ -10037,10 +10045,21 @@ window.renderTrackingTable = function (data, container) {
       ? `<span style="color:#28a745; font-size:1.3em;" title="متصل الآن"><i class="fas fa-circle"></i></span>`
       : `<span style="color:#adb5bd; font-size:1.3em;" title="أوفلاين"><i class="fas fa-circle"></i></span>`;
 
+    // 2. تظبيط زرار الخريطة (مع إصلاح الروابط القديمة الخاطئة)
     let mapLinkHtml =
       '<span style="color:#999; font-size:0.85em;">غير متاح</span>';
-    if (row.mapsLink && row.mapsLink.startsWith("http")) {
-      mapLinkHtml = `<a href="${row.mapsLink}" target="_blank" class="btn btn-sm" style="background-color:#dc3545; color:white; padding: 5px 10px; text-decoration: none; border-radius: 4px;">
+    let finalLink = row.mapsLink;
+
+    // السحر هنا: لو الرابط قديم وفيه المشكلة، هنستخرج منه الإحداثيات ونبني رابط نظيف
+    if (finalLink && finalLink.includes("q=")) {
+      const match = finalLink.match(/q=([^&"]+)/);
+      if (match && match[1]) {
+        finalLink = `https://www.google.com/maps?q=${match[1]}`;
+      }
+    }
+
+    if (finalLink && finalLink.startsWith("http")) {
+      mapLinkHtml = `<a href="${finalLink}" target="_blank" class="btn btn-sm" style="background-color:#dc3545; color:white; padding: 5px 10px; text-decoration: none; border-radius: 4px;">
             <i class="fas fa-map-marker-alt"></i> فتح الخريطة
         </a>`;
     }

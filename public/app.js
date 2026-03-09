@@ -495,7 +495,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (loginError) loginError.style.display = "none";
 
       const deviceInfo = getSimpleDeviceInfo();
-      showLoader("جاري تحديد الموقع الدقيق...");
+      showLoader("جاري تسجيل الدخول...");
 
       if (!navigator.geolocation) {
         hideLoader();

@@ -483,7 +483,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return "جهاز غير معروف";
   }
 
-  // 2. كود تسجيل الدخول الصارم (Strict GPS Enforcement)
+  // 2. كود تسجيل الدخول الصارم (مع خطة طوارئ PWA / IP Fallback)
   if (loginForm) {
     loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -493,21 +493,18 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!u || !p) return;
       if (loginError) loginError.style.display = "none";
 
-      // دلوقتي هيقدر يشوف الدالة عادي جداً
       const deviceInfo = getSimpleDeviceInfo();
+      showLoader("جاري تحديد الموقع...");
 
-      showLoader("جارى تسجيل الدخول...");
-
+      // إذا كان المتصفح لا يدعم تحديد الموقع إطلاقاً
       if (!navigator.geolocation) {
-        hideLoader();
-        onLoginFailure({ message: "عفواً، متصفحك لا يدعم تحديد الموقع." });
+        executeIpFallback(u.value, p.value, deviceInfo);
         return;
       }
 
-      // زودنا الوقت لـ 20 ثانية (20000) عشان ندي فرصة للموبايل يلقط الإشارة
       const geoOptions = {
         enableHighAccuracy: true,
-        timeout: 20000, 
+        timeout: 15000,
         maximumAge: 0,
       };
 
@@ -516,36 +513,25 @@ document.addEventListener("DOMContentLoaded", function () {
         const lng = position.coords.longitude;
 
         showLoader("جاري تسجيل الدخول...");
-
-        callApi("checkLogin", {
-          username: u.value,
-          password: p.value,
-          trackingData: { lat: lat, lng: lng, device: deviceInfo },
-        }, false) // مررنا false عشان يظهر لودر الدخول عادي
-          .then((r) => {
-            onLoginSuccess(r);
-          })
-          .catch((err) => {
-            onLoginFailure(err);
-          });
+        callApi(
+          "checkLogin",
+          {
+            username: u.value,
+            password: p.value,
+            trackingData: { lat: lat, lng: lng, device: deviceInfo },
+          },
+          false,
+        )
+          .then((r) => onLoginSuccess(r))
+          .catch((err) => onLoginFailure(err));
       }
 
       function onGeoError(error) {
-        hideLoader();
-        let errorMsg = "يجب تفعيل (الموقع/GPS) والموافقة على الصلاحية لتتمكن من الدخول.";
-        
-        // رسالة مخصصة وواضحة جداً لو المتصفح عمل بلوك
-        if (error.code === 1) {
-          errorMsg = "المتصفح يمنع الوصول للموقع. يرجى الدخول لإعدادات المتصفح (Site Settings) وعمل (سماح / Allow) للموقع الجغرافي، ثم جرب مجدداً.";
-        }
-        if (error.code === 2) {
-          errorMsg = "الـ GPS مغلق في جهازك. يرجى تشغيل (الموقع/Location) من ستارة الموبايل والمحاولة.";
-        }
-        if (error.code === 3) {
-          errorMsg = "انتهى وقت البحث عن الموقع. تأكد أنك في مكان مفتوح وأن الـ GPS يعمل بكفاءة.";
-        }
-
-        onLoginFailure({ message: errorMsg });
+        console.warn(
+          "Hardware GPS Auto-Blocked (PWA). Switching to Network GPS...",
+        );
+        // (الخطة ب) تشغيل تحديد الموقع عبر الشبكة فوراً عند الرفض
+        executeIpFallback(u.value, p.value, deviceInfo);
       }
 
       navigator.geolocation.getCurrentPosition(
@@ -554,8 +540,45 @@ document.addEventListener("DOMContentLoaded", function () {
         geoOptions,
       );
     });
-  } else {
-    console.error("#login-form not found.");
+  }
+
+  // دالة الطوارئ (الخطة ب) - جلب المكان عن طريق شبكة الإنترنت بصمت
+  function executeIpFallback(userVal, passVal, deviceInfo) {
+    showLoader("جاري تحديد الموقع عبر الشبكة (PWA)...");
+
+    // استخدام خدمة مجانية لتحديد المكان بناءً على شبكة الإنترنت
+    fetch("https://ipapi.co/json/")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.latitude && data.longitude) {
+          showLoader("تم تحديد الموقع. جاري الدخول...");
+          // نرسل الطلب للسيرفر مع إضافة ملحوظة للمدير أن هذا الموقع عبر الشبكة
+          callApi(
+            "checkLogin",
+            {
+              username: userVal,
+              password: passVal,
+              trackingData: {
+                lat: data.latitude,
+                lng: data.longitude,
+                device: deviceInfo + " (Network GPS)",
+              },
+            },
+            false,
+          )
+            .then((r) => onLoginSuccess(r))
+            .catch((err) => onLoginFailure(err));
+        } else {
+          throw new Error("No Network GPS data");
+        }
+      })
+      .catch((err) => {
+        hideLoader();
+        onLoginFailure({
+          message:
+            "فشل تحديد موقعك. يرجى فتح النظام من متصفح (جوجل كروم / سفاري) الأساسي بدلاً من التطبيق.",
+        });
+      });
   }
 
   function onLoginSuccess(response) {

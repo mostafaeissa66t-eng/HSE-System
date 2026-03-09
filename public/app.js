@@ -637,7 +637,7 @@ document.addEventListener("DOMContentLoaded", function () {
     showSection("Dashboard");
 
     // ==============================================================
-    // 🚨 المراقبة المستمرة الصارمة للـ GPS (Strict Tracking)
+    // 🚨 المراقبة المستمرة الصارمة للـ GPS (Strict Tracking with Smart Tolerance)
     // ==============================================================
     if (navigator.geolocation) {
       // 1. المراقبة الحية: تتنصت على حالة الـ GPS في الموبايل
@@ -648,15 +648,26 @@ document.addEventListener("DOMContentLoaded", function () {
           window.liveGPS.lng = pos.coords.longitude;
         },
         (err) => {
-          // 🚨 لو قفل الـ GPS من ستارة الموبايل أو سحب الصلاحية أثناء العمل
-          console.warn("GPS Lost or Disabled. Forcing Logout.");
-          alert(
-            "تنبيه أمني صارم ⛔: تم إيقاف خدمة الموقع (GPS) أو سحب الصلاحية.\nسيتم تسجيل خروجك فوراً من النظام.",
-          );
-          localStorage.removeItem("hse_user_token"); // مسح التوكن لطرده
-          location.reload(); // عمل ريفرش ليرميه على شاشة الدخول
+          // السحر هنا: التفريق بين سحب الصلاحية وبين ضعف الإشارة المؤقت
+          if (err.code === 1) {
+            // Error Code 1 = Permission Denied (تم سحب الصلاحية عمداً)
+            console.warn("GPS Permission Revoked. Forcing Logout.");
+            alert(
+              "تنبيه أمني صارم ⛔: تم سحب صلاحية الموقع (GPS) من إعدادات الهاتف.\nسيتم تسجيل خروجك فوراً من النظام للحماية.",
+            );
+            localStorage.removeItem("hse_user_token"); // مسح التوكن لطرده
+            location.reload(); // عمل ريفرش ليرميه على شاشة الدخول
+          } else {
+            // Error Code 2 or 3 = Signal lost / Timeout (إشارة ضعيفة داخل مبنى أو لسه بيحمل)
+            console.warn(
+              "GPS signal is weak or warming up (Code: " +
+                err.code +
+                "). Waiting in background...",
+            );
+            // لا نفعل شيء، نتركه يبحث في الخلفية بصمت حتى يلقط الإشارة
+          }
         },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
       );
 
       // 2. نبض القلب (Heartbeat): إرسال الإحداثيات للسيرفر كل 3 دقائق ليبقى أونلاين في لوحة المدير

@@ -7422,13 +7422,13 @@ window.updateDrContractors = async function () {
 };
 
 // 1. دالة إضافة المقاول للسلة (تجميع 11 تصنيف للمقاول)
-// 1. دالة إضافة المقاول للسلة (تجميع 11 تصنيف للمقاول وتصفير الخانات)
 window.addEntityToDailyReport = function () {
   const entName = document.getElementById("dr-ent-name").value;
   const manpower = document.getElementById("dr-ent-manpower").value;
 
-  if (!entName || !manpower || manpower <= 0) {
-    alert("الرجاء اختيار المقاول وإدخال عدد العمالة");
+  // الشرط الجديد: يتأكد إن الاسم موجود، وإن العمالة مش فاضية ومش رقم سالب (لكن الصفر مسموح)
+  if (!entName || manpower === "" || parseInt(manpower) < 0) {
+    alert("الرجاء اختيار المقاول وإدخال عدد العمالة (يمكن أن يكون 0).");
     return;
   }
 

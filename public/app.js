@@ -89,19 +89,24 @@ window.fillSelect = function (element, dataArray) {
   }
 };
 
-// 2. الدالة الأهم: جعل callApi عالمية وتأمينها
-window.callApi = async function (action, payload = {}) {
+// متغير عالمي لتخزين اللوكيشن الحي (Live GPS)
+window.liveGPS = { lat: null, lng: null };
+
+// الدالة الأهم: جعل callApi عالمية وتأمينها (مع دعم الوضع الصامت للنبضات)
+window.callApi = async function (action, payload = {}, isSilent = false) {
   let loaderMessage = `جاري ${action}...`;
   if (action === "checkLogin") loaderMessage = "جاري تسجيل الدخول...";
   if (action === "getInitialData") loaderMessage = "جاري تحميل البيانات...";
   if (action === "verifySession") loaderMessage = "جاري التحقق من الأمان...";
 
-  window.showLoader(loaderMessage);
+  // إظهار اللودر فقط لو مش وضع صامت
+  if (!isSilent) window.showLoader(loaderMessage);
 
-  // إرفاق التوكن مع كل طلب للسيرفر ما عدا تسجيل الدخول
+  // إرفاق التوكن والـ GPS مع كل طلب
   if (action !== "checkLogin") {
     const token = localStorage.getItem("hse_user_token");
     if (token) payload.token = token;
+    payload.liveGPS = window.liveGPS;
   }
 
   try {
@@ -112,18 +117,16 @@ window.callApi = async function (action, payload = {}) {
     });
 
     const responseText = await response.text();
-    window.hideLoader();
+    if (!isSilent) window.hideLoader();
 
     if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
     const result = JSON.parse(responseText);
 
     if (result && result.status === "error") {
-      // حماية متقدمة: لو السيرفر رفض التوكن يطرد المستخدم
       if (result.message.includes("Access Denied")) {
         localStorage.removeItem("hse_user_token");
-        // لا تظهر رسالة الطرد إذا كنا فقط نتحقق من الجلسة في البداية
-        if (action !== "verifySession") {
+        if (action !== "verifySession" && !isSilent) {
           alert(
             "انتهت الجلسة أو تم تغيير الصلاحيات. يرجى تسجيل الدخول من جديد.",
           );
@@ -134,7 +137,7 @@ window.callApi = async function (action, payload = {}) {
     }
     return window.sanitizeData(result);
   } catch (error) {
-    window.hideLoader();
+    if (!isSilent) window.hideLoader();
     console.error(`API Error (${action}):`, error);
     throw error;
   }
@@ -309,6 +312,7 @@ document.addEventListener("DOMContentLoaded", function () {
     DailyApprovals: "fas fa-check-double",
     MonitorDailyReports: "fas fa-file-archive",
     MonitorKPIs: "fas fa-chart-bar",
+    UserTracking: "fas fa-satellite-dish",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -341,6 +345,7 @@ document.addEventListener("DOMContentLoaded", function () {
     DailyApprovals: "اعتماد التقارير اليومية",
     MonitorDailyReports: "سجل التقارير اليومية",
     MonitorKPIs: "سجل التقييمات", // <--- أضف هذا السطر
+    UserTracking: "تتبع المستخدمين (GPS)",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -427,6 +432,12 @@ document.addEventListener("DOMContentLoaded", function () {
       icon: "fas fa-chart-line",
       children: ["DailyHseReport", "DailyApprovals", "MonitorDailyReports"], // سنضيف قسم الاعتماد والسجل لاحقاً هنا
     },
+    {
+      type: "group",
+      title: "لوحة تحكم الإدارة",
+      icon: "fas fa-cogs",
+      children: ["UserTracking"], // ضفنا التتبع هنا
+    },
   ];
 
   // --- === UTILITY FUNCTIONS (Defined FIRST!) === ---
@@ -462,24 +473,82 @@ document.addEventListener("DOMContentLoaded", function () {
   // --- =================================== ---
   // --- START APPLICATION LOGIC (Defined AFTER helpers)
   // --- =================================== ---
+  // 1. الدالة المساعدة لمعرفة الجهاز (نحطها فوق عشان المتصفح يشوفها الأول)
+  function getSimpleDeviceInfo() {
+    const ua = navigator.userAgent;
+    if (/android/i.test(ua)) return "Android Device";
+    if (/iPad|iPhone|iPod/.test(ua)) return "iOS Device";
+    if (/Windows/.test(ua)) return "Windows PC";
+    if (/Mac/.test(ua)) return "Mac";
+    return "جهاز غير معروف";
+  }
 
-  // --- Login Logic ---
+  // 2. كود تسجيل الدخول الصارم (Strict GPS Enforcement)
   if (loginForm) {
-    loginForm.addEventListener("submit", async function (e) {
+    loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
+
       const u = document.getElementById("username");
       const p = document.getElementById("password");
       if (!u || !p) return;
       if (loginError) loginError.style.display = "none";
-      try {
-        const r = await callApi("checkLogin", {
+
+      // دلوقتي هيقدر يشوف الدالة عادي جداً
+      const deviceInfo = getSimpleDeviceInfo();
+
+      showLoader("جارى تسجيل الدخول...");
+
+      if (!navigator.geolocation) {
+        hideLoader();
+        onLoginFailure({ message: "عفواً، متصفحك لا يدعم تحديد الموقع." });
+        return;
+      }
+
+      const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      };
+
+      function onGeoSuccess(position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        showLoader("جاري تسجيل الدخول...");
+
+        callApi("checkLogin", {
           username: u.value,
           password: p.value,
-        });
-        onLoginSuccess(r);
-      } catch (err) {
-        onLoginFailure(err);
+          trackingData: { lat: lat, lng: lng, device: deviceInfo },
+        })
+          .then((r) => {
+            onLoginSuccess(r);
+          })
+          .catch((err) => {
+            onLoginFailure(err);
+          });
       }
+
+      function onGeoError(error) {
+        hideLoader();
+        let errorMsg =
+          "يجب تفعيل (الموقع/GPS) والموافقة على الصلاحية لتتمكن من الدخول.";
+        if (error.code === 1)
+          errorMsg = "لقد قمت برفض صلاحية الوصول للموقع. لن تتمكن من الدخول.";
+        if (error.code === 2)
+          errorMsg = "الـ GPS مغلق في جهازك. يرجى تفعيله والمحاولة.";
+        if (error.code === 3)
+          errorMsg =
+            "انتهى وقت البحث عن الموقع، تأكد من جودة الإنترنت والـ GPS.";
+
+        onLoginFailure({ message: errorMsg });
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        onGeoSuccess,
+        onGeoError,
+        geoOptions,
+      );
     });
   } else {
     console.error("#login-form not found.");
@@ -491,11 +560,9 @@ document.addEventListener("DOMContentLoaded", function () {
       localStorage.setItem("hse_user_token", response.token);
     }
 
-    // (*** التعديل الجذري هنا: تحديث المتغيرين لضمان الرؤية في كل أجزاء الكود ***)
     currentUser = response.userInfo;
     window.currentUser = response.userInfo;
 
-    // إخفاء اللوجن وإظهار التطبيق
     if (loginScreen) loginScreen.style.display = "none";
     if (appWrapper) appWrapper.style.display = "flex";
 
@@ -525,6 +592,39 @@ document.addEventListener("DOMContentLoaded", function () {
     buildSidebar(currentUser.sections);
     loadInitialData();
     showSection("Dashboard");
+
+    // ==============================================================
+    // 🚨 الأمن الصارم: المراقبة المستمرة ونبض القلب (Continuous Tracking)
+    // ==============================================================
+    if (navigator.geolocation) {
+      // 1. المراقبة الحية: لو قفل الـ GPS يطرده بره السيستم
+      window.gpsWatcher = navigator.geolocation.watchPosition(
+        (pos) => {
+          // تحديث اللوكيشن بنجاح
+          window.liveGPS.lat = pos.coords.latitude;
+          window.liveGPS.lng = pos.coords.longitude;
+        },
+        (err) => {
+          // 🚨 سحب الصلاحية أو قفل الـ GPS -> طرد فوري
+          console.warn("GPS Lost. Forcing Logout.");
+          alert(
+            "تنبيه أمني: تم إيقاف خدمة الموقع (GPS). سيتم تسجيل خروجك فوراً من النظام.",
+          );
+          localStorage.removeItem("hse_user_token"); // مسح التوكن
+          location.reload(); // طرد لصفحة الدخول
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 },
+      );
+
+      // 2. نبض القلب (Heartbeat): إرسال إشارة صامتة كل 3 دقائق للسيرفر
+      // ده بيخلي السيرفر يعرف إنه لسه فاتح الموقع.. لو قفل، النبض هيقف ويبقى رمادي!
+      window.heartbeatInterval = setInterval(() => {
+        if (window.liveGPS.lat && window.liveGPS.lng) {
+          // استدعاء صامت للسيرفر
+          callApi("heartbeat", { liveGPS: window.liveGPS }, true);
+        }
+      }, 180000); // 180000 ملي ثانية = 3 دقائق
+    }
   }
   function onLoginFailure(error) {
     const errorMessage =
@@ -747,6 +847,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "MonitorKPIs") {
         window.initMonitorKpiPage();
       }
+      if (sectionId === "UserTracking") window.initUserTrackingPage();
       if (sectionId === "MonitorDailyReports")
         window.initMonitorDailyReportsPage();
     } else {
@@ -1589,7 +1690,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
-   * (مهم) الدالة اللي بتخفي وتظهر الحقول بناءً على نوع الحركة
+   * (مهم) الدالة اللي بتخفي وتظهر الحقول بناءً على نوs� الحركة
    */
   function updatePpeFormUI() {
     const type = ppeTransactionType.value;
@@ -1601,7 +1702,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ppeItemsGroup.style.display = "none";
     ppeSaveBtn.disabled = true;
 
-    // مسح كل اt�رسائل
+    // مسs� كل اt�رسائل
     showMessage(ppeMainMessage, "", true);
     showMessage(ppeSaveMessage, "", true);
 
@@ -1652,7 +1753,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (type === "موظف") {
       // حذفنo� استدعاء updateEmployeeDropdown() لأنه لم يعد هناك قائمة منسدلة
       console.log(
-        "تم اختيار نوع المستلم: موظف. بانتm�ار فتح النافذة المنبثقة للاختيار.",
+        "تم اختيار نوع المستلم: موظف. بانتظار فتح النافذة المنبثقة للاختيار.",
       );
     } else if (type === "مقاول") {
       if (typeof updatePpeContractorDropdown === "function")
@@ -2423,7 +2524,7 @@ document.addEventListener("DOMContentLoaded", function () {
           printBtn.style.setProperty("display", "inline-flex", "important");
 
           printBtn.onclick = function () {
-            // نأخذ المحتوى الذي تم إنشاؤه داخل حاوية النتائج فقط
+            // نأخذ المحتوى الذي تم إنشاؤ؇ داخل حاو(�ة النتائج فقط
             const tableHtml = stockReportResultsTable.innerHTML;
 
             // استدعاء دالة التوليد الاحترافية (تأكد أنها معرفة في app.js)
@@ -3277,7 +3378,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const day = String(now.getDate()).padStart(2, "0");
     const dateString = `${year}-${month}-${day}`; // النتيجة: 2025-11-30
 
-    // تعيين التاريخ
+    // تعيين التo�ريخ
     if (document.getElementById("haz-view-date")) {
       document.getElementById("haz-view-date").value = dateString;
     }
@@ -3306,7 +3407,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
     }
-    // تعيين اسم اB�مستخدم (المصدر)
+    // تع �ين اسم اB�مستخدم (المصدر)
     if (document.getElementById("haz-issuer") && currentUser) {
       document.getElementById("haz-issuer").value = currentUser.username;
     }
@@ -5079,7 +5180,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // (جديد) ربط حدث تغيير المشروع
+  // (جديد) ربط حدث d�غيير المشروع
   if (contProject) {
     contProject.addEventListener("change", updateContUploadContractors);
   }
@@ -5100,7 +5201,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const anaPrintBtn = document.getElementById("ana-print-btn");
 
   // =================================================================
-  // (app.js) إصلاح القائمة المنسدلة للمشاريع + رسم الجدول
+  // (app.js) إصلاح القائمة المنسدA�ة لn�مشاريع + رسم الجدول
   // =================================================================
 
   async function initContractorAnalyticsPage() {
@@ -8925,7 +9026,7 @@ window.generateConsolidatedDailyReport = function () {
         dailyContractors += val;
       }
 
-      // تجميع الساعات وباقي الأرقام كمجموع تراكمي
+      // تجميع الساعات وباقي الأرقام كمجموع تراكم>�
       target.hours += parseFloat(ent.hours || 0);
       target.train += parseFloat(ent.train || 0);
       target.induct += parseFloat(ent.induct || 0);
@@ -9794,4 +9895,143 @@ window.handleKpiBulkUpload = function (event) {
 
   // نقرأ الملف كـ ArrayBuffer عشان المكتبة تقدر تتعامل معاه
   reader.readAsArrayBuffer(file);
+};
+
+// =================================================================
+// --- وحدة غرفة العمليات وتتبع المستخدمين (User Tracking) ---
+// =================================================================
+
+window.initUserTrackingPage = async function () {
+  const container = document.getElementById("tracking-table-container");
+  if (!container) return;
+  container.innerHTML =
+    '<div class="loader-small">جاري الاتصال بالقمر الصناعي وتحديث البيانات...</div>';
+
+  try {
+    const res = await callApi("getUserTrackingData", { userInfo: currentUser });
+    if (res.status === "success") {
+      window.renderTrackingTable(res.data, container);
+    } else {
+      container.innerHTML = `<p class="error-message">${res.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">خطأ في الاتصال: ${e.message}</p>`;
+  }
+};
+
+window.renderTrackingTable = function (data, container) {
+  if (!data || data.length === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; padding:20px;">لا توجد بيانات تتبع حتى الآن.</p>';
+    return;
+  }
+
+  // 1. قاموس ترجمة الإجراءات (لتحويل أسماء السيرفر لأسماء مقروءة للمدير)
+  const actionDictionary = {
+    checkLogin: "تسجيل الدخول",
+    verifySession: "فتح النظام",
+    getInitialData: "تحديث النظام",
+    savePermit: "إصدار تصريح جديد",
+    closePermit: "إغلاق تصريح",
+    searchPermits: "البحث في التصاريح",
+    getOpenPermits: "تصفح التصاريح",
+    saveTransaction: "حركة مخزنية",
+    savePpeTransaction: "صرف مهمات",
+    getInventoryInitData: "تصفح المخازن",
+    saveEvaluations: "تقييم موظف (KPI)",
+    saveBulkKpiEvaluations: "رفع تقييمات (Excel)",
+    getKpiInitData: "تصفح تقييمات الموظفين",
+    saveTrainingSession: "تسجيل تدريب",
+    getTrainingInitData: "تصفح سجل التدريب",
+    saveObservationFull: "تسجيل ملاحظة",
+    searchObservations: "تصفح الملاحظات",
+    saveHazardFull: "تسجيل تقرير خطر",
+    searchHazards: "تصفح تقارير الخطر",
+    saveViolation: "تسجيل مخالفة",
+    saveNCR: "إصدار تقرير عدم مطابقة (NCR)",
+    saveContractorEval: "تقييم مقاول",
+    saveAccidentFull: "تسجيل حادث",
+    saveDailyHseReport: "تسجيل تقرير يومي",
+    getPendingReports: "تصفح التقارير اليومية",
+    processReportAction: "اعتماد/رفض تقرير",
+    getUserTrackingData: "مراقبة غرفة العمليات", // الإجراء اللي كان طالعلك في الصورة
+  };
+
+  let html = `
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th style="text-align:center;">الحالة</th>
+          <th>اسم المشرف</th>
+          <th>آخر نشاط فعلي</th>
+          <th>وقت النشاط</th>
+          <th>الجهاز المستخدم</th>
+          <th style="text-align:center;">الموقع الجغرافي (GPS)</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  const now = new Date();
+
+  data.forEach((row) => {
+    let isOnline = false;
+    let timeDisplay = "-";
+
+    // 2. إصلاح مشكلة التاريخ (استبدال المسافة بـ T لضمان التوافق مع كل المتصفحات)
+    let rawTime = String(row.actionTime || row.lastLogin).trim();
+    // تحويل "2026-03-08 12:14:26" إلى "2026-03-08T12:14:26"
+    let safeTimeStr = rawTime.replace(" ", "T").replace(/\//g, "-");
+
+    const actionDate = new Date(safeTimeStr);
+
+    if (!isNaN(actionDate.getTime())) {
+      const diffMins = (now - actionDate) / (1000 * 60);
+
+      // لو عدى أقل من 15 دقيقة يبقى أونلاين
+      if (diffMins >= 0 && diffMins <= 15) {
+        isOnline = true;
+      }
+
+      timeDisplay = actionDate.toLocaleTimeString("ar-EG", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    const statusHtml = isOnline
+      ? `<span style="color:#28a745; font-size:1.3em;" title="متصل الآن"><i class="fas fa-circle"></i></span>`
+      : `<span style="color:#adb5bd; font-size:1.3em;" title="أوفلاين"><i class="fas fa-circle"></i></span>`;
+
+    let mapLinkHtml =
+      '<span style="color:#999; font-size:0.85em;">غير متاح</span>';
+    if (row.mapsLink && row.mapsLink.startsWith("http")) {
+      mapLinkHtml = `<a href="${row.mapsLink}" target="_blank" class="btn btn-sm" style="background-color:#dc3545; color:white; padding: 5px 10px; text-decoration: none; border-radius: 4px;">
+            <i class="fas fa-map-marker-alt"></i> فتح الخريطة
+        </a>`;
+    }
+
+    // 3. تطبيق القاموس على اسم النشاط
+    const rawAction = String(row.lastAction).trim();
+    const friendlyAction = actionDictionary[rawAction] || rawAction; // لو مش في القاموس هيعرض الاسم الأصلي
+
+    let actionBadge = `<span class="badge bg-info" style="color:#000; font-weight:normal;">${friendlyAction}</span>`;
+    if (rawAction === "checkLogin" || friendlyAction === "تسجيل الدخول") {
+      actionBadge = `<span class="badge bg-warning" style="color:#000; font-weight:normal;">تسجيل الدخول</span>`;
+    }
+
+    html += `
+      <tr>
+        <td style="text-align:center; vertical-align:middle;">${statusHtml}</td>
+        <td style="font-weight:bold; color:#2C2A29;">${row.username}</td>
+        <td>${actionBadge}</td>
+        <td style="direction:ltr; text-align:right; font-weight:bold; color:#555;">${timeDisplay}</td>
+        <td style="font-size:0.85em; color:#666;"><i class="fas fa-mobile-alt"></i> ${row.device}</td>
+        <td style="text-align:center;">${mapLinkHtml}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
 };

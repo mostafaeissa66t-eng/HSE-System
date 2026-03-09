@@ -504,9 +504,10 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
+      // زودنا الوقت لـ 20 ثانية (20000) عشان ندي فرصة للموبايل يلقط الإشارة
       const geoOptions = {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 20000, 
         maximumAge: 0,
       };
 
@@ -520,7 +521,7 @@ document.addEventListener("DOMContentLoaded", function () {
           username: u.value,
           password: p.value,
           trackingData: { lat: lat, lng: lng, device: deviceInfo },
-        })
+        }, false) // مررنا false عشان يظهر لودر الدخول عادي
           .then((r) => {
             onLoginSuccess(r);
           })
@@ -531,15 +532,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
       function onGeoError(error) {
         hideLoader();
-        let errorMsg =
-          "يجب تفعيل (الموقع/GPS) والموافقة على الصلاحية لتتمكن من الدخول.";
-        if (error.code === 1)
-          errorMsg = "لقد قمت برفض صلاحية الوصول للموقع. لن تتمكن من الدخول.";
-        if (error.code === 2)
-          errorMsg = "الـ GPS مغلق في جهازك. يرجى تفعيله والمحاولة.";
-        if (error.code === 3)
-          errorMsg =
-            "انتهى وقت البحث عن الموقع، تأكد من جودة الإنترنت والـ GPS.";
+        let errorMsg = "يجب تفعيل (الموقع/GPS) والموافقة على الصلاحية لتتمكن من الدخول.";
+        
+        // رسالة مخصصة وواضحة جداً لو المتصفح عمل بلوك
+        if (error.code === 1) {
+          errorMsg = "المتصفح يمنع الوصول للموقع. يرجى الدخول لإعدادات المتصفح (Site Settings) وعمل (سماح / Allow) للموقع الجغرافي، ثم جرب مجدداً.";
+        }
+        if (error.code === 2) {
+          errorMsg = "الـ GPS مغلق في جهازك. يرجى تشغيل (الموقع/Location) من ستارة الموبايل والمحاولة.";
+        }
+        if (error.code === 3) {
+          errorMsg = "انتهى وقت البحث عن الموقع. تأكد أنك في مكان مفتوح وأن الـ GPS يعمل بكفاءة.";
+        }
 
         onLoginFailure({ message: errorMsg });
       }

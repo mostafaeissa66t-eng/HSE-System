@@ -4729,6 +4729,43 @@
                     </div>
                 </section>
                 <div
+                    id="UserTracking"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-satellite-dish"></i> غرفة العمليات
+                            (Live Tracking)
+                        </h2>
+                        <p>
+                            مراقبة حالة المشرفين (أونلاين/أوفلاين)، أماكنهم
+                            الجغرافية الحالية، وآخر نشاط لهم.
+                        </p>
+                    </div>
+
+                    <div
+                        style="
+                            margin-bottom: 15px;
+                            display: flex;
+                            justify-content: flex-end;
+                        "
+                    >
+                        <button
+                            class="btn"
+                            style="background-color: #17a2b8; color: white"
+                            onclick="window.initUserTrackingPage()"
+                        >
+                            <i class="fas fa-sync-alt"></i> تحديث الحالة الآن
+                        </button>
+                    </div>
+
+                    <div
+                        id="tracking-table-container"
+                        class="results-table-container"
+                    ></div>
+                </div>
+                <div
                     id="MonitorKPIs"
                     class="page-section"
                     style="display: none"

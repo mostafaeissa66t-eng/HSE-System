@@ -621,37 +621,44 @@ document.addEventListener("DOMContentLoaded", function () {
     showSection("Dashboard");
 
     // ==============================================================
-    // 🚨 الأمن الصارم: المراقبة المستمرة ونبض القلب (Continuous Tracking)
+    // 🚨 المراقبة المستمرة ونبض القلب الذكي (Smart Heartbeat)
     // ==============================================================
-    if (navigator.geolocation) {
-      // 1. المراقبة الحية: لو قفل الـ GPS يطرده بره السيستم
-      window.gpsWatcher = navigator.geolocation.watchPosition(
+
+    // دالة إرسال النبضة (تحاول قمر صناعي أولاً، ولو فشلت أو PWA تستخدم الشبكة بصمت)
+    function sendSmartHeartbeat() {
+      if (!navigator.geolocation) return;
+
+      navigator.geolocation.getCurrentPosition(
         (pos) => {
-          // تحديث اللوكيشن بنجاح
+          // نجاح: تم التقاط قمر صناعي
           window.liveGPS.lat = pos.coords.latitude;
           window.liveGPS.lng = pos.coords.longitude;
+          callApi("heartbeat", { liveGPS: window.liveGPS }, true);
         },
         (err) => {
-          // 🚨 سحب الصلاحية أو قفل الـ GPS -> طرد فوري
-          console.warn("GPS Lost. Forcing Logout.");
-          alert(
-            "تنبيه أمني: تم إيقاف خدمة الموقع (GPS). سيتم تسجيل خروجك فوراً من النظام.",
-          );
-          localStorage.removeItem("hse_user_token"); // مسح التوكن
-          location.reload(); // طرد لصفحة الدخول
+          // فشل: (بسبب حماية الـ PWA أو ضعف الإشارة) -> تشغيل الشبكة بصمت
+          fetch("https://ipapi.co/json/")
+            .then((res) => res.json())
+            .then((data) => {
+              if (data && data.latitude && data.longitude) {
+                window.liveGPS.lat = data.latitude;
+                window.liveGPS.lng = data.longitude;
+                callApi("heartbeat", { liveGPS: window.liveGPS }, true);
+              }
+            })
+            .catch((e) => console.warn("Silent Network GPS failed"));
         },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
-
-      // 2. نبض القلب (Heartbeat): إرسال إشارة صامتة كل 3 دقائق للسيرفر
-      // ده بيخلي السيرفر يعرف إنه لسه فاتح الموقع.. لو قفل، النبض هيقف ويبقى رمادي!
-      window.heartbeatInterval = setInterval(() => {
-        if (window.liveGPS.lat && window.liveGPS.lng) {
-          // استدعاء صامت للسيرفر
-          callApi("heartbeat", { liveGPS: window.liveGPS }, true);
-        }
-      }, 180000); // 180000 ملي ثانية = 3 دقائق
     }
+
+    // 1. إرسال نبضة أولى بعد الدخول بـ 5 ثواني لضمان تحديث الخريطة
+    setTimeout(sendSmartHeartbeat, 5000);
+
+    // 2. إرسال نبضة كل 3 دقائق للحفاظ على حالة (أونلاين 🟢)
+    // لو قفل الموقع، النبض هيقف، والسيرفر هيحوله (أوفلاين ⚪) بعد 5 دقائق لوحده.
+    if (window.heartbeatInterval) clearInterval(window.heartbeatInterval);
+    window.heartbeatInterval = setInterval(sendSmartHeartbeat, 180000);
   }
   function onLoginFailure(error) {
     const errorMessage =

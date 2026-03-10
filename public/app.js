@@ -614,25 +614,29 @@ document.addEventListener("DOMContentLoaded", function () {
         (err) => {
           // لو قفل الـ GPS من الستارة (Code 2) أو سحب الصلاحية (Code 1) يطرده فوراً
           if (err.code === 1 || err.code === 2) {
-             console.warn("GPS Lost or Disabled. Forcing Logout.");
-             alert("تنبيه أمني صارم ⛔\nتم إيقاف خدمة الموقع (GPS) أو سحب الصلاحية.\nسيتم تسجيل خروجك فوراً من النظام للحماية.");
+            console.warn("GPS Lost or Disabled. Forcing Logout.");
+            alert(
+              "تنبيه أمني صارم ⛔\nتم إيقاف خدمة الموقع (GPS) أو سحب الصلاحية.\nسيتم تسجيل خروجك فوراً من النظام للحماية.",
+            );
 
-             // مسح التوكن وتسجيل الخروج الإجباري
-             localStorage.removeItem("hse_user_token"); 
-             location.reload(); 
+            // مسح التوكن وتسجيل الخروج الإجباري
+            localStorage.removeItem("hse_user_token");
+            location.reload();
           } else {
-             // لو الإشارة ضعيفة بس (Code 3) بنصبر عليه ومبنطردوش
-             console.warn("GPS signal is weak (Code: " + err.code + "). Waiting...");
+            // لو الإشارة ضعيفة بس (Code 3) بنصبر عليه ومبنطردوش
+            console.warn(
+              "GPS signal is weak (Code: " + err.code + "). Waiting...",
+            );
           }
         },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
       );
 
       // نبض القلب (Heartbeat): إرسال الإحداثيات للسيرفر كل 3 دقائق
       if (window.heartbeatInterval) clearInterval(window.heartbeatInterval);
       window.heartbeatInterval = setInterval(() => {
         if (window.liveGPS.lat && window.liveGPS.lng) {
-          callApi("heartbeat", { liveGPS: window.liveGPS }, true); 
+          callApi("heartbeat", { liveGPS: window.liveGPS }, true);
         }
       }, 180000);
     }
@@ -3356,7 +3360,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const hazReporterNid = document.getElementById("haz-reporter-nid");
   const hazNidSearchBtn = document.getElementById("haz-nid-search-btn");
   const hazReporterName = document.getElementById("haz-reporter-name");
-  const hazResult = document.getElementById("haz-result"); // القائمة المنسدلة للهازارد
+  const hazResult = document.getElementById("haz-result"); // o�لقائمة المنسدلة للهازارد
   const hazActionText = document.getElementById("haz-action-text");
   const hazActionDate = document.getElementById("haz-action-date");
   const hazAddActionBtn = document.getElementById("haz-add-action-btn");
@@ -7604,17 +7608,16 @@ window.addEntityToDailyReport = function () {
 // دالة إرسال التقرير اليومي - النسخة النهائية الموحدة
 // =================================================================
 // الإرسال النهائي للتقرير اليومي للاعتماد
+// الإرسال النهائي للتقرير اليومي للاعتماد
 document.getElementById("daily-report-form").onsubmit = async function (e) {
   e.preventDefault();
 
-  // --- التعديل هنا: جعل إضافة المقاول اختيارية ---
   if (drAddedEntities.length === 0) {
-    // تنبيه بسيط للتأكيد فقط وليس للمنع
     const confirmSolo = confirm("هل تريد إرسال تقرير (طاقم السويدي) فقط ؟");
-    if (!confirmSolo) return; // لو داس Cancel يوقف عشان يضيف مقاولين
+    if (!confirmSolo) return;
   }
 
-  // 1. تجميع البيانات العالمية للموقع
+  // 1. تجميع البيانات العالمية للموقع (بما فيها الخانات الجديدة)
   const globalData = {
     projectName: document.getElementById("dr-project").value,
     reportDate: document.getElementById("dr-date").value,
@@ -7634,9 +7637,16 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
     accInspection: document.getElementById("dr-acc-insp").value || 0,
     weeklyWalkdown: document.getElementById("dr-weekly-walk").value || 0,
     monthlySiteTour: document.getElementById("dr-monthly-tour").value || 0,
+    // --- الخانات الجديدة ---
+    drill: document.getElementById("dr-drill")
+      ? document.getElementById("dr-drill").value || 0
+      : 0,
+    campaigns: document.getElementById("dr-campaigns")
+      ? document.getElementById("dr-campaigns").value || 0
+      : 0,
   };
 
-  // 2. تجميع أداء :�ركة السويدي
+  // 2. تجميع أداء شركة السويدي
   const sewedyPerformance = {
     trainingRegular: document.getElementById("dr-sw-train").value || 0,
     induction: document.getElementById("dr-sw-induct").value || 0,
@@ -7653,15 +7663,13 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
     envIncident: document.getElementById("dr-sw-env-inc").value || 0,
   };
 
-  // 3. تجهيز الـ Payload (سواء المصفوفة فيها مقاولين أو فاضية)
   const finalPayload = {
     globalData: globalData,
     sewedyData: sewedyPerformance,
-    entitiesArray: drAddedEntities, // لو المصفوفة فاضية، السيرفر هيسجل السويدي بس
+    entitiesArray: drAddedEntities,
     userInfo: currentUser,
   };
 
-  // 4. الإرسال للسيرفر
   try {
     const response = await callApi("saveDailyHseReport", finalPayload);
     if (response.status === "success") {
@@ -7927,6 +7935,8 @@ window.viewDailyReportDetails = function (logId) {
     weekly: firstEntity[28],
     monthly: firstEntity[29],
     security: firstEntity[20],
+    drill: firstEntity[36] || 0, // تم التصحيح لتقرأ من العمود 37 في الشيت
+    campaigns: firstEntity[37] || 0,
   };
 
   // 1. ضبط المربع الأبيض الكبير (Modal Content) عشان ميخرجش بره الشاشة أبداً
@@ -7942,7 +7952,6 @@ window.viewDailyReportDetails = function (logId) {
 
   const body = document.getElementById("report-details-body");
 
-  // 2. تصميم المحتوى الداخلي فقط (بدون أزرار)
   let html = `
     <div style="background: #f8f9fa; border-right: 4px solid #007bff; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; font-size: 0.85rem;">
@@ -7955,45 +7964,41 @@ window.viewDailyReportDetails = function (logId) {
     </div>
 
     <h4 style="color: #28a745; margin-bottom: 10px; font-size: 0.95rem;"><i class="fas fa-chart-pie"></i> المؤشرات الاستباقية (Proactive)</h4>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; margin-bottom: 15px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; margin-bottom: 15px;">
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Hazards</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#d32f2f;">${stats.hazards}</div>
+            <div style="font-size:0.7rem; color:#666;">Hazards</div><div style="font-size:1.1rem; font-weight:bold; color:#d32f2f;">${stats.hazards}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Site Obs.</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#f57c00;">${stats.obs}</div>
+            <div style="font-size:0.7rem; color:#666;">Site Obs.</div><div style="font-size:1.1rem; font-weight:bold; color:#f57c00;">${stats.obs}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">PTW</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#1976d2;">${stats.ptw}</div>
+            <div style="font-size:0.7rem; color:#666;">PTW</div><div style="font-size:1.1rem; font-weight:bold; color:#1976d2;">${stats.ptw}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Eqp Insp</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#388e3c;">${stats.equip}</div>
+            <div style="font-size:0.7rem; color:#666;">Eqp Insp</div><div style="font-size:1.1rem; font-weight:bold; color:#388e3c;">${stats.equip}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Int Audit</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#555;">${stats.intAudit}</div>
+            <div style="font-size:0.7rem; color:#666;">Int Audit</div><div style="font-size:1.1rem; font-weight:bold; color:#555;">${stats.intAudit}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Ext Audit</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#555;">${stats.extAudit}</div>
+            <div style="font-size:0.7rem; color:#666;">Ext Audit</div><div style="font-size:1.1rem; font-weight:bold; color:#555;">${stats.extAudit}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Week Walk</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#673ab7;">${stats.weekly}</div>
+            <div style="font-size:0.7rem; color:#666;">Week Walk</div><div style="font-size:1.1rem; font-weight:bold; color:#673ab7;">${stats.weekly}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Month Tour</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#673ab7;">${stats.monthly}</div>
+            <div style="font-size:0.7rem; color:#666;">Month Tour</div><div style="font-size:1.1rem; font-weight:bold; color:#673ab7;">${stats.monthly}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Acc Insp</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:#009688;">${stats.accInsp}</div>
+            <div style="font-size:0.7rem; color:#666;">Acc Insp</div><div style="font-size:1.1rem; font-weight:bold; color:#009688;">${stats.accInsp}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Drills</div><div style="font-size:1.1rem; font-weight:bold; color:#e91e63;">${stats.drill}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.7rem; color:#666;">Campaigns</div><div style="font-size:1.1rem; font-weight:bold; color:#e91e63;">${stats.campaigns}</div>
         </div>
     </div>
-
     <h4 style="color: #333; margin-bottom: 10px; font-size: 0.95rem;"><i class="fas fa-users"></i> تفاصيل العمالة، التدريب، والإصابات</h4>
     <div style="font-size:0.7rem; color:#856404; background:#fff3cd; padding:5px; margin-bottom:5px; border-radius:4px; text-align:center;">
         <i class="fas fa-arrows-alt-h"></i> اسحب الجدول لليمين واليسار لرؤية باقي الأعمدة
@@ -8745,7 +8750,7 @@ window.printDailyReportPDF = function (logId) {
 
             .section-title { background: #333; color: #fff; padding: 5px 10px; font-size: 14px; border-radius: 4px; margin: 15px 0 10px 0; -webkit-print-color-adjust: exact; display:inline-block; }
 
-            .stats-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; margin-bottom: 20px; }
+            .stats-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px; margin-bottom: 20px; }
             .stat-box { border: 1px solid #ddd; padding: 8px 5px; text-align: center; border-radius: 4px; background: #fff; }
             .stat-box .title { font-size: 10px; color: #666; font-weight: bold; margin-bottom: 5px; }
             .stat-box .val { font-size: 18px; font-weight: 800; color: #C8102E; }
@@ -8787,6 +8792,8 @@ window.printDailyReportPDF = function (logId) {
             <div class="stat-box"><div class="title">Weekly Walk</div><div class="val" style="color:#673ab7">${g.weekly}</div></div>
             <div class="stat-box"><div class="title">Monthly Tour</div><div class="val" style="color:#673ab7">${g.monthly}</div></div>
             <div class="stat-box"><div class="title">Security</div><div class="val" style="color:#000">${g.security}</div></div>
+            <div class="stat-box"><div class="title">Drills</div><div class="val" style="color:#e91e63">${g.drill || 0}</div></div>
+            <div class="stat-box"><div class="title">Campaigns</div><div class="val" style="color:#e91e63">${g.campaigns || 0}</div></div>
         </div>
 
         <div class="section-title">تفاصيل العمالة والإصابات والملاحظات (Entities Breakdown)</div>
@@ -8920,6 +8927,8 @@ window.generateConsolidatedDailyReport = function () {
     accInsp: 0,
     weekly: 0,
     monthly: 0,
+    drill: 0, // <--- ضيف دي
+    campaigns: 0,
   };
 
   let aggEntities = {
@@ -9017,6 +9026,8 @@ window.generateConsolidatedDailyReport = function () {
     aggGlobal.weekly += parseFloat(r.globalStats.weekly || 0);
     aggGlobal.monthly += parseFloat(r.globalStats.monthly || 0);
     aggGlobal.security += parseFloat(r.globalStats.security || 0);
+    aggGlobal.drill += parseFloat(r.globalStats.drill || 0);
+    aggGlobal.campaigns += parseFloat(r.globalStats.campaigns || 0);
 
     let dailySewedy = 0;
     let dailyContractors = 0;
@@ -9174,7 +9185,7 @@ window.generateConsolidatedDailyReport = function () {
             .info-bar span { color: #666; font-size: 11px; }
             .info-bar strong { font-size: 14px; color: #333; }
             .section-title { background: #333; color: #fff; padding: 5px 10px; font-size: 14px; border-radius: 4px; margin: 15px 0 10px 0; -webkit-print-color-adjust: exact; display:inline-block; }
-            .stats-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; margin-bottom: 20px; }
+            .stats-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px; margin-bottom: 20px; }
             .stat-box { border: 1px solid #ddd; padding: 8px 5px; text-align: center; border-radius: 4px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
             .stat-box .title { font-size: 10px; color: #666; font-weight: bold; margin-bottom: 5px; }
             .stat-box .val { font-size: 18px; font-weight: 800; color: #ff9800; }
@@ -9213,6 +9224,8 @@ window.generateConsolidatedDailyReport = function () {
             <div class="stat-box"><div class="title">Weekly Walk</div><div class="val" style="color:#673ab7">${aggGlobal.weekly}</div></div>
             <div class="stat-box"><div class="title">Monthly Tour</div><div class="val" style="color:#673ab7">${aggGlobal.monthly}</div></div>
             <div class="stat-box"><div class="title">Security</div><div class="val" style="color:#000">${aggGlobal.security}</div></div>
+            <div class="stat-box"><div class="title">Drills</div><div class="val" style="color:#e91e63">${aggGlobal.drill || 0}</div></div>
+            <div class="stat-box"><div class="title">Campaigns</div><div class="val" style="color:#e91e63">${aggGlobal.campaigns || 0}</div></div>
         </div>
 
         <div class="section-title">إجمالي العمالة والإصابات والملاحظات خلال الفترة</div>

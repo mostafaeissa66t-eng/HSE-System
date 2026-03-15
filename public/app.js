@@ -9638,16 +9638,22 @@ window.printViolationPDF = async function (vioId) {
 // --- وحدة سجل تقييمات الموظفين (Monitor KPIs) ---
 // =================================================================
 
+// =================================================================
+// --- وحدة سجل تقييمات الموظفين (Monitor KPIs) ---
+// =================================================================
+
 window.initMonitorKpiPage = function () {
   const projSelect = document.getElementById("mon-kpi-project");
   const fromMonth = document.getElementById("mon-kpi-from");
   const toMonth = document.getElementById("mon-kpi-to");
   const tableContainer = document.getElementById("mon-kpi-results");
+  const exportBtn = document.getElementById("mon-kpi-export-btn");
 
   // تصفير الواجهة
   if (tableContainer)
     tableContainer.innerHTML =
       '<p style="text-align:center; padding:20px; color:#666;">حدد معايير البحث واضغط عرض السجل...</p>';
+  if (exportBtn) exportBtn.style.display = "none";
 
   // تعيين الشهر الحالي كافتراضي
   const now = new Date();
@@ -9655,7 +9661,7 @@ window.initMonitorKpiPage = function () {
   if (fromMonth) fromMonth.value = currentMonthStr;
   if (toMonth) toMonth.value = currentMonthStr;
 
-  // تعبئة المشاريع بصلاحيات المستخدم (إعادة استخدام متغير initialData)
+  // تعبئة المشاريع بصلاحيات المستخدم
   if (projSelect && projSelect.options.length <= 1) {
     projSelect.innerHTML =
       '<option value="ALL_ACCESSIBLE">كل المشاريع المتاحة</option>';
@@ -9678,6 +9684,7 @@ window.initMonitorKpiPage = function () {
       if (!tableContainer) return;
       tableContainer.innerHTML =
         '<div class="loader-small">جاري حساب السجل النهائي...</div>';
+      if (exportBtn) exportBtn.style.display = "none";
 
       const filters = {
         project: projSelect.value,
@@ -9690,11 +9697,25 @@ window.initMonitorKpiPage = function () {
           filters,
           userInfo: currentUser,
         });
+
+        // حفظ البيانات في متغير عالمي عشان نستخدمها في الإكسيل
+        window.currentKpiLogsData = r.data;
+
         window.renderKpiLogsTable(r.data, tableContainer);
+
+        // إظهار زر الإكسيل لو فيه بيانات
+        if (exportBtn && r.data && r.data.length > 0) {
+          exportBtn.style.display = "block";
+        }
       } catch (e) {
         tableContainer.innerHTML = `<p class="error-message">خطأ: ${e.message}</p>`;
       }
     };
+  }
+
+  // ربط زر التصدير
+  if (exportBtn) {
+    exportBtn.onclick = window.exportKpiLogsToExcel;
   }
 };
 
@@ -10069,4 +10090,67 @@ window.renderTrackingTable = function (data, container) {
 
   html += `</tbody></table>`;
   container.innerHTML = html;
+};
+// دالة تصدير سجل التقييمات إلى ملف Excel احترافي
+window.exportKpiLogsToExcel = function () {
+  if (!window.currentKpiLogsData || window.currentKpiLogsData.length === 0) {
+    alert("لا توجد بيانات لتصديرها.");
+    return;
+  }
+
+  window.showLoader("جاري تجهيز ملف الإكسيل...");
+
+  try {
+    // 1. تجهيز البيانات بالعناوين العربية
+    const excelData = window.currentKpiLogsData.map((row, index) => ({
+      م: index + 1,
+      "شهر التقييم": row.period,
+      "كود الموظف": row.empId,
+      "اسم الموظف": row.empName,
+      "المسمى الوظيفي": row.jobTitle,
+      المشروع: row.project,
+      "الدرجة المحققة": row.totalScore,
+      "الدرجة القصوى": row.totalMax,
+      "النسبة المئوية": row.percentage + "%",
+      "المدير المُقيّم": row.evaluators,
+    }));
+
+    // 2. إنشاء ورقة العمل (Worksheet)
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // 3. تظبيط عرض الأعمدة عشان الكلام ميبقاش مقصوص
+    const wscols = [
+      { wch: 5 }, // م
+      { wch: 15 }, // شهر التقييم
+      { wch: 15 }, // الكود
+      { wch: 35 }, // اسم الموظف
+      { wch: 25 }, // الوظيفة
+      { wch: 25 }, // المشروع
+      { wch: 15 }, // الدرجة المحققة
+      { wch: 15 }, // الدرجة القصوى
+      { wch: 15 }, // النسبة
+      { wch: 40 }, // المدير
+    ];
+    worksheet["!cols"] = wscols;
+
+    // 4. إنشاء الملف (Workbook) وإضافة الشيت ليه
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "سجل التقييمات");
+
+    // 5. تحديد اسم الملف بناءً على المشروع والتاريخ
+    const projSelect = document.getElementById("mon-kpi-project");
+    const projName =
+      projSelect && projSelect.value !== "ALL_ACCESSIBLE"
+        ? projSelect.value
+        : "All_Projects";
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `KPI_Report_${projName}_${dateStr}.xlsx`;
+
+    // 6. تحميل الملف
+    XLSX.writeFile(workbook, fileName);
+  } catch (e) {
+    alert("حدث خطأ أثناء تصدير الملف: " + e.message);
+  } finally {
+    window.hideLoader();
+  }
 };

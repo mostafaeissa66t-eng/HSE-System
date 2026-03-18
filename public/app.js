@@ -9742,11 +9742,17 @@ window.renderKpiLogsTable = function (data, container) {
         <tbody>`;
 
   data.forEach((row) => {
-    // استخدمنا النسبة المئوية هنا فقط لتحديد لون المربع (أخضر، أصفر، أحمر)
-    const scorePercent = parseFloat(row.percentage);
-    let badgeClass = "bg-success";
-    if (scorePercent < 70) badgeClass = "bg-danger";
-    else if (scorePercent < 90) badgeClass = "bg-warning";
+    let badgeClass = "bg-secondary"; // اللون الافتراضي للـ N/A
+    let scoreDisplay = "N/A (لم يتواجد)";
+
+    // لو الموظف عنده درجات فعلية (مش N/A)
+    if (row.percentage !== "N/A") {
+      const scorePercent = parseFloat(row.percentage);
+      badgeClass = "bg-success";
+      if (scorePercent < 70) badgeClass = "bg-danger";
+      else if (scorePercent < 90) badgeClass = "bg-warning";
+      scoreDisplay = `${row.totalScore} / ${row.totalMax}`;
+    }
 
     html += `
         <tr>
@@ -9758,7 +9764,7 @@ window.renderKpiLogsTable = function (data, container) {
             <td style="font-size:0.85em; color:#555;">${row.evaluators}</td>
             <td style="text-align:center;">
                 <span class="badge ${badgeClass}" style="font-size:1.1em; padding:6px 12px; direction:ltr; display:inline-block;">
-                    ${row.totalScore} / ${row.totalMax}
+                    ${scoreDisplay}
                 </span>
             </td>
         </tr>`;
@@ -10111,7 +10117,8 @@ window.exportKpiLogsToExcel = function () {
       المشروع: row.project,
       "الدرجة المحققة": row.totalScore,
       "الدرجة القصوى": row.totalMax,
-      "النسبة المئوية": row.percentage + "%",
+      "النسبة المئوية":
+        row.percentage === "N/A" ? "لم يتواجد (N/A)" : row.percentage + "%", // <-- التعديل هنا
       "المدير المُقيّم": row.evaluators,
     }));
 

@@ -10111,6 +10111,7 @@ window.renderTrackingTable = function (data, container) {
   container.innerHTML = html;
 };
 // دالة تصدير سجل التقييمات إلى ملف Excel احترافي
+// دالة تصدير سجل التقييمات إلى ملف Excel احترافي
 window.exportKpiLogsToExcel = function () {
   if (!window.currentKpiLogsData || window.currentKpiLogsData.length === 0) {
     alert("لا توجد بيانات لتصديرها.");
@@ -10120,9 +10121,8 @@ window.exportKpiLogsToExcel = function () {
   window.showLoader("جاري تجهيز ملف الإكسيل...");
 
   try {
-    // 1. تجهيز البيانات بالعناوين العربية
+    // 1. تجهيز البيانات بالعناوين العربية (تم إضافة القسم)
     const excelData = window.currentKpiLogsData.map((row, index) => {
-      // تحديد النص الذي سيظهر في الإكسيل
       let percentageText = row.percentage + "%";
       if (row.percentage === "N/A") percentageText = "لم يتواجد (N/A)";
       if (row.percentage === "لم يتم التقييم")
@@ -10133,6 +10133,7 @@ window.exportKpiLogsToExcel = function () {
         "شهر التقييم": row.period,
         "كود الموظف": row.empId,
         "اسم الموظف": row.empName,
+        القسم: row.department || "غير محدد", // <--- (العمود الجديد)
         "المسمى الوظيفي": row.jobTitle,
         المشروع: row.project,
         "الدرجة المحققة": row.totalScore,
@@ -10151,11 +10152,12 @@ window.exportKpiLogsToExcel = function () {
       { wch: 15 }, // شهر التقييم
       { wch: 15 }, // الكود
       { wch: 35 }, // اسم الموظف
+      { wch: 25 }, // القسم  <--- (مساحة العمود الجديد)
       { wch: 25 }, // الوظيفة
       { wch: 25 }, // المشروع
       { wch: 15 }, // الدرجة المحققة
       { wch: 15 }, // الدرجة القصوى
-      { wch: 15 }, // النسبة
+      { wch: 20 }, // النسبة
       { wch: 40 }, // المدير
     ];
     worksheet["!cols"] = wscols;
@@ -10164,7 +10166,7 @@ window.exportKpiLogsToExcel = function () {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "سجل التقييمات");
 
-    // 5. تحديد اسم الملف بناءً على المشروع والتاريخ
+    // 5. تحديد اسم الملف
     const projSelect = document.getElementById("mon-kpi-project");
     const projName =
       projSelect && projSelect.value !== "ALL_ACCESSIBLE"

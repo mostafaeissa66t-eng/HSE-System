@@ -9742,32 +9742,45 @@ window.renderKpiLogsTable = function (data, container) {
         <tbody>`;
 
   data.forEach((row) => {
-    let badgeClass = "bg-secondary"; // اللون الافتراضي للـ N/A
+    // الألوان الافتراضية لحالة (N/A)
+    let bgColor = "#6c757d"; // رصاصي قوي
+    let textColor = "#ffffff"; // أبيض
     let scoreDisplay = "N/A (لم يتواجد)";
 
-    // لو الموظف عنده درجات فعلية (مش N/A)
-    if (row.percentage !== "N/A") {
+    if (row.percentage === "لم يتم التقييم") {
+      bgColor = "#343a40"; // أسود/رمادي غامق جداً للمتأخرين
+      textColor = "#ffffff";
+      scoreDisplay = "لم يتم التقييم";
+    } else if (row.percentage !== "N/A") {
       const scorePercent = parseFloat(row.percentage);
-      badgeClass = "bg-success";
-      if (scorePercent < 70) badgeClass = "bg-danger";
-      else if (scorePercent < 90) badgeClass = "bg-warning";
+
+      if (scorePercent < 70) {
+        bgColor = "#dc3545"; // أحمر صريح وقوي (Danger)
+        textColor = "#ffffff";
+      } else if (scorePercent < 90) {
+        bgColor = "#ffc107"; // أصفر فاقع وواضح (Warning)
+        textColor = "#212529"; // نص أسود غامق عشان يكون مقروء جداً على الأصفر
+      } else {
+        bgColor = "#28a745"; // أخضر صريح ومبهج (Success)
+        textColor = "#ffffff";
+      }
       scoreDisplay = `${row.totalScore} / ${row.totalMax}`;
     }
 
     html += `
-        <tr>
-            <td style="font-weight:bold; white-space:nowrap;">${row.period}</td>
-            <td style="font-weight:bold; color:#2C2A29;">${row.empName}</td>
-            <td>${row.empId}</td>
-            <td>${row.jobTitle}</td>
-            <td>${row.project}</td>
-            <td style="font-size:0.85em; color:#555;">${row.evaluators}</td>
-            <td style="text-align:center;">
-                <span class="badge ${badgeClass}" style="font-size:1.1em; padding:6px 12px; direction:ltr; display:inline-block;">
-                    ${scoreDisplay}
-                </span>
-            </td>
-        </tr>`;
+          <tr style="border-bottom: 1px solid #eee;">
+              <td style="font-weight:bold; white-space:nowrap; vertical-align: middle;">${row.period}</td>
+              <td style="font-weight:bold; color:#2C2A29; vertical-align: middle;">${row.empName}</td>
+              <td style="vertical-align: middle;">${row.empId}</td>
+              <td style="vertical-align: middle;">${row.jobTitle}</td>
+              <td style="vertical-align: middle;">${row.project}</td>
+              <td style="font-size:0.85em; color:#555; vertical-align: middle;">${row.evaluators}</td>
+              <td style="text-align:center; vertical-align: middle;">
+                  <span class="badge" style="background-color: ${bgColor}; color: ${textColor}; font-size: 1.1em; padding: 8px 15px; direction: ltr; display: inline-block; border-radius: 6px; font-weight: 800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); letter-spacing: 1px;">
+                      ${scoreDisplay}
+                  </span>
+              </td>
+          </tr>`;
   });
 
   html += `</tbody></table>`;
@@ -10108,19 +10121,26 @@ window.exportKpiLogsToExcel = function () {
 
   try {
     // 1. تجهيز البيانات بالعناوين العربية
-    const excelData = window.currentKpiLogsData.map((row, index) => ({
-      م: index + 1,
-      "شهر التقييم": row.period,
-      "كود الموظف": row.empId,
-      "اسم الموظف": row.empName,
-      "المسمى الوظيفي": row.jobTitle,
-      المشروع: row.project,
-      "الدرجة المحققة": row.totalScore,
-      "الدرجة القصوى": row.totalMax,
-      "النسبة المئوية":
-        row.percentage === "N/A" ? "لم يتواجد (N/A)" : row.percentage + "%", // <-- التعديل هنا
-      "المدير المُقيّم": row.evaluators,
-    }));
+    const excelData = window.currentKpiLogsData.map((row, index) => {
+      // تحديد النص الذي سيظهر في الإكسيل
+      let percentageText = row.percentage + "%";
+      if (row.percentage === "N/A") percentageText = "لم يتواجد (N/A)";
+      if (row.percentage === "لم يتم التقييم")
+        percentageText = "لم يتم التقييم";
+
+      return {
+        م: index + 1,
+        "شهر التقييم": row.period,
+        "كود الموظف": row.empId,
+        "اسم الموظف": row.empName,
+        "المسمى الوظيفي": row.jobTitle,
+        المشروع: row.project,
+        "الدرجة المحققة": row.totalScore,
+        "الدرجة القصوى": row.totalMax,
+        "النسبة المئوية": percentageText,
+        "المدير المُقيّم": row.evaluators,
+      };
+    });
 
     // 2. إنشاء ورقة العمل (Worksheet)
     const worksheet = XLSX.utils.json_to_sheet(excelData);

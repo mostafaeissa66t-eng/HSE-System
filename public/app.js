@@ -313,6 +313,9 @@ document.addEventListener("DOMContentLoaded", function () {
     MonitorDailyReports: "fas fa-file-archive",
     MonitorKPIs: "fas fa-chart-bar",
     UserTracking: "fas fa-satellite-dish",
+    VehicleRegistration: "fas fa-truck-pickup",
+    VehicleInspection: "fas fa-clipboard-check",
+    ManageVehicles: "fas fa-car-side",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -346,6 +349,9 @@ document.addEventListener("DOMContentLoaded", function () {
     MonitorDailyReports: "سجل التقارير اليومية",
     MonitorKPIs: "سجل التقييمات", // <--- أضف هذا السطر
     UserTracking: "تتبع المستخدمين (GPS)",
+    VehicleRegistration: "تسجيل السيارات",
+    VehicleInspection: "فحص السيارات",
+    ManageVehicles: "إدارة ومتابعة السيارات",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -403,8 +409,14 @@ document.addEventListener("DOMContentLoaded", function () {
     {
       type: "group",
       title: "إدارة المقاولين",
-      icon: "fas fa-hard-hat", // أيقونة الخوذة (مناسبة للمقاولين)
+      icon: "fas fa-hard-hat",
       children: ["NewContractor", "ContractorAnalytics"],
+    },
+    {
+      type: "group",
+      title: "إدارة السيارات",
+      icon: "fas fa-truck-pickup",
+      children: ["VehicleRegistration", "VehicleInspection", "ManageVehicles"],
     },
     // 8. أخرى (رابط مباشر)
     { type: "link", id: "NewNearMiss" },
@@ -821,7 +833,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "NewTraining") {
         initTrainingPage();
       }
-      // أضف الكود هنا
+      // -�ضف الكود هنا
       if (sectionId === "TrainingLog") {
         initTrainingLogPage();
       }
@@ -862,6 +874,9 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "MonitorKPIs") {
         window.initMonitorKpiPage();
       }
+      if (sectionId === "ManageVehicles") window.initManageVehiclesPage();
+      if (sectionId === "VehicleInspection") window.initVehicleInspectionPage();
+      if (sectionId === "VehicleRegistration") window.initVehiclePage();
       if (sectionId === "UserTracking") window.initUserTrackingPage();
       if (sectionId === "MonitorDailyReports")
         window.initMonitorDailyReportsPage();
@@ -2483,7 +2498,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    // (*** فلترة القائمة بناءً على صلاحيات المستخدم ***)
+    // (*** فلترة القائمة بناo�ً على صلاحيات المستخدم ***)
     const userProjects = (currentUser.projects || "").toString().trim();
     let accessibleLocations = [];
 
@@ -2491,7 +2506,7 @@ document.addEventListener("DOMContentLoaded", function () {
       accessibleLocations = ppeLocations; // متاح له كل حاجة
     } else {
       const userProjectList = userProjects.split(",");
-      // فلترة قائمة المخازن بناءً على صلاحيات المستخدم
+      // فلترة قائمة المخازن بناءB� على صلاحيات المستخدم
       accessibleLocations = ppeLocations.filter((loc) =>
         userProjectList.includes(loc),
       );
@@ -4471,7 +4486,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
       // ============================================================
-      // --- الحالة 2: Violation (مخالفة) ---
+      // --- i�لحالة 2: Violation (مخالفة) ---
       // ============================================================
       else {
         const levelEl = document.querySelector(
@@ -6420,7 +6435,7 @@ document.addEventListener("DOMContentLoaded", function () {
         currentTrainingData = response.data.reverse();
         renderTrainingTable(response.data);
 
-        // تشغيل الحساب فوراً بعد ظهور الجدول
+        // تشغيل الحساب فوراً بعد ظهور الجدوp�
         if (typeof window.calculateTrainingStats === "function") {
           window.calculateTrainingStats(response.data);
         }
@@ -7999,7 +8014,7 @@ window.viewDailyReportDetails = function (logId) {
             <div style="font-size:0.7rem; color:#666;">Campaigns</div><div style="font-size:1.1rem; font-weight:bold; color:#e91e63;">${stats.campaigns}</div>
         </div>
     </div>
-    <h4 style="color: #333; margin-bottom: 10px; font-size: 0.95rem;"><i class="fas fa-users"></i> تفاصيل العمالة، التدريب، والإصابات</h4>
+    <h4 style="color: #333; margin-bottom: 10px; font-size: 0.95rem;"><i class="fas fa-users"></i> تفاصيل العمالة، ال٪دريب، والإصابات</h4>
     <div style="font-size:0.7rem; color:#856404; background:#fff3cd; padding:5px; margin-bottom:5px; border-radius:4px; text-align:center;">
         <i class="fas fa-arrows-alt-h"></i> اسحب الجدول لليمين واليسار لرؤية باقي الأعمدة
     </div>
@@ -8207,7 +8222,7 @@ window.showMissingDatesDetail = async function (projectName, dates) {
       projectName: projectName,
     });
 
-    // حفظ القائمة المفلترة في المتغير العالمي لاستخدامها في البوب أب التالي
+    // حفظ ا �قائمة المفلترة في المتغير العالمي لاستخدامها في البوب أب التالي
     tempSupervisorsList = resSup.list || [];
 
     if (tempSupervisorsList.length === 0) {
@@ -8408,7 +8423,7 @@ async function loadRejectedReportsAlert() {
   if (!alertDiv) {
     alertDiv = document.createElement("div");
     alertDiv.id = "rejected-alerts";
-    // نضعه قبل الفورم مباشرة
+    // نضعه قبn� الفورم مباشرة
     const form = document.getElementById("daily-report-form");
     section.insertBefore(alertDiv, form);
   }
@@ -8768,7 +8783,7 @@ window.printDailyReportPDF = function (logId) {
         <div class="pdf-header">
             <div class="header-info">
                 <h1>HSE Daily Report</h1>
-                <p>التقرير اليومي للسلامة والصحة المهنية والبيئة</p>
+                <p>التقرير اليومى للسلامة والصحة المهنية والبيئة</p>
             </div>
             <div class="logo-container"><img src="../turnkey.png"></div>
         </div>
@@ -8903,7 +8918,7 @@ window.printDailyReportPDF = function (logId) {
 };
 // =================================================================
 // دالة إنشاء التقرير اليومي المُجمّع لكل المشاريع (Consolidated Report)
-// (تم تعديل حساب العمالة: حساب Max/Avg لكل مشروع على حدة ثم جمع النواتج)
+// (تم تعديل حساب العمالة: حساب Max/Avg لكل مشروع على حدة ثم d�`� � النواتج)
 // =================================================================
 window.generateConsolidatedDailyReport = function () {
   const reports = window.loadedFinalReports;
@@ -9152,7 +9167,8 @@ window.generateConsolidatedDailyReport = function () {
   const projSelect = document.getElementById("mon-dr-project");
   const titleProject =
     projSelect.value === "ALL_ACCESSIBLE"
-      ? `مُجمّع لـ (${totalProjectsSet.size}) مشاريع`
+      ? `مُجمّع لـ (${totalProjectsSet.size}) مشار
+يع`
       : projSelect.value;
 
   let dateRange = "الفترة المحددة";
@@ -9742,8 +9758,8 @@ window.renderKpiLogsTable = function (data, container) {
         <tbody>`;
 
   data.forEach((row) => {
-    // الألوان الافتراضية لحالة (N/A)
-    let bgColor = "#6c757d"; // رصاصي قوي
+    // ال=�لوان الافتراضية لحالة (N/A)
+    let bgColor = "#6c757d"; // رص��صي قوي
     let textColor = "#ffffff"; // أبيض
     let scoreDisplay = "N/A (لم يتواجد)";
 
@@ -10136,7 +10152,7 @@ window.exportKpiLogsToExcel = function () {
         القسم: row.department || "غير محدد", // <--- (العمود الجديد)
         "المسمى الوظيفي": row.jobTitle,
         المشروع: row.project,
-        "الدرجة المحققة": row.totalScore,
+        "ا؄درجة المحققة": row.totalScore,
         "الدرجة القصوى": row.totalMax,
         "النسبة المئوية": percentageText,
         "المدير المُقيّم": row.evaluators,
@@ -10179,6 +10195,1194 @@ window.exportKpiLogsToExcel = function () {
     XLSX.writeFile(workbook, fileName);
   } catch (e) {
     alert("حدث خطأ أثناء تصدير الملف: " + e.message);
+  } finally {
+    window.hideLoader();
+  }
+};
+// =================================================================
+// --- وحدة تسجيل السيارات (Vehicle Registration) - ذكية وموحدة ---
+// =================================================================
+
+window.activeEmpTarget = "";
+window.activeWorkerTarget = "";
+
+window.initVehiclePage = async function () {
+  const vehProject = document.getElementById("veh-project");
+  const vehDate = document.getElementById("veh-date");
+  const vehTime = document.getElementById("veh-time");
+
+  // 1. ضبط التاريخ والوقت
+  const now = new Date();
+  if (vehDate) vehDate.valueAsDate = now;
+  if (vehTime) {
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    vehTime.value = `${hh}:${mm}`;
+  }
+
+  // 2. تحميل الموظفين (للسويدي)
+  if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+    try {
+      const r = await callApi("getInventoryInitData", {
+        userInfo: currentUser,
+      });
+      if (r.status === "success") {
+        window.ppeLocations = r.locations;
+        window.ppeEmployees = r.employees;
+        window.ppeContractors = r.contractors;
+      }
+    } catch (e) {
+      console.error("فشل التحميل الأولي:", e);
+    }
+  }
+
+  // 3. تعبئة المشاريع
+  if (vehProject && vehProject.options.length <= 1) {
+    const userProj = (currentUser.projects || "").toString();
+    let acc = [];
+    if (
+      typeof window.ppeLocations !== "undefined" &&
+      window.ppeLocations.length > 0
+    ) {
+      acc =
+        userProj === "ALL"
+          ? window.ppeLocations
+          : window.ppeLocations.filter((p) => userProj.includes(p));
+    } else if (initialData && initialData.projects) {
+      acc =
+        userProj === "ALL"
+          ? initialData.projects
+          : initialData.projects.filter((p) => userProj.includes(p));
+    }
+    fillSelect(vehProject, acc);
+  }
+
+  window.toggleVehOwner();
+};
+
+// --- التحكم في الواجهة (السويدي / مقاول) ---
+window.toggleVehOwner = function () {
+  const ownerType = document.getElementById("veh-owner-type").value;
+  const contGroup = document.getElementById("veh-cont-group");
+  const contSelect = document.getElementById("veh-contractor");
+
+  const driverName = document.getElementById("veh-driver-name");
+  const driverNid = document.getElementById("veh-driver-nid");
+
+  const empSearchBtn = document.getElementById("veh-emp-btn");
+  const workerSearchBtn = document.getElementById("veh-worker-btn");
+  const nidSearchBtn = document.getElementById("veh-nid-search-btn");
+
+  // تصفير الخانات وإغلاق الاسم
+  driverName.value = "";
+  driverNid.value = "";
+  driverName.readOnly = true;
+  driverName.style.backgroundColor = "#f0f0f0";
+
+  if (ownerType === "السويدي") {
+    contGroup.style.display = "none";
+    contSelect.removeAttribute("required");
+
+    driverNid.readOnly = true;
+    driverNid.style.backgroundColor = "#f0f0f0";
+    driverNid.placeholder = "يتم جلبه تلقائياً";
+    driverName.placeholder = "اضغط (الموظفين) لاختيار الاسم";
+
+    empSearchBtn.style.display = "block";
+    workerSearchBtn.style.display = "none";
+    nidSearchBtn.style.display = "none"; // نخفي الفحص لأن الموظف بيتجاب من القائمة
+  } else {
+    contGroup.style.display = "block";
+    contSelect.setAttribute("required", "required");
+
+    driverNid.readOnly = false;
+    driverNid.style.backgroundColor = "#fff";
+    driverNid.placeholder = "اكتب الرقم القومي وافحص...";
+    driverName.placeholder = "افحص الرقم أو اختر من القائمة";
+
+    empSearchBtn.style.display = "none";
+    workerSearchBtn.style.display = "block";
+    nidSearchBtn.style.display = "block"; // نظهر الفحص للمقاول
+
+    window.updateVehContractors();
+  }
+};
+
+window.updateVehContractors = async function () {
+  const proj = document.getElementById("veh-project").value;
+  const vehContractor = document.getElementById("veh-contractor");
+  const ownerType = document.getElementById("veh-owner-type").value;
+
+  if (ownerType === "السويدي") return;
+
+  if (!proj) {
+    vehContractor.innerHTML =
+      '<option value="">-- اختر المشروع أولاً --</option>';
+    vehContractor.disabled = true;
+    return;
+  }
+
+  vehContractor.innerHTML = "<option>جاري التحميل...</option>";
+  vehContractor.disabled = true;
+
+  try {
+    const r = await callApi("getVehicleContractors", { projectName: proj });
+    if (r.status === "success" && r.contractors && r.contractors.length > 0) {
+      fillSelect(vehContractor, r.contractors);
+      vehContractor.disabled = false;
+    } else {
+      vehContractor.innerHTML =
+        '<option value="">لا يوجد مقاولي سيارات</option>';
+    }
+  } catch (e) {
+    vehContractor.innerHTML = "<option>خطأ في التحميل</option>";
+  }
+};
+
+// --- (الجديد والمحسن) فحص الرقم القومي للسائق ---
+window.searchVehDriverNid = async function () {
+  const nidEl = document.getElementById("veh-driver-nid");
+  const nameEl = document.getElementById("veh-driver-name");
+
+  if (!nidEl.value || nidEl.value.length < 5) {
+    alert("الرجاء إدخال رقم قومي/إقامة صحيح قبل الفحص.");
+    return;
+  }
+
+  nameEl.value = "جاري الفحص...";
+  nameEl.readOnly = true;
+  nameEl.style.backgroundColor = "#f0f0f0";
+
+  try {
+    const r = await callApi("getRecipientByNID", { nationalId: nidEl.value });
+    if (r.status === "found") {
+      nameEl.value = r.name;
+      nameEl.readOnly = true; // نخليه مقفول طالما موجود
+      nameEl.style.backgroundColor = "#e8f5e9"; // أخضر خفيف دليل النجاح
+
+      const currentCont = document.getElementById("veh-contractor").value;
+      if (r.contractor !== currentCont) {
+        alert(
+          `تنبيه: هذا السائق مسجل مسبقاً تبع شركة (${r.contractor}).\nسيتم تسجيل سيارته الآن في عهدة (${currentCont}).`,
+        );
+      }
+    } else {
+      // العامل جديد
+      nameEl.value = "";
+      nameEl.placeholder = "عامل جديد.. اكتب الاسم بالكامل";
+      nameEl.readOnly = false; // نفتح الخانة عشان يكتب
+      nameEl.style.backgroundColor = "#fff"; // لون أبيض للكتابة
+      nameEl.focus();
+      alert("هذا الرقم غير مسجل مسبقاً، يرجى كتابة اسم السائق لتسجيله.");
+    }
+  } catch (e) {
+    nameEl.value = "";
+    nameEl.placeholder = "خطأ في الاتصال، يمكنك الكتابة يدوياً";
+    nameEl.readOnly = false;
+    nameEl.style.backgroundColor = "#fff";
+  }
+};
+
+// --- فتح بوب أب عمال المقاول (تحديث لايف لمنع القائمة الفاضية) ---
+window.openVehWorkerSelector = async function () {
+  const contractorName = document.getElementById("veh-contractor").value;
+  if (!contractorName) {
+    alert("الرجاء اختيار المقاول أولاً");
+    return;
+  }
+
+  window.activeWorkerTarget = "VEHICLE";
+  const modal = document.getElementById("worker-selector-modal");
+  modal.style.display = "flex";
+  document.getElementById("worker-search-box").value = "";
+
+  const container = document.getElementById("worker-list-container");
+  if (container) {
+    container.innerHTML = `
+        <div style="text-align:center; padding:30px; color:#ff9800;">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p style="margin-top:10px;">جاري جلب عمال المقاول...</p>
+        </div>`;
+  }
+
+  try {
+    const response = await callApi("getContractorWorkers", {
+      contractorName: contractorName,
+    });
+    if (response.status === "success") {
+      window.currentContractorWorkers = response.workers;
+
+      if (!response.workers || response.workers.length === 0) {
+        container.innerHTML = `
+                <div style="text-align:center; padding:20px; color:#666;">
+                    <p>لا يوجد عمال مسجلين لهذه الشركة حتى الآن.</p>
+                    <button class="btn btn-primary" onclick="window.addNewVehWorkerManually()" style="margin-top:10px;">
+                       <i class="fas fa-plus"></i> تسجيل عامل جديد
+                    </button>
+                </div>`;
+      } else {
+        let html = response.workers
+          .map(
+            (w) => `
+                  <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:5px;" onclick="window.selectWorker('${w.id}', '${w.name}')">
+                      <div style="text-align:right;">
+                          <span style="display:block; font-weight:700;">${w.name}</span>
+                          <small style="color:#666;">ID: ${w.id}</small>
+                      </div>
+                      <i class="fas fa-chevron-left" style="color:#ccc;"></i>
+                  </div>
+              `,
+          )
+          .join("");
+
+        // زرار الإضافة اليدوية في آخر القائمة
+        html += `
+                <button class="btn-secondary" onclick="window.addNewVehWorkerManually()" style="width:100%; margin-top:15px; background:#17a2b8; color:white; border:none; padding:10px; border-radius:4px;">
+                   <i class="fas fa-plus"></i> السائق غير موجود بالقائمة؟ سجل عامل جديد
+                </button>`;
+
+        container.innerHTML = html;
+      }
+      document.getElementById("worker-search-box").focus();
+    }
+  } catch (e) {
+    if (container)
+      container.innerHTML =
+        '<p style="text-align:center; color:red; padding:20px;">حدث خطأ في الاتصال بقاعدة البيانات.</p>';
+  }
+};
+
+// زر "إضافة جديد" من داخل البوب أب
+window.addNewVehWorkerManually = function () {
+  if (typeof closeWorkerSelector === "function") closeWorkerSelector();
+  const nidInput = document.getElementById("veh-driver-nid");
+  nidInput.value = "";
+  nidInput.focus();
+  alert("الرجاء إدخال الرقم القومي للسائق الجديد ثم الضغط على زر (فحص)");
+};
+
+// فتح بوب أب الموظفين (للسويدي)
+window.openVehEmpSelector = function () {
+  const proj = document.getElementById("veh-project").value;
+  if (!proj) {
+    alert("الرجاء اختيار المشروع أولاً");
+    return;
+  }
+
+  window.activeEmpTarget = "VEHICLE";
+  document.getElementById("emp-selector-modal").style.display = "flex";
+  document.getElementById("emp-search-box").value = "";
+
+  const list = window.ppeEmployees.filter((e) => e.project === proj);
+  if (typeof renderEmployeesInModal === "function")
+    renderEmployeesInModal(list);
+};
+
+// توجيه الاختيارات من البوب أب
+const originalSelectEmployee = window.selectEmployee;
+window.selectEmployee = function (id, name, company) {
+  if (window.activeEmpTarget === "VEHICLE") {
+    document.getElementById("veh-driver-name").value = name;
+    document.getElementById("veh-driver-nid").value = id;
+    if (typeof closeEmpSelector === "function") closeEmpSelector();
+    window.activeEmpTarget = "";
+  } else {
+    if (typeof originalSelectEmployee === "function")
+      originalSelectEmployee(id, name, company);
+  }
+};
+
+const originalSelectWorker = window.selectWorker;
+window.selectWorker = function (id, name) {
+  if (window.activeWorkerTarget === "VEHICLE") {
+    const nameInput = document.getElementById("veh-driver-name");
+    nameInput.value = name;
+    nameInput.readOnly = true;
+    nameInput.style.backgroundColor = "#e8f5e9";
+
+    document.getElementById("veh-driver-nid").value = id;
+    if (typeof closeWorkerSelector === "function") closeWorkerSelector();
+    window.activeWorkerTarget = "";
+  } else {
+    if (typeof originalSelectWorker === "function")
+      originalSelectWorker(id, name);
+  }
+};
+
+// --- حفظ النموذج وإرساله للسيرفر ---
+const vehForm = document.getElementById("vehicle-form");
+if (vehForm) {
+  const newVehForm = vehForm.cloneNode(true);
+  vehForm.parentNode.replaceChild(newVehForm, vehForm);
+
+  newVehForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const btn = document.getElementById("veh-save-btn");
+    const msg = document.getElementById("veh-save-msg");
+    const ownerType = document.getElementById("veh-owner-type").value;
+    const nameInput = document.getElementById("veh-driver-name");
+
+    const contractorVal =
+      ownerType === "السويدي"
+        ? "السويدي"
+        : document.getElementById("veh-contractor").value;
+
+    const vehData = {
+      date: document.getElementById("veh-date").value,
+      time: document.getElementById("veh-time").value,
+      project: document.getElementById("veh-project").value,
+      contractor: contractorVal,
+      vehNumber: document.getElementById("veh-number").value,
+      vehType: document.getElementById("veh-type").value,
+      vehModel: document.getElementById("veh-model").value,
+      vehLicenseExp: document.getElementById("veh-license-exp").value,
+      driverName: nameInput.value,
+      driverNid: document.getElementById("veh-driver-nid").value,
+      drvLicenseExp: document.getElementById("veh-driver-exp").value,
+      gpsApp: document.getElementById("veh-gps-app").value,
+      gpsUser: document.getElementById("veh-gps-user").value,
+      gpsPass: document.getElementById("veh-gps-pass").value,
+
+      // إذا كانت خانة الاسم مفتوحة للكتابة، إذاً هذا عامل جديد يجب حفظه في الداتابيز
+      driverIsNew: !nameInput.readOnly,
+    };
+
+    if (!vehData.contractor) {
+      alert("الرجاء اختيار المقاول.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+      const r = await callApi("saveVehicleRecord", {
+        vehData: vehData,
+        userInfo: currentUser,
+      });
+      showMessage(msg, r.message, true);
+      newVehForm.reset();
+      window.initVehiclePage();
+    } catch (err) {
+      showMessage(msg, err.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> حفظ بيانات السيارة';
+    }
+  });
+}
+
+// =================================================================
+// --- وحدة الفحص الشهري للسيارات (Vehicle Inspection) ---
+// =================================================================
+
+// مصفوفة الـ 26 نقطة بناءً على النموذج المرفق
+const vehicleChecklistItems = [
+  "وثائق المركبة والسائق (رخصة المركبة والسائق) - Vehicle and Driver documentation",
+  "وثائق السائق (سجل جنائي / اختبار مخدرات) - Driver's paperwork",
+  "زجاج السيارة الأمامي، الخلفي، والجوانب - Glass (front, back, and sides)",
+  "حالة الأضواء الأمامية / الإشارة - Head/signal light Condition",
+  "حالة المرايا الجانبية والأمامية - Side and front mirrors Condition",
+  "حالة الإطارات - Tires Condition",
+  "إطار إحتياطي - Spare tire",
+  "العدة (توفر العدة الضرورية) - Suitable tools",
+  "العاكس مثلث التحذير - Reflecting Triangle",
+  "سترة عاكسة (سترتين) - Reflective vest",
+  "قفازات قطنية - Cotton Gloves",
+  "مصباح يدوي - Flashlight",
+  "حالة المساحات الأمامية - Wipers Condition",
+  "الحالة العامة للمركبة - General Condition",
+  "صندوق الإسعافات الأولية / جهاز إطفاء الحريق - First Aid Box/Fire Extinguisher",
+  "حالة حزام الأمان - Seat belts Condition",
+  "تخزين المواد القابلة للاشتعال (تأكد من عدم وجودها) - Storage of flammable materials",
+  "خزان الوقود (عدم وجود تسربات) - Fuel tank",
+  "الفرامل والفرملة اليدوية - Brakes and Hand Brake",
+  "نظام مانع الانغلاق - Antilock Brake System (ABS)",
+  "وسائد هوائية (وسادتي هواء على الأقل) - Airbags",
+  "عمر المركبة (لا يتجاوز 5 سنوات) - Vehicle age",
+  "المؤشرات - Indicators",
+  "حالة البوق (آلة التنبيه) - Horn Condition",
+  "جهاز التنبيه عند الرجوع للخلف - Reverse Alarm",
+  "جهاز تتبع GPS - GPS tracking device",
+];
+
+let currentProjectVehicles = [];
+
+window.initVehicleInspectionPage = function () {
+  const projSelect = document.getElementById("v-insp-project");
+
+  // (*** التعديل هنا: استدعاء الحاوية الجديدة بدل الـ tbody ***)
+  const container = document.getElementById("v-insp-cards-container");
+
+  // تعبئة المشاريع
+  if (projSelect && projSelect.options.length <= 1) {
+    const userProj = (currentUser.projects || "").toString();
+    let acc = [];
+
+    if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+      acc =
+        userProj === "ALL"
+          ? ppeLocations
+          : ppeLocations.filter((p) => userProj.includes(p));
+      fillSelect(projSelect, acc);
+    } else if (initialData && initialData.projects) {
+      acc =
+        userProj === "ALL"
+          ? initialData.projects
+          : initialData.projects.filter((p) => userProj.includes(p));
+      fillSelect(projSelect, acc);
+    }
+  }
+
+  // توليد أسئلة الفحص (نظام الكروت للموبايل)
+  if (container && container.children.length === 0) {
+    let html = "";
+    vehicleChecklistItems.forEach((item, index) => {
+      const i = index + 1;
+
+      // فصل النص الإنجليزي عن العربي لو حابب تخليه شكله أشيك
+      const parts = item.split(" - ");
+      const arText = parts[0];
+      const enText = parts[1]
+        ? `<br><small style="color:#666; font-weight:normal;">${parts[1]}</small>`
+        : "";
+
+      html += `
+        <div class="insp-item-card">
+            <div class="insp-item-title">
+                <span class="badge-num">${i}</span> ${arText} ${enText}
+            </div>
+
+            <div class="insp-options-group">
+                <label class="insp-opt-label">
+                    <input type="radio" name="chk-${i}" value="S">
+                    <div class="insp-opt-btn"><i class="fas fa-check"></i> S</div>
+                </label>
+
+                <label class="insp-opt-label">
+                    <input type="radio" name="chk-${i}" value="U">
+                    <div class="insp-opt-btn"><i class="fas fa-times"></i> U</div>
+                </label>
+
+                <label class="insp-opt-label">
+                    <input type="radio" name="chk-${i}" value="NA">
+                    <div class="insp-opt-btn"><i class="fas fa-minus"></i> NA</div>
+                </label>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+  }
+};
+
+window.updateInspectionVehicles = async function () {
+  const proj = document.getElementById("v-insp-project").value;
+  const plateSelect = document.getElementById("v-insp-plate");
+
+  // تصفير الخانات
+  document.getElementById("v-insp-cont").value = "";
+  document.getElementById("v-insp-type").value = "";
+  document.getElementById("v-insp-driver").value = "";
+
+  if (!proj) {
+    plateSelect.innerHTML =
+      '<option value="">-- اختر المشروع أولاً --</option>';
+    plateSelect.disabled = true;
+    return;
+  }
+
+  plateSelect.innerHTML = "<option>جاري التحميل...</option>";
+  plateSelect.disabled = true;
+
+  try {
+    const r = await callApi("getProjectVehicles", { projectName: proj });
+    if (r.status === "success" && r.vehicles.length > 0) {
+      currentProjectVehicles = r.vehicles;
+      plateSelect.innerHTML = '<option value="">-- اختر السيارة --</option>';
+      r.vehicles.forEach((v) => {
+        plateSelect.add(new Option(`${v.plate} (${v.driver})`, v.plate));
+      });
+      plateSelect.disabled = false;
+    } else {
+      plateSelect.innerHTML =
+        '<option value="">لا توجد سيارات مسجلة بهذا المشروع</option>';
+    }
+  } catch (e) {
+    plateSelect.innerHTML = "<option>خطأ في التحميل</option>";
+  }
+};
+
+window.autoFillVehicleDetails = function () {
+  const plate = document.getElementById("v-insp-plate").value;
+  if (!plate) return;
+
+  const vehicle = currentProjectVehicles.find((v) => v.plate === plate);
+  if (vehicle) {
+    document.getElementById("v-insp-cont").value = vehicle.contractor;
+    document.getElementById("v-insp-type").value = vehicle.type;
+    document.getElementById("v-insp-driver").value = vehicle.driver;
+  }
+};
+
+const inspForm = document.getElementById("veh-insp-form");
+if (inspForm) {
+  inspForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("v-insp-save-btn");
+    const msg = document.getElementById("v-insp-save-msg");
+
+    // تجميع نتيجة الـ 26 نقطة
+    let checklistResults = {};
+    for (let i = 1; i <= 26; i++) {
+      const selected = document.querySelector(`input[name="chk-${i}"]:checked`);
+      if (!selected) {
+        alert(`الرجاء تقييم النقطة رقم ${i}`);
+        return;
+      }
+      checklistResults[`Q${i}`] = selected.value; // بيخزن S أو U أو NA
+    }
+
+    const data = {
+      project: document.getElementById("v-insp-project").value,
+      plate: document.getElementById("v-insp-plate").value,
+      contractor: document.getElementById("v-insp-cont").value,
+      type: document.getElementById("v-insp-type").value,
+      driver: document.getElementById("v-insp-driver").value,
+      checklist: checklistResults,
+      comments: {
+        text: document.getElementById("v-insp-comments").value,
+        targetDate: document.getElementById("v-insp-target-date").value,
+      },
+    };
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+      const r = await callApi("saveVehicleInspection", {
+        data: data,
+        userInfo: currentUser,
+      });
+      showMessage(msg, r.message, true);
+      inspForm.reset();
+      document.getElementById("v-insp-cont").value = "";
+      document.getElementById("v-insp-type").value = "";
+      document.getElementById("v-insp-driver").value = "";
+    } catch (err) {
+      showMessage(msg, err.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> اعتماد وحفظ الفحص';
+    }
+  });
+}
+// =================================================================
+// الحل الجذري: دوال مستقلة تماماً للبوب أب في قسم السيارات
+// =================================================================
+
+// 1. فتح بوب أب عمال المقاول (خاص بالسيارات فقط)
+window.openVehWorkerSelector = async function () {
+  const contractorName = document.getElementById("veh-contractor").value;
+  if (!contractorName) {
+    alert("الرجاء اختيار المقاول أولاً");
+    return;
+  }
+
+  const modal = document.getElementById("worker-selector-modal");
+  if (modal) modal.style.display = "flex";
+
+  const searchBox = document.getElementById("worker-search-box");
+  if (searchBox) {
+    searchBox.value = "";
+    searchBox.oninput = window.filterVehWorkerList; // ربط البحث بدالة السيارات
+    searchBox.focus();
+  }
+
+  const container = document.getElementById("worker-list-container");
+  if (container) {
+    container.innerHTML = `
+        <div style="text-align:center; padding:30px; color:#ff9800;">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p style="margin-top:10px;">جاري جلب عمال المقاول...</p>
+        </div>`;
+  }
+
+  try {
+    const response = await callApi("getContractorWorkers", {
+      contractorName: contractorName,
+    });
+    if (response.status === "success") {
+      window.currentContractorWorkers = response.workers;
+      window.renderVehWorkersInModal(response.workers);
+    }
+  } catch (e) {
+    if (container)
+      container.innerHTML =
+        '<p style="text-align:center; color:red; padding:20px;">حدث خطأ في الاتصال بقاعدة البيانات.</p>';
+  }
+};
+
+// 2. رسم العمال في البوب أب (وتوجيه الضغطة لدالة السيارات)
+window.renderVehWorkersInModal = function (workers) {
+  const container = document.getElementById("worker-list-container");
+  if (!container) return;
+
+  if (!workers || workers.length === 0) {
+    container.innerHTML = `
+          <div style="text-align:center; padding:20px; color:#666;">
+              <p>لا يوجد عمال مسجلين لهذه الشركة حتى الآن.</p>
+              <button class="btn btn-primary" onclick="window.addNewVehWorkerManually()" style="margin-top:10px;">
+                 <i class="fas fa-plus"></i> تسجيل سائق جديد
+              </button>
+          </div>`;
+  } else {
+    let html = workers
+      .map(
+        (w) => `
+            <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:5px;" onclick="window.selectVehWorker('${w.id}', '${w.name}')">
+                <div style="text-align:right;">
+                    <span style="display:block; font-weight:700;">${w.name}</span>
+                    <small style="color:#666;">ID: ${w.id}</small>
+                </div>
+                <i class="fas fa-check-circle" style="color:#28a745;"></i>
+            </div>
+        `,
+      )
+      .join("");
+
+    html += `
+          <button class="btn-secondary" onclick="window.addNewVehWorkerManually()" style="width:100%; margin-top:15px; background:#17a2b8; color:white; border:none; padding:10px; border-radius:4px;">
+             <i class="fas fa-plus"></i> السائق غير موجود بالقائمة؟ سجل سائق جديد
+          </button>`;
+
+    container.innerHTML = html;
+  }
+};
+
+// 3. فلترة العمال في البوب أب (خاص بالسيارات)
+window.filterVehWorkerList = function () {
+  const query = document
+    .getElementById("worker-search-box")
+    .value.toLowerCase();
+  const filtered = (window.currentContractorWorkers || []).filter(
+    (w) => w.name.toLowerCase().includes(query) || w.id.includes(query),
+  );
+  window.renderVehWorkersInModal(filtered);
+};
+
+// 4. دالة اختيار العامل (خاصة بالسيارات فقط)
+window.selectVehWorker = function (id, name) {
+  const nameInput = document.getElementById("veh-driver-name");
+  const nidInput = document.getElementById("veh-driver-nid");
+
+  if (nameInput) {
+    nameInput.value = name;
+    nameInput.readOnly = true;
+    nameInput.style.backgroundColor = "#e8f5e9"; // لون أخضر
+  }
+  if (nidInput) {
+    nidInput.value = id;
+    nidInput.readOnly = true;
+    nidInput.style.backgroundColor = "#f0f0f0";
+  }
+
+  const modal = document.getElementById("worker-selector-modal");
+  if (modal) modal.style.display = "none";
+};
+
+// 5. إضافة عامل يدوي (خاصة بالسيارات)
+window.addNewVehWorkerManually = function () {
+  const query = document.getElementById("worker-search-box").value;
+  const nameInput = document.getElementById("veh-driver-name");
+  const nidInput = document.getElementById("veh-driver-nid");
+
+  if (nameInput) {
+    nameInput.value = query;
+    nameInput.readOnly = false;
+    nameInput.style.backgroundColor = "#fff";
+  }
+  if (nidInput) {
+    nidInput.value = "";
+    nidInput.readOnly = false;
+    nidInput.style.backgroundColor = "#fff";
+    nidInput.focus();
+  }
+
+  const modal = document.getElementById("worker-selector-modal");
+  if (modal) modal.style.display = "none";
+
+  alert(
+    "الرجاء إدخال الرقم القومي للسائق الجديد ثم الضغط على زر (فحص) للتأكد من عدم تسجيله مسبقاً.",
+  );
+};
+
+// ---------------------------------------------------------------------
+// 6. دوال الموظفين (للسويدي) مستقلة للسيارات
+// ---------------------------------------------------------------------
+window.openVehEmpSelector = function () {
+  const proj = document.getElementById("veh-project").value;
+  if (!proj) {
+    alert("الرجاء اختيار المشروع أولاً");
+    return;
+  }
+
+  const modal = document.getElementById("emp-selector-modal");
+  if (modal) modal.style.display = "flex";
+
+  const searchBox = document.getElementById("emp-search-box");
+  if (searchBox) {
+    searchBox.value = "";
+    searchBox.oninput = window.filterVehEmpList;
+    searchBox.focus();
+  }
+
+  const list = (window.ppeEmployees || []).filter((e) => e.project === proj);
+  window.renderVehEmpsInModal(list);
+};
+
+window.renderVehEmpsInModal = function (list) {
+  const container = document.getElementById("emp-list-container");
+  if (!container) return;
+
+  if (!list || list.length === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; padding:20px; color:#999;">لا يوجد موظفين</p>';
+    return;
+  }
+  container.innerHTML = list
+    .map(
+      (e) => `
+        <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:8px;" onclick="window.selectVehEmployee('${e.id}', '${e.name}')">
+            <div style="text-align:right;">
+                <span style="display:block; font-weight:700;">${e.name}</span>
+                <small style="color:#666;">ID: ${e.id} | ${e.project}</small>
+            </div>
+            <i class="fas fa-check-circle" style="color:#007bff;"></i>
+        </div>
+    `,
+    )
+    .join("");
+};
+
+window.filterVehEmpList = function () {
+  const query = document.getElementById("emp-search-box").value.toLowerCase();
+  const proj = document.getElementById("veh-project").value;
+  const baseList = (window.ppeEmployees || []).filter(
+    (e) => e.project === proj,
+  );
+  const filtered = baseList.filter(
+    (e) =>
+      e.name.toLowerCase().includes(query) || e.id.toString().includes(query),
+  );
+  window.renderVehEmpsInModal(filtered);
+};
+
+window.selectVehEmployee = function (id, name) {
+  const nameInput = document.getElementById("veh-driver-name");
+  const nidInput = document.getElementById("veh-driver-nid");
+
+  if (nameInput) {
+    nameInput.value = name;
+    nameInput.readOnly = true;
+    nameInput.style.backgroundColor = "#e8f5e9";
+  }
+  if (nidInput) {
+    nidInput.value = id;
+    nidInput.readOnly = true;
+    nidInput.style.backgroundColor = "#f0f0f0";
+  }
+
+  const modal = document.getElementById("emp-selector-modal");
+  if (modal) modal.style.display = "none";
+};
+
+// =================================================================
+// --- وحدة إدارة السيارات (Manage Vehicles) ---
+// =================================================================
+
+window.allVehiclesData = [];
+
+window.initManageVehiclesPage = async function () {
+  const projSelect = document.getElementById("manage-veh-project");
+
+  // تعبئة المشاريع
+  if (projSelect && projSelect.options.length <= 1) {
+    const userProj = (currentUser.projects || "").toString();
+    let acc = [];
+    if (
+      typeof window.ppeLocations !== "undefined" &&
+      window.ppeLocations.length > 0
+    ) {
+      acc =
+        userProj === "ALL"
+          ? window.ppeLocations
+          : window.ppeLocations.filter((p) => userProj.includes(p));
+    } else if (initialData && initialData.projects) {
+      acc =
+        userProj === "ALL"
+          ? initialData.projects
+          : initialData.projects.filter((p) => userProj.includes(p));
+    }
+    acc.forEach((p) => projSelect.add(new Option(p, p)));
+  }
+
+  window.loadManageVehicles();
+};
+
+window.loadManageVehicles = async function () {
+  const container = document.getElementById("manage-veh-results");
+  const projFilter = document.getElementById("manage-veh-project").value;
+
+  container.innerHTML =
+    '<div class="loader-small">جاري جلب بيانات السيارات...</div>';
+
+  try {
+    const r = await callApi("getAllVehicles", { userInfo: currentUser });
+    if (r.status === "success") {
+      // فلترة حسب المشروع المختار
+      if (projFilter !== "ALL_ACCESSIBLE") {
+        window.allVehiclesData = r.vehicles.filter(
+          (v) => v.project === projFilter,
+        );
+      } else {
+        window.allVehiclesData = r.vehicles;
+      }
+      window.renderManageVehicles(window.allVehiclesData);
+    } else {
+      container.innerHTML = `<p class="error-message">${r.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">خطأ: ${e.message}</p>`;
+  }
+};
+
+// حساب الأيام المتبقية وحالة الرخصة
+function checkLicenseStatus(dateStr) {
+  if (!dateStr || dateStr === "-")
+    return { status: "unknown", days: 0, text: "-", badge: "bg-secondary" };
+
+  const expDate = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = expDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0)
+    return {
+      status: "expired",
+      days: diffDays,
+      text: "منتهية",
+      badge: "bg-danger",
+    };
+  if (diffDays <= 30)
+    return {
+      status: "warning",
+      days: diffDays,
+      text: `تنتهي خلال ${diffDays} يوم`,
+      badge: "bg-warning",
+    };
+  return {
+    status: "valid",
+    days: diffDays,
+    text: "سارية",
+    badge: "bg-success",
+  };
+}
+
+window.renderManageVehicles = function (data) {
+  const container = document.getElementById("manage-veh-results");
+  document.getElementById("veh-alerts-dashboard").style.display = "grid";
+
+  let total = data.length;
+  let warning = 0;
+  let danger = 0;
+
+  if (total === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; padding:20px;">لا توجد سيارات مسجلة.</p>';
+    document.getElementById("veh-count-total").textContent = "0";
+    document.getElementById("veh-count-warning").textContent = "0";
+    document.getElementById("veh-count-danger").textContent = "0";
+    return;
+  }
+
+  let html = `<table class="results-table" style="font-size:0.85rem;">
+      <thead>
+          <tr>
+              <th>رقم اللوحة</th>
+              <th>المشروع والمقاول</th>
+              <th>السائق</th>
+              <th>رخصة السيارة</th>
+              <th>رخصة السائق</th>
+              <th style="text-align:center;">إجراءات وتفاصيل</th>
+          </tr>
+      </thead>
+      <tbody>`;
+
+  data.forEach((v) => {
+    const vehLic = checkLicenseStatus(v.vehLicExp);
+    const drvLic = checkLicenseStatus(v.drvLicExp);
+
+    if (vehLic.status === "expired" || drvLic.status === "expired") danger++;
+    else if (vehLic.status === "warning" || drvLic.status === "warning")
+      warning++;
+
+    html += `<tr>
+          <td style="font-weight:bold; font-size:1.1em; color:#0056b3;">${v.plate}</td>
+          <td><strong>${v.project}</strong><br><small style="color:#666;">${v.contractor}</small></td>
+          <td><strong>${v.driver}</strong><br><small style="color:#666;">${v.driverNid}</small></td>
+          <td>
+              ${v.vehLicExp}<br>
+              <span class="badge ${vehLic.badge}" style="font-size:0.7em;">${vehLic.text}</span>
+          </td>
+          <td>
+              ${v.drvLicExp}<br>
+              <span class="badge ${drvLic.badge}" style="font-size:0.7em;">${drvLic.text}</span>
+          </td>
+          <td style="text-align:center;">
+              <div style="display:flex; justify-content:center; gap:5px; margin-bottom:5px;">
+                  <button class="btn-small btn-secondary" onclick="window.viewVehicleGPS('${v.id}')" style="background:#17a2b8; border:none; color:white;" title="بيانات الـ GPS">
+                      <i class="fas fa-map-marker-alt"></i> GPS
+                  </button>
+                  <button class="btn-small btn-secondary" onclick="window.viewVehicleInspections('${v.plate}')" style="background:#28a745; border:none; color:white;" title="سجل الفحوصات">
+                      <i class="fas fa-clipboard-check"></i> الفحوصات
+                  </button>
+              </div>
+              <div style="display:flex; justify-content:center; gap:5px;">
+                  <button class="btn-small btn-secondary" onclick="window.openEditVehicle('${v.id}')" style="background:#ffc107; border:none; color:#000;" title="تعديل البيانات">
+                      <i class="fas fa-edit"></i> تعديل
+                  </button>
+                  <button class="btn-small btn-danger" onclick="window.deleteVehicle('${v.id}', '${v.plate}')" title="مسح من الموقع">
+                      <i class="fas fa-trash-alt"></i> إزالة
+                  </button>
+              </div>
+          </td>
+      </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+
+  // تحديث لوحة التنبيهات
+  document.getElementById("veh-count-total").textContent = total;
+  document.getElementById("veh-count-warning").textContent = warning;
+  document.getElementById("veh-count-danger").textContent = danger;
+};
+
+// --- دوال عرض النوافذ المنبثقة الجديدة ---
+
+window.viewVehicleGPS = function (id) {
+  const veh = window.allVehiclesData.find((v) => v.id === id);
+  if (!veh) return;
+
+  document.getElementById("gps-plate-display").textContent = veh.plate;
+  document.getElementById("gps-app-display").textContent =
+    veh.gpsApp || "غير مسجل";
+  document.getElementById("gps-user-display").textContent =
+    veh.gpsUser || "غير مسجل";
+  document.getElementById("gps-pass-display").textContent =
+    veh.gpsPass || "غير مسجل";
+
+  document.getElementById("gps-veh-modal").style.display = "flex";
+};
+
+window.viewVehicleInspections = async function (plate) {
+  const modal = document.getElementById("insp-history-modal");
+  const container = document.getElementById("insp-history-results");
+
+  document.getElementById("insp-history-plate").textContent = plate;
+  modal.style.display = "flex";
+  container.innerHTML =
+    '<div class="loader-small">جاري جلب السجل التفصيلي للفحوصات...</div>';
+
+  try {
+    const r = await callApi("getVehicleInspections", { plate: plate });
+    if (r.status === "success") {
+      if (r.data.length === 0) {
+        container.innerHTML =
+          '<p style="text-align:center; padding:20px; color:#666;">لم يتم إجراء أي فحوصات لهذه السيارة حتى الآن.</p>';
+      } else {
+        let html = `<div style="display: flex; flex-direction: column; gap: 15px;">`;
+
+        r.data.forEach((insp, inspIndex) => {
+          // توليد الـ 26 نقطة
+          let checklistHtml = "";
+          if (typeof vehicleChecklistItems !== "undefined") {
+            vehicleChecklistItems.forEach((item, idx) => {
+              const qKey = `Q${idx + 1}`;
+              const score = insp.checklist[qKey] || "-";
+
+              let badgeColor = "#6c757d";
+              let scoreLabel = score;
+              if (score === "S") {
+                badgeColor = "#28a745";
+                scoreLabel = "تحقق (S)";
+              } else if (score === "U") {
+                badgeColor = "#dc3545";
+                scoreLabel = "غير متحقق (U)";
+              } else if (score === "NA") {
+                badgeColor = "#6c757d";
+                scoreLabel = "غير مطلوب";
+              }
+
+              const arText = item.split(" - ")[0]; // نأخذ الجزء العربي فقط للاختصار
+
+              checklistHtml += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 8px 0;">
+                                <span style="flex: 1; padding-left: 10px; font-size: 0.85rem; color:#333;">${idx + 1}. ${arText}</span>
+                                <span class="badge" style="background-color: ${badgeColor}; color: white; padding: 4px 8px; font-size: 0.75rem;">${scoreLabel}</span>
+                            </div>`;
+            });
+          }
+
+          // كارت الفحص الواحد (أكورديون)
+          // أول كارت نخليه مفتوح تلقائي، والباقي مقفول
+          const isFirst = inspIndex === 0;
+          const displayStyle = isFirst ? "block" : "none";
+          const iconClass = isFirst ? "fa-chevron-up" : "fa-chevron-down";
+
+          html += `
+                    <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <div style="background: #f8f9fa; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;" 
+                             onclick="const details = this.nextElementSibling; const icon = this.querySelector('.toggle-icon'); if(details.style.display === 'none'){ details.style.display = 'block'; icon.classList.replace('fa-chevron-down', 'fa-chevron-up'); } else { details.style.display = 'none'; icon.classList.replace('fa-chevron-up', 'fa-chevron-down'); }">
+                            <div>
+                                <strong style="color: #2C2A29; font-size: 1.1rem;">تاريخ الفحص: ${insp.date}</strong> <br>
+                                <small style="color: #0056b3;"><i class="fas fa-user-shield"></i> المفتش: ${insp.inspector}</small>
+                            </div>
+                            <div style="color: #666; font-weight: bold; font-size: 0.9rem;">
+                                عرض التفاصيل <i class="fas ${iconClass} toggle-icon" style="margin-right: 5px;"></i>
+                            </div>
+                        </div>
+
+                        <div style="display: ${displayStyle}; padding: 15px;">
+                            <div style="margin-bottom: 15px; background: #fff3cd; padding: 12px; border-right: 4px solid #ffc107; border-radius: 4px;">
+                                <p style="margin: 0 0 8px 0; color: #333; line-height: 1.5;"><strong><i class="fas fa-comment-dots"></i> الملاحظات:</strong><br> ${insp.comments}</p>
+                                <p style="margin: 0; color: #dc3545; font-weight: bold;">
+                                    <i class="fas fa-calendar-times"></i> تاريخ الهدف للإصلاح: ${insp.targetDate && insp.targetDate !== "-" ? insp.targetDate : "غير محدد"}
+                                </p>
+                            </div>
+
+                            <h4 style="margin-bottom: 10px; color: #17a2b8; border-bottom: 2px dashed #eee; padding-bottom: 5px;">
+                                <i class="fas fa-list-ul"></i> تفاصيل الـ 26 بند:
+                            </h4>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0 20px;">
+                               ${checklistHtml}
+                            </div>
+                        </div>
+                    </div>`;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+      }
+    } else {
+      container.innerHTML = `<p class="error-message">${r.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">حدث خطأ: ${e.message}</p>`;
+  }
+};
+
+window.filterManageVehicles = function () {
+  const query = document
+    .getElementById("manage-veh-search")
+    .value.toLowerCase();
+  const filtered = window.allVehiclesData.filter(
+    (v) =>
+      v.plate.toLowerCase().includes(query) ||
+      v.driver.toLowerCase().includes(query) ||
+      v.contractor.toLowerCase().includes(query),
+  );
+  window.renderManageVehicles(filtered);
+};
+
+// --- التعديل والمسح ---
+window.openEditVehicle = function (id) {
+  const veh = window.allVehiclesData.find((v) => v.id === id);
+  if (!veh) return;
+
+  document.getElementById("e-veh-id").value = veh.id;
+  document.getElementById("e-veh-plate").value = veh.plate;
+  document.getElementById("e-veh-type").value = veh.type;
+
+  // تحويل صيغة التاريخ لـ YYYY-MM-DD عشان الـ input date يقرأها
+  try {
+    document.getElementById("e-veh-lic-exp").value = new Date(
+      veh.vehLicExp.split("/").reverse().join("-"),
+    )
+      .toISOString()
+      .split("T")[0];
+    document.getElementById("e-drv-lic-exp").value = new Date(
+      veh.drvLicExp.split("/").reverse().join("-"),
+    )
+      .toISOString()
+      .split("T")[0];
+  } catch (e) {}
+
+  document.getElementById("e-drv-name").value = veh.driver;
+  document.getElementById("e-drv-nid").value = veh.driverNid;
+
+  document.getElementById("edit-veh-modal").style.display = "flex";
+};
+
+// حفظ التعديلات
+const eVehForm = document.getElementById("edit-veh-form");
+if (eVehForm) {
+  eVehForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("e-veh-save-btn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    const data = {
+      id: document.getElementById("e-veh-id").value,
+      plate: document.getElementById("e-veh-plate").value,
+      type: document.getElementById("e-veh-type").value,
+      vehLicExp: document.getElementById("e-veh-lic-exp").value,
+      drvLicExp: document.getElementById("e-drv-lic-exp").value,
+      driverName: document.getElementById("e-drv-name").value,
+      driverNid: document.getElementById("e-drv-nid").value,
+    };
+
+    try {
+      const r = await callApi("updateVehicleData", {
+        vehData: data,
+        userInfo: currentUser,
+      });
+      alert(r.message);
+      document.getElementById("edit-veh-modal").style.display = "none";
+      window.loadManageVehicles(); // ريفريش الجدول
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "حفظ التعديلات";
+    }
+  });
+}
+
+// مسح السيارة
+window.deleteVehicle = async function (id, plate) {
+  if (
+    !confirm(
+      `هل أنت متأكد من إزالة السيارة رقم (${plate}) نهائياً من الموقع؟\n(هذا الإجراء لا يمكن التراجع عنه)`,
+    )
+  )
+    return;
+
+  window.showLoader("جاري إزالة السيارة...");
+  try {
+    const r = await callApi("deleteVehicleRecord", {
+      vehId: id,
+      userInfo: currentUser,
+    });
+    alert(r.message);
+    window.loadManageVehicles(); // ريفريش الجدول
+  } catch (e) {
+    alert(e.message);
   } finally {
     window.hideLoader();
   }

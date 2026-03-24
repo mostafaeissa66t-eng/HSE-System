@@ -2316,6 +2316,8 @@ body {
     border-bottom: 1px solid #eee;
     padding-bottom: 5px;
 }
+
+
 /* ========================================= */
 /* --- إصلاح جدول المقاولين في التقرير اليومي (للموبايل) --- */
 /* ========================================= */
@@ -2343,4 +2345,98 @@ body {
     font-size: 0.8rem !important;
     width: auto !important;
     height: auto !important;
+}
+
+/* ========================================= */
+/* تصميم كروت الفحص (Mobile Friendly) */
+/* ========================================= */
+.inspection-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.insp-item-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.insp-item-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #2C2A29;
+    margin-bottom: 12px;
+    line-height: 1.5;
+    border-bottom: 1px dashed #ccc;
+    padding-bottom: 10px;
+}
+
+.insp-item-title span.badge-num {
+    background: #C8102E;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+}
+
+/* تنسيق خيارات الـ Radio كزراير */
+.insp-options-group {
+    display: flex;
+    gap: 10px;
+}
+
+.insp-opt-label {
+    flex: 1;
+    cursor: pointer;
+    margin: 0;
+}
+
+.insp-opt-label input[type="radio"] {
+    display: none; /* إخفاء النقطة الدائرية الافتراضية */
+}
+
+.insp-opt-btn {
+    display: block;
+    text-align: center;
+    padding: 10px 5px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: #555;
+    background: #fff;
+    transition: all 0.2s ease-in-out;
+}
+
+/* لما المستخدم يختار الـ Radio Button، نغير لون الـ Div اللي بعده */
+/* (S) Satisfactory -> أخضر */
+.insp-opt-label input[value="S"]:checked + .insp-opt-btn {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: #fff;
+}
+
+/* (U) Unsatisfactory -> أحمر */
+.insp-opt-label input[value="U"]:checked + .insp-opt-btn {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+
+/* (NA) Not Applicable -> رصاصي */
+.insp-opt-label input[value="NA"]:checked + .insp-opt-btn {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+}
+
+/* تأثير عند المرور بالماوس */
+.insp-opt-label:hover .insp-opt-btn {
+    background-color: #f1f1f1;
+}
+.insp-opt-label input:checked + .insp-opt-btn:hover {
+    filter: brightness(0.9);
 }

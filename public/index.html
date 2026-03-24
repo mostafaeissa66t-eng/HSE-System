@@ -4896,6 +4896,744 @@
                         </div>
                     </div>
                 </div>
+                <section
+                    id="VehicleRegistration"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-truck-pickup"></i> تسجيل سيارة جديدة
+                        بالموقع
+                    </h2>
+                    <form id="vehicle-form" class="app-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="required">التاريخ:</label>
+                                <input type="date" id="veh-date" required />
+                            </div>
+                            <div class="form-group">
+                                <label class="required">الوقت:</label>
+                                <input type="time" id="veh-time" required />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="required">المشروع:</label>
+                                <select
+                                    id="veh-project"
+                                    required
+                                    onchange="window.updateVehContractors()"
+                                ></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="required">ملكية السيارة:</label>
+                                <select
+                                    id="veh-owner-type"
+                                    required
+                                    onchange="window.toggleVehOwner()"
+                                >
+                                    <option value="مقاول">مقاول باطن</option>
+                                    <option value="السويدي">
+                                        شركة السويدي (موظف)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row" id="veh-cont-group">
+                            <div class="form-group">
+                                <label class="required"
+                                    >المقاول (الشركة):</label
+                                >
+                                <select id="veh-contractor" required></select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group" style="position: relative">
+                                <label class="required"
+                                    >الرقم القومي / كود الموظف:</label
+                                >
+                                <div style="display: flex; gap: 10px">
+                                    <input
+                                        type="text"
+                                        id="veh-driver-nid"
+                                        required
+                                        style="flex: 1"
+                                        placeholder="اكتب الرقم القومي وافحص..."
+                                    />
+                                    <button
+                                        type="button"
+                                        id="veh-nid-search-btn"
+                                        class="btn-secondary"
+                                        style="
+                                            display: block;
+                                            padding: 10px;
+                                            border: none;
+                                            background: #17a2b8;
+                                            color: white;
+                                            border-radius: 4px;
+                                            font-weight: bold;
+                                            cursor: pointer;
+                                        "
+                                        onclick="window.searchVehDriverNid()"
+                                    >
+                                        <i class="fas fa-search"></i> فحص
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="position: relative">
+                                <label class="required">اسم السائق:</label>
+                                <div style="display: flex; gap: 10px">
+                                    <input
+                                        type="text"
+                                        id="veh-driver-name"
+                                        required
+                                        style="
+                                            flex: 1;
+                                            background-color: #f0f0f0;
+                                        "
+                                        placeholder="افحص الرقم أو اختر من القائمة"
+                                        readonly
+                                    />
+
+                                    <button
+                                        type="button"
+                                        id="veh-emp-btn"
+                                        class="btn-secondary"
+                                        style="
+                                            display: none;
+                                            padding: 10px;
+                                            border: none;
+                                            background: #007bff;
+                                            color: white;
+                                            border-radius: 4px;
+                                            font-weight: bold;
+                                            cursor: pointer;
+                                        "
+                                        onclick="window.openVehEmpSelector()"
+                                    >
+                                        <i class="fas fa-user-tie"></i> الموظفين
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        id="veh-worker-btn"
+                                        class="btn-secondary"
+                                        style="
+                                            display: block;
+                                            padding: 10px;
+                                            border: none;
+                                            background: #ff9800;
+                                            color: white;
+                                            border-radius: 4px;
+                                            font-weight: bold;
+                                            cursor: pointer;
+                                        "
+                                        onclick="window.openVehWorkerSelector()"
+                                    >
+                                        <i class="fas fa-users"></i> العمال
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="required">رقم اللوحة:</label>
+                                <input
+                                    type="text"
+                                    id="veh-number"
+                                    required
+                                    placeholder="مثال: أ ب ج 1234"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="required">نوع السيارة:</label>
+                                <select id="veh-type" required>
+                                    <option value="">-- اختر --</option>
+                                    <option value="ملاكي">ملاكي (Sedan)</option>
+                                    <option value="ربع نقل">
+                                        ربع نقل (Pickup 4x4 / 4x2)
+                                    </option>
+                                    <option value="نصف نقل">نصف نقل</option>
+                                    <option value="ميكروباص">ميكروباص</option>
+                                    <option value="مينى باص">ميني باص</option>
+                                    <option value="باص">أتوبيس كبير</option>
+                                    <option value="أخرى">أخرى</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="required"
+                                    >الموديل (الماركة وسنة الصنع):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="veh-model"
+                                    required
+                                    placeholder="مثال: تويوتا هايلوكس 2022"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="required"
+                                    >تاريخ انتهاء رخصة السيارة:</label
+                                >
+                                <input
+                                    type="date"
+                                    id="veh-license-exp"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="required"
+                                    >تاريخ انتهاء رخصة السائق:</label
+                                >
+                                <input
+                                    type="date"
+                                    id="veh-driver-exp"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>تطبيق التتبع (GPS Provider):</label>
+                                <input
+                                    type="text"
+                                    id="veh-gps-app"
+                                    placeholder="مثال: Track solid, GPS Tracking..."
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>اسم المستخدم (GPS User):</label>
+                                <input type="text" id="veh-gps-user" />
+                            </div>
+                            <div class="form-group">
+                                <label>كلمة المرور (GPS Password):</label>
+                                <input type="text" id="veh-gps-pass" />
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="veh-save-btn"
+                            class="btn btn-primary"
+                            style="width: 100%; margin-top: 15px"
+                        >
+                            <i class="fas fa-save"></i> حفظ بيانات السيارة
+                        </button>
+                        <p
+                            id="veh-save-msg"
+                            class="success-message"
+                            style="display: none"
+                        ></p>
+                    </form>
+                </section>
+                <section
+                    id="VehicleInspection"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-clipboard-check"></i> الفحص الشهري
+                        للسيارات (Light Vehicles Checklist)
+                    </h2>
+
+                    <form id="veh-insp-form" class="app-form">
+                        <div class="card">
+                            <h3><i class="fas fa-search"></i> تحديد السيارة</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="required">المشروع:</label>
+                                    <select
+                                        id="v-insp-project"
+                                        required
+                                        onchange="window.updateInspectionVehicles()"
+                                    ></select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="required"
+                                        >اختر السيارة (اللوحة - السائق):</label
+                                    >
+                                    <select
+                                        id="v-insp-plate"
+                                        required
+                                        onchange="window.autoFillVehicleDetails()"
+                                        disabled
+                                    >
+                                        <option value="">
+                                            -- اختر المشروع أولاً --
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- بيانات للعرض فقط بعد الاختيار -->
+                            <div
+                                class="form-row"
+                                style="
+                                    background: #f8f9fa;
+                                    padding: 10px;
+                                    border-radius: 5px;
+                                    margin-top: 10px;
+                                "
+                            >
+                                <div class="form-group">
+                                    <label>المقاول:</label
+                                    ><input
+                                        type="text"
+                                        id="v-insp-cont"
+                                        readonly
+                                        style="
+                                            border: none;
+                                            background: transparent;
+                                            font-weight: bold;
+                                            color: #c8102e;
+                                        "
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>نوع السيارة:</label
+                                    ><input
+                                        type="text"
+                                        id="v-insp-type"
+                                        readonly
+                                        style="
+                                            border: none;
+                                            background: transparent;
+                                            font-weight: bold;
+                                            color: #0056b3;
+                                        "
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>السائق:</label
+                                    ><input
+                                        type="text"
+                                        id="v-insp-driver"
+                                        readonly
+                                        style="
+                                            border: none;
+                                            background: transparent;
+                                            font-weight: bold;
+                                        "
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- استبدل قسم الجدول بالكامل بهذا الكود -->
+                        <div class="card">
+                            <h3>
+                                <i class="fas fa-tasks"></i> عناصر الفحص (26
+                                نقطة)
+                            </h3>
+                            <p
+                                style="
+                                    font-size: 0.85rem;
+                                    color: #666;
+                                    margin-bottom: 15px;
+                                "
+                            >
+                                (يرجى تقييم جميع العناصر أدناه)
+                            </p>
+
+                            <!-- الحاوية الجديدة اللي هنرسم جواها الكروت -->
+                            <div
+                                id="v-insp-cards-container"
+                                class="inspection-cards-grid"
+                            >
+                                <!-- سيتم توليد الـ 26 سؤال هنا برمجياً -->
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>
+                                <i class="fas fa-comments"></i> ملاحظات وخطة
+                                الإجراءات (Comments & Targets)
+                            </h3>
+                            <div class="form-group">
+                                <label>ملاحظات إضافية:</label>
+                                <textarea
+                                    id="v-insp-comments"
+                                    rows="3"
+                                    placeholder="اكتب ملاحظاتك هنا..."
+                                ></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label
+                                        >تاريخ الهدف للإصلاح (Target
+                                        Date):</label
+                                    >
+                                    <input
+                                        type="date"
+                                        id="v-insp-target-date"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="v-insp-save-btn"
+                            class="btn btn-primary"
+                            style="width: 100%; margin-top: 20px"
+                        >
+                            <i class="fas fa-save"></i> اعتماد وحفظ الفحص
+                        </button>
+                        <p
+                            id="v-insp-save-msg"
+                            class="success-message"
+                            style="display: none"
+                        ></p>
+                    </form>
+                </section>
+                <section
+                    id="ManageVehicles"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-car-side"></i> إدارة ومتابعة السيارات
+                    </h2>
+
+                    <div class="app-form">
+                        <div
+                            id="veh-alerts-dashboard"
+                            class="stats-grid"
+                            style="margin-bottom: 20px; display: none"
+                        >
+                            <div
+                                class="stat-card"
+                                style="border-right: 4px solid #007bff"
+                            >
+                                <i
+                                    class="fas fa-car"
+                                    style="color: #007bff"
+                                ></i>
+                                <div class="stat-info">
+                                    <span class="stat-label"
+                                        >إجمالي السيارات</span
+                                    >
+                                    <span
+                                        id="veh-count-total"
+                                        class="stat-value"
+                                        style="color: #007bff"
+                                        >0</span
+                                    >
+                                </div>
+                            </div>
+                            <div
+                                class="stat-card"
+                                style="border-right: 4px solid #ffc107"
+                            >
+                                <i
+                                    class="fas fa-exclamation-triangle"
+                                    style="color: #ffc107"
+                                ></i>
+                                <div class="stat-info">
+                                    <span class="stat-label"
+                                        >رخص تنتهي قريباً (أقل من 30 يوم)</span
+                                    >
+                                    <span
+                                        id="veh-count-warning"
+                                        class="stat-value"
+                                        style="color: #ffc107"
+                                        >0</span
+                                    >
+                                </div>
+                            </div>
+                            <div
+                                class="stat-card"
+                                style="border-right: 4px solid #dc3545"
+                            >
+                                <i
+                                    class="fas fa-times-circle"
+                                    style="color: #dc3545"
+                                ></i>
+                                <div class="stat-info">
+                                    <span class="stat-label">رخص منتهية</span>
+                                    <span
+                                        id="veh-count-danger"
+                                        class="stat-value"
+                                        style="color: #dc3545"
+                                        >0</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select
+                                    id="manage-veh-project"
+                                    onchange="window.loadManageVehicles()"
+                                >
+                                    <option value="ALL_ACCESSIBLE">
+                                        كل المشاريع
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>بحث سريع:</label>
+                                <input
+                                    type="text"
+                                    id="manage-veh-search"
+                                    placeholder="رقم اللوحة، اسم السائق، أو المقاول..."
+                                    oninput="window.filterManageVehicles()"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                class="btn"
+                                onclick="window.loadManageVehicles()"
+                            >
+                                <i class="fas fa-sync"></i> تحديث
+                            </button>
+                        </div>
+
+                        <div
+                            id="manage-veh-results"
+                            class="results-table-container"
+                        >
+                            <p style="text-align: center; padding: 20px">
+                                جاري التحميل...
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        id="edit-veh-modal"
+                        class="modal"
+                        style="display: none"
+                        onclick="if(event.target == this) this.style.display='none'"
+                    >
+                        <div
+                            class="modal-content"
+                            style="max-width: 800px; width: 95%"
+                        >
+                            <span
+                                class="close"
+                                onclick="document.getElementById('edit-veh-modal').style.display='none'"
+                                >&times;</span
+                            >
+                            <h3
+                                style="
+                                    color: var(--primary-color);
+                                    border-bottom: 2px solid #eee;
+                                    padding-bottom: 10px;
+                                "
+                            >
+                                <i class="fas fa-edit"></i> تعديل بيانات السيارة
+                            </h3>
+                            <form id="edit-veh-form" style="margin-top: 15px">
+                                <input type="hidden" id="e-veh-id" />
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>رقم اللوحة:</label>
+                                        <input
+                                            type="text"
+                                            id="e-veh-plate"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>نوع السيارة:</label>
+                                        <input
+                                            type="text"
+                                            id="e-veh-type"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label
+                                            >تاريخ انتهاء رخصة السيارة:</label
+                                        >
+                                        <input
+                                            type="date"
+                                            id="e-veh-lic-exp"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>تاريخ انتهاء رخصة السائق:</label>
+                                        <input
+                                            type="date"
+                                            id="e-drv-lic-exp"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>اسم السائق:</label>
+                                        <input
+                                            type="text"
+                                            id="e-drv-name"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>الرقم القومي للسائق:</label>
+                                        <input
+                                            type="text"
+                                            id="e-drv-nid"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary"
+                                    style="width: 100%; margin-top: 15px"
+                                    id="e-veh-save-btn"
+                                >
+                                    حفظ التعديلات
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <div
+                        id="gps-veh-modal"
+                        class="modal"
+                        style="display: none"
+                        onclick="if(event.target == this) this.style.display='none'"
+                    >
+                        <div
+                            class="modal-content"
+                            style="
+                                max-width: 400px;
+                                width: 95%;
+                                text-align: center;
+                            "
+                        >
+                            <span
+                                class="close"
+                                onclick="document.getElementById('gps-veh-modal').style.display='none'"
+                                >&times;</span
+                            >
+                            <h3
+                                style="
+                                    color: #17a2b8;
+                                    border-bottom: 2px solid #eee;
+                                    padding-bottom: 10px;
+                                "
+                            >
+                                <i class="fas fa-map-marker-alt"></i> بيانات
+                                التتبع (GPS)
+                            </h3>
+                            <div
+                                style="
+                                    background: #f8f9fa;
+                                    padding: 20px;
+                                    border-radius: 8px;
+                                    margin-top: 15px;
+                                    text-align: right;
+                                "
+                            >
+                                <p
+                                    style="
+                                        font-size: 1.1rem;
+                                        margin-bottom: 10px;
+                                    "
+                                >
+                                    <strong>السيارة:</strong>
+                                    <span
+                                        id="gps-plate-display"
+                                        style="color: #c8102e"
+                                    ></span>
+                                </p>
+                                <p>
+                                    <strong
+                                        ><i class="fas fa-mobile-alt"></i>
+                                        التطبيق (App):</strong
+                                    >
+                                    <span id="gps-app-display"></span>
+                                </p>
+                                <p>
+                                    <strong
+                                        ><i class="fas fa-user"></i> اسم
+                                        المستخدم:</strong
+                                    >
+                                    <span id="gps-user-display"></span>
+                                </p>
+                                <p>
+                                    <strong
+                                        ><i class="fas fa-lock"></i> كلمة
+                                        المرور:</strong
+                                    >
+                                    <span id="gps-pass-display"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        id="insp-history-modal"
+                        class="modal"
+                        style="display: none"
+                        onclick="if(event.target == this) this.style.display='none'"
+                    >
+                        <div
+                            class="modal-content"
+                            style="max-width: 800px; width: 95%"
+                        >
+                            <span
+                                class="close"
+                                onclick="document.getElementById('insp-history-modal').style.display='none'"
+                                >&times;</span
+                            >
+                            <h3
+                                style="
+                                    color: #28a745;
+                                    border-bottom: 2px solid #eee;
+                                    padding-bottom: 10px;
+                                "
+                            >
+                                <i class="fas fa-clipboard-list"></i> سجل
+                                الفحوصات الدورية
+                            </h3>
+                            <p
+                                style="
+                                    text-align: right;
+                                    font-weight: bold;
+                                    margin-top: 10px;
+                                "
+                            >
+                                رقم اللوحة:
+                                <span
+                                    id="insp-history-plate"
+                                    style="color: #c8102e"
+                                ></span>
+                            </p>
+
+                            <div
+                                id="insp-history-results"
+                                class="results-table-container"
+                                style="
+                                    margin-top: 15px;
+                                    max-height: 60vh;
+                                    overflow-y: auto;
+                                "
+                            >
+                                <p style="text-align: center">
+                                    جاري التحميل...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
                 <div
                     id="attendees-modal"

@@ -316,6 +316,9 @@ document.addEventListener("DOMContentLoaded", function () {
     VehicleRegistration: "fas fa-truck-pickup",
     VehicleInspection: "fas fa-clipboard-check",
     ManageVehicles: "fas fa-car-side",
+    NewEquipment: "fas fa-snowplow",
+    EquipmentInspection: "fas fa-clipboard-check",
+    ManageEquipment: "fas fa-toolbox",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -352,6 +355,9 @@ document.addEventListener("DOMContentLoaded", function () {
     VehicleRegistration: "تسجيل السيارات",
     VehicleInspection: "فحص السيارات",
     ManageVehicles: "إدارة ومتابعة السيارات",
+    NewEquipment: "تسجيل معدة",
+    EquipmentInspection: "فحص المعدات",
+    ManageEquipment: "إدارة ومتابعة المعدات",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -372,7 +378,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type: "group",
       title: "الملاحظات",
       icon: "fas fa-eye",
-      children: ["NewObservation", "MyObservations", "MonitorObservations"], // أضفناها هنا
+      children: ["NewObservation", "MyObservations", "MonitorObservations"], // أفناها هنا
     },
 
     // 4. مجموعة الهازارد (قائمة منسدلة - تحتها 2)
@@ -417,6 +423,12 @@ document.addEventListener("DOMContentLoaded", function () {
       title: "إدارة السيارات",
       icon: "fas fa-truck-pickup",
       children: ["VehicleRegistration", "VehicleInspection", "ManageVehicles"],
+    },
+    {
+      type: "group",
+      title: "إدارة المعدات",
+      icon: "fas fa-snowplow",
+      children: ["NewEquipment", "EquipmentInspection", "ManageEquipment"],
     },
     // 8. أخرى (رابط مباشر)
     { type: "link", id: "NewNearMiss" },
@@ -750,11 +762,11 @@ document.addEventListener("DOMContentLoaded", function () {
     parentContainer.appendChild(li);
   }
 
-  // دالة مساعدة لإنشاء قائe�ة منسدلة
+  // دالة مساعدة لإنشاء قائة منسدلة
   function createGroupMenu(title, iconClass, childrenIds, parentContainer) {
     const li = document.createElement("li");
 
-    // 1. رأس n�لقائمة (العنوان)
+    // 1. رأس لقائمة (العنوان)
     const aToggle = document.createElement("a");
     aToggle.href = "#";
     aToggle.className = "menu-toggle";
@@ -812,8 +824,8 @@ document.addEventListener("DOMContentLoaded", function () {
       target.style.display = "block";
       if (sectionId === "NewPermit") resetPermitForm();
       if (sectionId === "NewObservation") {
-        // resetObservationForm(); // <-- امسح القديمة دي لو موجودة
-        initObservationPage(); // <-- واستe�دم الجديدة دي
+        // resetObservationForm(); // <-- امسح القيمة دي لو موجودة
+        initObservationPage(); // <-- واستدم الجديدة د
       }
       if (sectionId === "MyObservations") loadMyOpenObservations();
       if (sectionId === "ClosePermit") loadOpenPermits();
@@ -833,7 +845,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "NewTraining") {
         initTrainingPage();
       }
-      // -�ضف الكود هنا
+      // ضف الكود هنا
       if (sectionId === "TrainingLog") {
         initTrainingLogPage();
       }
@@ -849,7 +861,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "ContractorEvaluation") initContractorEvalPage();
       if (sectionId === "NewNcrViolation") {
         initNcrPage(); // تشغيل الـ NCR
-        initViolationPage(); // (n�هم) تشغيل المخالفات <-- ده اللي هينشط الكود الرمادي
+        initViolationPage(); // (nهم) تشغيل المخالفات <-- ده اللي هينشط الكود الرمادي
       }
       if (sectionId === "MyNCRs") loadMyOpenNCRs();
       if (sectionId === "MonitorNcrViolations")
@@ -878,6 +890,10 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "VehicleInspection") window.initVehicleInspectionPage();
       if (sectionId === "VehicleRegistration") window.initVehiclePage();
       if (sectionId === "UserTracking") window.initUserTrackingPage();
+      if (sectionId === "ManageEquipment") window.initManageEquipmentPage();
+      if (sectionId === "NewEquipment") window.initNewEquipmentPage();
+      if (sectionId === "EquipmentInspection")
+        window.initEquipmentInspectionPage();
       if (sectionId === "MonitorDailyReports")
         window.initMonitorDailyReportsPage();
     } else {
@@ -965,8 +981,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const now = new Date();
     const currentHour = now.getHours();
 
-    // الشرط: لو الساعة .�كبر من أو تساوي 8 (يعني من 8:00 وأنت طالع)
-    // يمكنك تعديل ا ���شرط لو عايزها بعد 8:30 مثلاً
+    // الشرط: لو الساعة كبر من أو تساوي 8 (يعني من 8:00 وأنت طالع)
+    // يمكنك تعديل ا شرط لو عايزها بعد 8:30 مثلاً
     if (currentHour >= 8) {
       delayGroup.style.display = "block";
       delayReason.required = true; // اجباري
@@ -1016,7 +1032,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!currentUser) return;
 
-      // 2. تجميع البيانات (باستخدام ?.value لمنع الأخطاء لو العنصر مش موجود)
+      // 2. تجميع البيانات (باستخدام ?.value لمنع الأخطاء لو العنصر مش oوجود)
       const d = {
         projectName: document.getElementById("permit-project")?.value,
         permitDate: document.getElementById("permit-date")?.value,
@@ -1068,7 +1084,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      // 5. الإرسال للسيa�فر
+      // 5. الإرسال للسيaفر
       try {
         const r = await callApi("savePermit", {
           permitObject: d,
@@ -1088,7 +1104,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // تصفير الفورم
     resetPermitForm();
 
-    // الت(�كد من إخفاء المقاول
+    // التكد من إخفاء المقاول
     const subcontractorGroup = document.getElementById(
       "permit-subcontractor-group",
     );
@@ -1684,7 +1700,7 @@ document.addEventListener("DOMContentLoaded", function () {
     updatePpeCartUI();
 
     try {
-      // نستخدم البيانات المحملة مسبقاً إذا وجدت، أو نحم��ها
+      // نستخدم البيانات المحملة مسبقاً إذا وجدت، أو نحمها
       if (typeof ppeLocations === "undefined" || ppeLocations.length === 0) {
         const data = await callApi("getInventoryInitData", {
           userInfo: currentUser,
@@ -1720,7 +1736,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
-   * (مهم) الدالة اللي بتخفي وتظهر الحقول بناءً على نوs� الحركة
+   * (مهم) الدالة اللي بتخفي وتظهر الحقول بناءً على نوs الحركة
    */
   function updatePpeFormUI() {
     const type = ppeTransactionType.value;
@@ -1732,7 +1748,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ppeItemsGroup.style.display = "none";
     ppeSaveBtn.disabled = true;
 
-    // مسs� كل اt�رسائل
+    // مس كل اtرسائل
     showMessage(ppeMainMessage, "", true);
     showMessage(ppeSaveMessage, "", true);
 
@@ -1781,7 +1797,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type === "مقاول" ? "block" : "none";
 
     if (type === "موظف") {
-      // حذفنo� استدعاء updateEmployeeDropdown() لأنه لم يعد هناك قائمة منسدلة
+      // حذفنo استدعاء updateEmployeeDropdown() لأنه لم يعد هناك قائمة منسدلة
       console.log(
         "تم اختيار نوع المستلم: موظف. بانتظار فتح النافذة المنبثقة للاختيار.",
       );
@@ -1941,7 +1957,7 @@ document.addEventListener("DOMContentLoaded", function () {
   async function updatePpeContractorDropdown() {
     const selectedProject = ppeRecipientLocation.value;
 
-    // لو T�فيش مشروع أو النوع مش مقاول، مفيش داعي نحمل
+    // لو Tفيش مشروع أو النوع مش مقاول، مفيش داعي نحمل
     if (!selectedProject || ppeRecipientType.value !== "مقاول") {
       return;
     }
@@ -2004,7 +2020,7 @@ document.addEventListener("DOMContentLoaded", function () {
       } else {
         ppeItemSelect.innerHTML =
           '<option value="">جاري تحميل القائمة الرئيسية...</option>';
-        // محاولة إعادة تحميل الC�يانات لو مش موجودة
+        // محاولة إعادة تحميل اليانات لو مش موجودة
         try {
           const r = await callApi("getInventoryInitData", {
             userInfo: currentUser,
@@ -2050,13 +2066,14 @@ document.addEventListener("DOMContentLoaded", function () {
       // تعبئة القائمة
       populateSelect(ppeItemSelect, availableItems, "id", "name");
 
-      // (إضافة) عرض عدد الأصناف المتاحة في أول خي-�ر كنوع من التأكيد
+      // (إضافة) عرض عدد الأصناف المتاحة في أول خير كنوع من التأكيد
       ppeItemSelect.options[0].text = `-- اختر المهمة (${availableItems.length} صنف متاح) --`;
 
       ppeItemSelect.disabled = false;
     } catch (e) {
       console.error(e);
-      ppeItemSelect.innerHTML = '<option value="">⚠️ خطاء فى الاتصال</option>';
+      ppeItemSelect.innerHTML = ppeItemSelect.innerHTML =
+        '<option value="">⚠️ خطاء فى الاتصال</option>';
       showMessage(
         ppeMainMessage,
         "فشل جلب محتويات المخزن. حاول تغيير المشروع واختياره مرة أخرى.",
@@ -2118,7 +2135,7 @@ document.addEventListener("DOMContentLoaded", function () {
         throw new Error("الرجاء اختيار مهمة وكمية صحيحة.");
       }
 
-      // (*** هذا هو المنطق الجديد  �لتحe�ق من الرصيد ***)
+      // (*** هذا هو المنطق الجديد  لتحق من الرصيد ***)
       // (التحقق من الرصيد مطلوب فقط في "الصرف" و "التحويل")
       if (type === "صرف" || type === "تحويل") {
         let sourceLocation = null;
@@ -2134,7 +2151,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // فحص الرصيد الحالي + ما تم إضافته للسلة
         const existingItem = ppeCart.find((item) => item.id === itemId);
         const qtyInCart = existingItem ? existingItem.qty : 0;
-        const totalQtyNeeded = qty + qtyInCart; // الكمية المطل �بة = (اللي في السلة + اللي هتضيفه)
+        const totalQtyNeeded = qty + qtyInCart; // الكمية المطل بة = (اللي في السلة + اللي هتضيفه)
 
         // استدعاء الـ API للتحقق
         const response = await callApi("checkStockBalance", {
@@ -2184,7 +2201,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (ppeCart.length === 0) {
       ppeCartContainer.innerHTML = "<p>لم يتم إضافة أي مهمات...</p>";
     } else {
-      ppeCartContainer.innerHTML = ""; // ت �ريغ
+      ppeCartContainer.innerHTML = ""; // ت ريغ
       ppeCart.forEach((item, index) => {
         const itemDiv = document.createElement("div");
         itemDiv.className = "ppe-cart-item";
@@ -2202,7 +2219,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    // (جديد) تحد)�ث الرصيد الم=�روض
+    // (جديد) تحدث الرصيد المروض
     const itemId = ppeItemSelect.value;
     const type = ppeTransactionType.value;
     let location = "";
@@ -2474,7 +2491,7 @@ document.addEventListener("DOMContentLoaded", function () {
       true,
     ); // Reset message
 
-    // جلب البيانات الأولية (لو مش موجودة)
+    // جلب البيانات الأولية (لو مش وجودة)
     // (هذه الدالة هتستخدم نفس البيانات اللي جابتها صفحة المخزن)
     if (ppeLocations.length === 0) {
       try {
@@ -2498,7 +2515,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    // (*** فلترة القائمة بناo�ً على صلاحيات المستخدم ***)
+    // (*** فلترة القائمة  على صلاحيات المستخدم ***)
     const userProjects = (currentUser.projects || "").toString().trim();
     let accessibleLocations = [];
 
@@ -2506,7 +2523,7 @@ document.addEventListener("DOMContentLoaded", function () {
       accessibleLocations = ppeLocations; // متاح له كل حاجة
     } else {
       const userProjectList = userProjects.split(",");
-      // فلترة قائمة المخازن بناءB� على صلاحيات المستخدم
+      // فلترة قائمة المخازن بناء على صلاحيات المستخدم
       accessibleLocations = ppeLocations.filter((loc) =>
         userProjectList.includes(loc),
       );
@@ -2554,7 +2571,7 @@ document.addEventListener("DOMContentLoaded", function () {
           printBtn.style.setProperty("display", "inline-flex", "important");
 
           printBtn.onclick = function () {
-            // نأخذ المحتوى الذي تم إنشاؤ؇ داخل حاو(�ة النتائج فقط
+            // نأخذ المحتوى الذي تم إنشاؤ؇ داخل حاوة النتائج فقط
             const tableHtml = stockReportResultsTable.innerHTML;
 
             // استدعاء دالة التوليد الاحترافية (تأكد أنها معرفة في app.js)
@@ -2641,7 +2658,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const trnNotes = document.getElementById("trn-notes");
 
   // Data
-  // --- متغيرات الحالة (تأكد من وجودها في أعلى الملف أو بداية سكشن التدf�يب) ---
+  // --- متغيرات الحالة (تأكد من وجودها في أعلى الملف أو بداية سكشن التديب) ---
   let trainingDataLoaded = false;
 
   async function initTrainingPage() {
@@ -2670,7 +2687,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const r = await callApi("getTrainingInitData", { userInfo: currentUser });
 
       if (r.status === "success") {
-        // (هام جداً) تعبئة المصفوفة العالمية للموظفg�ن ليراها المودال
+        // (هام جداً) تعبئة المصفوفة العالمية للموظفن ليراها المودال
         window.ppeEmployees = r.employees;
 
         // تعبئة المشاريع والمواضيع والمقاولين في القوائم المنسدلة
@@ -2849,7 +2866,7 @@ document.addEventListener("DOMContentLoaded", function () {
       trnContNid.value = "";
       trnContName.value = "";
       trnContName.disabled = false;
-      trnContNid.readOnly = false; // إعادة ا �f�قل قابلاً للكتابة
+      trnContNid.readOnly = false; // إعادة ا fقل قابلاً للكتابة
       trnContNid.style.backgroundColor = "#fff";
     }
   }
@@ -2902,7 +2919,7 @@ document.addEventListener("DOMContentLoaded", function () {
           false,
         );
 
-        // تنبيه إضافي لضمان اD�انتباه
+        // تنبيه إضافي لضمان اانتباه
         alert(
           "تنبيه: الرقم القومى مسجل بالفعل باسم ( " +
             r.name +
@@ -3019,12 +3036,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const monObsBtn = document.getElementById("mon-obs-btn");
   const monObsTable = document.getElementById("mon-obs-table");
 
-  let obsActionsCart = []; // سلة i�لإجراءات
+  let obsActionsCart = []; // سلة iلإجراءات
 
   async function initObservationPage() {
     console.log("بدء تشغيل صفحة الملاحظات...");
 
-    // 1. ضبط التاريخ والاسم (يد=�=�ا-y-� لضمان الشكل الصحيح)
+    // 1. ضبط التاريخ والاسم (يدا- لضمان الشكل الصحيح)
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0"); // شهر 1 يبقى 01
@@ -3091,7 +3108,7 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("resp-elsewedy").checked = true;
     if (typeof toggleObsContractor === "function") toggleObsContractor();
   }
-  // إظهار/إخفاl� المقاول حسب الراديو
+  // إظهار/إخفاl المقاول حسب الراديو
   // إظهار/إخفاء المقاول (تم تصحيح الخطأ الإملائي)
   function toggleObsContractor() {
     let isCont = false;
@@ -3101,7 +3118,7 @@ document.addEventListener("DOMContentLoaded", function () {
       'input[name="obs-resp"]:checked',
     );
 
-    // (تصحيح هام): الكلمة كانت مكتوبة خطأ "مDاول"
+    // (تصحيح هام): الكلمة كانت مكتوبةeأ "مDاول"
     if (checkedRadio && checkedRadio.value === "مقاول") {
       isCont = true;
     }
@@ -3337,7 +3354,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // إظهار لn�در بسh�ط
+    // إظهار لط
     showLoader("جاري إغلاق الملاحظة...");
 
     try {
@@ -3375,7 +3392,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const hazReporterNid = document.getElementById("haz-reporter-nid");
   const hazNidSearchBtn = document.getElementById("haz-nid-search-btn");
   const hazReporterName = document.getElementById("haz-reporter-name");
-  const hazResult = document.getElementById("haz-result"); // o�لقائمة المنسدلة للهازارد
+  const hazResult = document.getElementById("haz-result"); // oلقائمة المنسدلة للهازارد
   const hazActionText = document.getElementById("haz-action-text");
   const hazActionDate = document.getElementById("haz-action-date");
   const hazAddActionBtn = document.getElementById("haz-add-action-btn");
@@ -3408,7 +3425,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const day = String(now.getDate()).padStart(2, "0");
     const dateString = `${year}-${month}-${day}`; // النتيجة: 2025-11-30
 
-    // تعيين التo�ريخ
+    // تعيين التريخ
     if (document.getElementById("haz-view-date")) {
       document.getElementById("haz-view-date").value = dateString;
     }
@@ -3437,7 +3454,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
     }
-    // تع �ين اسم اB�مستخدم (المصدر)
+    // تع ين اسم مستخدم (المصدر)
     if (document.getElementById("haz-issuer") && currentUser) {
       document.getElementById("haz-issuer").value = currentUser.username;
     }
@@ -3625,7 +3642,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const empId = document.getElementById("haz-emp-id-hidden").value;
         const empName = document.getElementById("haz-emp-name-display").value;
 
-        // اrٿ�تحقق من أن المستخدم اختار موظفاً بالفعل من البوب أب
+        // اrتحقق من أن المستخدم اختار موظفاً بالفعل من البوب أب
         if (!empId || !empName) {
           alert("الرجاء الضغط على خانة الاسم واختيار الموظف من القائمة");
           return;
@@ -3761,7 +3778,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // 2. منطق بحث المخ �طر
+  // 2. منطق بحث المخ طر
   async function searchHazards() {
     monHazTable.innerHTML = "جاري البحث...";
     const filters = {
@@ -3833,7 +3850,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (monHazBtn) monHazBtn.addEventListener("click", searchHazards);
 
   // =================================================================
-  // --- (جديد) وحدة تقييم المقاوليi� ---
+  // --- (جديد) وحدة تقييم المقاولي ---
   // =================================================================
 
   const contEvalProject = document.getElementById("cont-eval-project");
@@ -4116,7 +4133,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (document.getElementById("ncr-issuer") && currentUser)
       document.getElementById("ncr-issuer").value = currentUser.username;
 
-    // 3. التأكد من جلب h�يانات الموظفين وتخزينها في window لكي يراها المودال
+    // 3. التأكد من جلب يانات الموظفين وتخزينها في window لكي يراها المودال
     if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
       try {
         const r = await callApi("getInventoryInitData", {
@@ -4171,7 +4188,7 @@ document.addEventListener("DOMContentLoaded", function () {
       ncrFieldsDiv.style.display = "block";
       vioFieldsDiv.style.display = "none";
 
-      // تفعيل حقول NCR وتعطيل حقول Violation (لح � مشكلة الـ Submit)
+      // تفعيل حقول NCR وتعطيل حقول Violation (لح  مشكلة الـ Submit)
       setContainerState(ncrFieldsDiv, true);
       setContainerState(vioFieldsDiv, false);
 
@@ -4184,7 +4201,7 @@ document.addEventListener("DOMContentLoaded", function () {
       setContainerState(ncrFieldsDiv, false);
       setContainerState(vioFieldsDiv, true);
 
-      // تهS�ئة صفحة المخالفات (التاريخ والوقت)
+      // تهSئة صفحة المخالفات (التاريخ والوقت)
       initViolationPage();
     }
   }
@@ -4224,7 +4241,7 @@ document.addEventListener("DOMContentLoaded", function () {
     openNcrVioModalBase(proj, showAll);
   };
 
-  // دالة فتح المودال لقسم المخالفات
+  // دالة فتح المودال  قس  المخالفات
   window.openVioEmpSelector = function () {
     const proj = document.getElementById("vio-project").value;
     const showAll = document.getElementById("vio-show-all-emp").checked;
@@ -4420,7 +4437,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // 2. تجهيز بيانات المُبلغ (Observer)
         if (data.observer.type === "السويدي") {
           const empId = document.getElementById("ncr-emp-id-hidden").value;
-          // البحث في مصفوفة الt�وظفين المحملة
+          // البحث في مصفوفة الوظفين المحملة
           const emp = ppeEmployees.find((x) => x.id == empId);
           if (!emp) {
             showMessage(
@@ -4486,7 +4503,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
       // ============================================================
-      // --- i�لحالة 2: Violation (مخالفة) ---
+      // --- لحالة 2: Violation (مخالفة) ---
       // ============================================================
       else {
         const levelEl = document.querySelector(
@@ -4573,12 +4590,12 @@ document.addEventListener("DOMContentLoaded", function () {
           ncrForm.reset();
           initNcrPage(); // يعيد ضبط الصفحة والوقت
           vioCart = [];
-          updateVioCartUI(); // تصفير سلة الجزاءr�ت
+          updateVioCartUI(); // تصفير سلة الجزاءrت
         } catch (err) {
           showMessage(ncrSaveMsg, err.message, false);
         } finally {
           ncrSaveBtn.disabled = false;
-          ncrSaveBtn.innerHTML = "حفظ المخالفة"; // إعا:�e� نص الزر حسب السياق
+          ncrSaveBtn.innerHTML = "حفظ المخالفة";
         }
       }
     });
@@ -4734,7 +4751,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (vioTime) vioTime.value = timeStr;
     if (vioIssuer && currentUser) vioIssuer.value = currentUser.username;
 
-    // 2. المشاريع (إعادة استخدام المخزn�)
+    // 2. المشاريع (إعادة استخدام المخز
     if (vioProject && vioProject.options.length <= 1) {
       if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
         const userProj = (currentUser.projects || "").toString();
@@ -4744,7 +4761,7 @@ document.addEventListener("DOMContentLoaded", function () {
             : ppeLocations.filter((p) => userProj.includes(p));
         fillSelect(vioProject, acc);
       } else {
-        // تحميل احتيا��ي
+        // تحميل احتياي
         callApi("getInventoryInitData", { userInfo: currentUser }).then((r) => {
           if (r.status === "success") {
             ppeLocations = r.locations;
@@ -4914,7 +4931,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // 5. تحديث واجهة ا؄سلة والحسابات (معدل لتميo�ز العملة/الأيام)
+  // 5. تحديث واجهة ا؄سلة والحسابات (معدل لتميoز العملة/الأيام)
   function updateVioCartUI() {
     vioListContainer.innerHTML = "";
     let total = 0;
@@ -5056,7 +5073,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (monNcrVioBtn) monNcrVioBtn.addEventListener("click", searchNcrViolations);
 
   // =================================================================
-  // --- (معدل) e�حدة المقاولين والرفع (Contractors Upload) ---
+  // --- (معدل) حدة المقاولين والرفع (Contractors Upload) ---
   // =================================================================
 
   const contForm = document.getElementById("contractor-form");
@@ -5110,7 +5127,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // (جديد) دالة جلب المقاولين عند تغيير المشروع
+  // (جديد) دالة جلب امقاولين ند تغيير اiمشروع
   async function updateContUploadContractors() {
     const proj = contProject.value;
     if (!proj) return;
@@ -5134,7 +5151,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // عر � اسم الملف
+  // عر  اسم الملف
   if (contFile) {
     contFile.addEventListener("change", function () {
       if (this.files && this.files[0]) {
@@ -5210,7 +5227,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // (جديد) ربط حدث d�غيير المشروع
+  // (جديد) ربط حدث غيير المشروع
   if (contProject) {
     contProject.addEventListener("change", updateContUploadContractors);
   }
@@ -5231,13 +5248,13 @@ document.addEventListener("DOMContentLoaded", function () {
   const anaPrintBtn = document.getElementById("ana-print-btn");
 
   // =================================================================
-  // (app.js) إصلاح القائمة المنسدA�ة لn�مشاريع + رسم الجدول
+  // (app.js) إصلاح القائمة المنسدAة مشاريع + رسم الجدول
   // =================================================================
 
   async function initContractorAnalyticsPage() {
     console.log("Analytics Page Init...");
 
-    // 1. ضبط الشهر اi�حالي
+    // 1. ضبط الشهر احالي
     if (anaMonth && !anaMonth.value) {
       const d = new Date();
       anaMonth.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}`;
@@ -5249,7 +5266,7 @@ document.addEventListener("DOMContentLoaded", function () {
       anaProject.innerHTML =
         '<option value="ALL_ACCESSIBLE">كل المشاريع</option>';
 
-      // محاولة استخدام البيانات المح��لة ��سبقاً
+      // محاولة استخدام البيانات المحلة سبقاً
       let projectsSource = [];
       if (
         initialData &&
@@ -5332,7 +5349,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // رسم الجدوr� (V4: PPE Details with Badges)
+  // رسم الجدوr (V4: PPE Details with Badges)
   function renderAnalyticsTable(data) {
     if (!data || data.length === 0) {
       anaResultsContainer.innerHTML =
@@ -5479,7 +5496,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // دالة الطباعة (PDF)
   function handlePrintPDF() {
-    // 1. معرفة الe�عمدة المختارة
+    // 1. معرفة الeعمدة المختارة
     const checkboxes = document.querySelectorAll(
       '.columns-selector input[type="checkbox"]',
     );
@@ -5504,8 +5521,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // 4. أمر الطباعة
     window.print();
 
-    // 5. (اختياري) إعادة إظهار كل الأعمدة بعد -�لطباعة (عشان لو اليوزر كنسل متب=�اش الصفحة بايظة)
-    // ممكن نعم����ها بـ setTimeout عشان تلحق تظهر فi� الطباعة الأول
+    // 5. (اختياري) إعادة إظهار كل الأعمدة بعد لطباعة (عشان لو اليوزر كنسل متب الصفحة بايظة)
+    // ممكن نعمها بـ setTimeout عشان تلحق تظهر  الطباعة الأول
     setTimeout(() => {
       checkboxes.forEach((chk) => {
         const colClass = `col-${chk.dataset.col}`;
@@ -5530,17 +5547,17 @@ document.addEventListener("DOMContentLoaded", function () {
   const empReportContainer = document.getElementById("emp-report-container");
   const empPrintBtn = document.getElementById("emp-print-btn");
 
-  let allEmployeesCache = []; // لتخزين اp�i�ائمة محلياً
+  let allEmployeesCache = []; // لتخزين ا محلياً
 
   // دالة التهيئة (تستدعى من showSection)
   function initEmployeeReports() {
-    // تحميل القائمة لو مش موجودة
+    // تحميل القائمة ل مش موجودة
     if (allEmployeesCache.length === 0) {
       callApi("getAllEmployeesForSearch", {}).then((r) => {
         if (r.status === "success") allEmployeesCache = r.list;
       });
     }
-    // تصفير البحث
+    // تصفي البحث
     if (empSearchInput) empSearchInput.value = "";
     if (empReportContainer) empReportContainer.style.display = "none";
     if (empPrintBtn) empPrintBtn.style.display = "none";
@@ -5671,7 +5688,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // الطباعة
   if (empPrintBtn) {
     empPrintBtn.addEventListener("click", () => {
-      // 1. تw�ميع بيانات الموظف من العناصر الموجودة في الصفحة
+      // 1. تميع بيانات الموظف من العناصر الموجودة في الصفحة
       const empData = {
         name: document.getElementById("r-emp-name").textContent,
         id: document.getElementById("r-emp-id").textContent,
@@ -5703,7 +5720,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // ابحث عن showSection وعدل الشرط:
   // if (sectionId === "EmployeeReports") initEmployeeReports();
   // =================================================================
-  // --- (جديد) و-�دة y�سجيt� ومتابعة الحوادث (Accident Module) ---
+  // --- (جديد)دة  ومتابعة الحوادث (Accident Module) ---
   // =================================================================
 
   // Selectors
@@ -6028,7 +6045,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (list.length === 0) {
       if (emptyMsgEl) emptyMsgEl.style.display = "block"; // أظهر الرسالة
     } else {
-      if (emptyMsgEl) emptyMsgEl.style.display = "none"; // أخفِ الرسالo�
+      if (emptyMsgEl) emptyMsgEl.style.display = "none"; // أخفِ الرسا
 
       list.forEach((p, idx) => {
         const li = document.createElement("li");
@@ -6108,7 +6125,7 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       if (!confirm("هل أنت متأكد من حفظ التقرير؟")) return;
 
-      // 1. تحديد نوع ال �ادث أولاً لمعرفة هل نحتاج b�يانات ضحية أم لا
+      // 1. تحديد نوع ال ادث أولاً لمعرفة هل نحتاج bيانات ضحية أم لا
       const classification = accClass.value;
       const noVictimTypes = [
         "Property Damage",
@@ -6365,7 +6382,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const rows = document.querySelectorAll(".acc-row");
     let hasSelection = false;
 
-    // أضف كلاس ا=�إخفاء للصفوف غير المحددة
+    // أضف كلاس إخفاء للصفوف غير المحددة
     rows.forEach((row) => {
       const checkbox = row.querySelector(".acc-print-check");
       if (checkbox && !checkbox.checked) {
@@ -6435,7 +6452,7 @@ document.addEventListener("DOMContentLoaded", function () {
         currentTrainingData = response.data.reverse();
         renderTrainingTable(response.data);
 
-        // تشغيل الحساب فوراً بعد ظهور الجدوp�
+        // تشغيل الحساب فوراً بعد ظهور الجدو
         if (typeof window.calculateTrainingStats === "function") {
           window.calculateTrainingStats(response.data);
         }
@@ -6493,7 +6510,7 @@ document.addEventListener("DOMContentLoaded", function () {
         contractorName: contractorName,
       });
       if (response.status === "success") {
-        currentContractorWorkers = response.workers; // حe�ظ في المتغير العام
+        currentContractorWorkers = response.workers; // حظ في المتغير العام
 
         // تحديث الـ Datalist
         dataList.innerHTML = response.workers
@@ -6829,7 +6846,7 @@ window.buildKpiForm = function (kpis) {
   });
 };
 
-// 3. دالة تحميل البنود (إخفاء الإرشادات وإظهار الفورم)
+// 3. دالة تحميل البنود (إخاء الإرشاد ت وإظهار الفورم)
 window.loadKpisForEmployee = async function (employeeId, period) {
   const listContainer = document.getElementById("kpi-list-container");
   const guidelines = document.getElementById("kpi-guidelines-container");
@@ -6866,7 +6883,7 @@ window.loadKpisForEmployee = async function (employeeId, period) {
       "<p class='error-message' style='display:block'>حدث خطأ أثناء تحميل البيانات.</p>";
   }
 };
-// --- دوال النافذة اr�منبثقة (خارج أي نطاق مغلق لضمان العمل) ---
+// --- دوال النافذة امنبثقة (خارج أي نطاق مغلق لضمان العمل) ---
 // --- دوال محرك تقييم الموظفين (KPI Popup Engine) ---
 
 window.openKpiEmpSelector = async function () {
@@ -6977,7 +6994,7 @@ window.filterKpiEmpList = function () {
   renderKpiEmpsInModal(filtered);
 };
 
-// 2. دالة اختيار المو-�ف من البوب أب (تعديل الربط مع التصميم اo�جديد)
+// 2. دالة اختيار الموف من البوب أب (تعديل الربط مع التصميم اoجديد)
 window.selectKpiEmployee = function (id, name, job, project) {
   // تعبئة الحقول الظاهرة والمخفية
   const nameInput = document.getElementById("kpi-emp-name-display");
@@ -6987,7 +7004,7 @@ window.selectKpiEmployee = function (id, name, job, project) {
   if (nameInput) nameInput.value = name;
   if (idInput) idInput.value = id;
 
-  // إظهار المسمى الوظيh�T� والمشروع في " �ريط المعلومات" الجديد
+  // إظهار المسمى  والمشروع في " ريط المعلومات" الجديد
   if (jobTitleEl) {
     jobTitleEl.innerHTML = `
             <span><i class="fas fa-briefcase"></i> ${job || "موظف"}</span> | 
@@ -7054,7 +7071,7 @@ window.handleKpiSave = async function (event) {
       notes: "لم يتواجد بالمشروع",
     });
   } else {
-    // ال:�قييم العادي (لو لم يتم تفعيل N/A)
+    // القييم العادي (لو لم يتم تفعيل N/A)
     let validationError = false;
     const kpiCards = kpiListContainer.querySelectorAll(".kpi-card");
 
@@ -7219,7 +7236,7 @@ window.calculateObservationStats = function (data) {
 };
 // دالة الطباعة الشاملة
 // =================================================================
-// نظام توليد PDF الاحترافي المنفصiun�ؽؽٽؽ (V2.0)
+// نظام توليد PDF الاحترافي المنفصؽؽٽؽ (V2.0)
 // =================================================================
 window.generateProfessionalPDF = function (title, contentHtml) {
   const printWindow = window.open("", "_blank", "width=1000,height=800");
@@ -7652,7 +7669,7 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
     accInspection: document.getElementById("dr-acc-insp").value || 0,
     weeklyWalkdown: document.getElementById("dr-weekly-walk").value || 0,
     monthlySiteTour: document.getElementById("dr-monthly-tour").value || 0,
-    // --- الخانات الجديدة ---
+    // --- الخااd لديدة ---
     drill: document.getElementById("dr-drill")
       ? document.getElementById("dr-drill").value || 0
       : 0,
@@ -7661,7 +7678,7 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
       : 0,
   };
 
-  // 2. تجميع أداء شركة السويدي
+  // 2. تجميع أدا شركة السويدي
   const sewedyPerformance = {
     trainingRegular: document.getElementById("dr-sw-train").value || 0,
     induction: document.getElementById("dr-sw-induct").value || 0,
@@ -7865,7 +7882,7 @@ async function initDailyApprovalsPage() {
 
     if (resPending.status === "success") {
       const reports = resPending.reports || [];
-      // تحديث المتغير العالمي للتقارير المعلقة لسهولة الوصول إليه عند الفلترة
+      // تحديث المتغير العالمي للتقارير المعلقة لسهوة الوصول إليه عند الفلترة
       currentPendingReports = reports;
 
       if (reports.length === 0) {
@@ -8203,12 +8220,12 @@ window.markHolidayPrompt = function () {
   }
 };
 
-// دالة إغلاق المودال الخاص بالتفاصيل
+//  الة إغلاق المودال الخاص بالتفاصيل
 window.closeReportModal = function () {
   document.getElementById("report-details-modal").style.display = "none";
 };
 
-// 1. متغير عالمي مؤقت لحفظ قائمة المشرفين عشان نهرب من مشكلة الـ JSON في الـ HTML
+// 1. متغير عالمي مؤقت لحظ قائمة المش فين عشان نهرب من مشكلة الـ JSON في الـ HTML
 let tempSupervisorsList = [];
 
 /**
@@ -8222,7 +8239,7 @@ window.showMissingDatesDetail = async function (projectName, dates) {
       projectName: projectName,
     });
 
-    // حفظ ا �قائمة المفلترة في المتغير العالمي لاستخدامها في البوب أب التالي
+    // حفقائمة المفلترة في المتغير العالمي لاستخدامها في البوب أب التالي
     tempSupervisorsList = resSup.list || [];
 
     if (tempSupervisorsList.length === 0) {
@@ -8400,7 +8417,7 @@ window.executeExtension = async function (proj, date) {
       proj: proj,
       supervisor: supervisor,
       reason: reason,
-      targetDate: date, // تأكد إن السطر ده موجود هنا
+      targetDate: date, // تأكد إن لسطر ده موجود هنا
       userInfo: currentUser,
     });
 
@@ -8413,8 +8430,8 @@ window.executeExtension = async function (proj, date) {
     hideLoader();
   }
 };
-// جلب وعرض التنبيهات للتقارير المرفوضة
-// جلب وعرض التنبيهات للتقارير المرفوضة (نسخة متوافقة تماماً مع الموبايل)
+// جلب وعرض التنبيهات للتقارير ال رفوضة
+// جلب وعرض التنبيهات للتقارير المرفوضة (نخة متوافقة تماماً مع الموبايل)
 async function loadRejectedReportsAlert() {
   const section = document.getElementById("DailyHseReport");
   let alertDiv = document.getElementById("rejected-alerts");
@@ -8423,7 +8440,7 @@ async function loadRejectedReportsAlert() {
   if (!alertDiv) {
     alertDiv = document.createElement("div");
     alertDiv.id = "rejected-alerts";
-    // نضعه قبn� الفورم مباشرة
+    // نضعه قبn الفورم مباشرة
     const form = document.getElementById("daily-report-form");
     section.insertBefore(alertDiv, form);
   }
@@ -8906,7 +8923,7 @@ window.printDailyReportPDF = function (logId) {
     document.body.appendChild(printModal);
   }
 
-  // 2. إظهار النافذة المنبثقة
+  // 2. إظهار اناذة المنبثقة
   printModal.style.display = "flex";
 
   // 3. كتابة كود الـ HTML بداخل الـ iframe
@@ -8918,7 +8935,7 @@ window.printDailyReportPDF = function (logId) {
 };
 // =================================================================
 // دالة إنشاء التقرير اليومي المُجمّع لكل المشاريع (Consolidated Report)
-// (تم تعديل حساب العمالة: حساب Max/Avg لكل مشروع على حدة ثم d�`� � النواتج)
+// (تم تعديل حساب العمالة: حساب Max/Avg لكل مشروع على حدة ثم   النواتج)
 // =================================================================
 window.generateConsolidatedDailyReport = function () {
   const reports = window.loadedFinalReports;
@@ -9063,7 +9080,7 @@ window.generateConsolidatedDailyReport = function () {
         dailyContractors += val;
       }
 
-      // تجميع الساعات وباقي الأرقام كمجموع تراكم>�
+      // تجميع الساعات وباقي الأرقام كمجموع تراكم
       target.hours += parseFloat(ent.hours || 0);
       target.train += parseFloat(ent.train || 0);
       target.induct += parseFloat(ent.induct || 0);
@@ -9163,7 +9180,7 @@ window.generateConsolidatedDailyReport = function () {
         </tr>`;
   });
 
-  // 5. إعدادات الطباعة والقالب
+  // 5. إعداد الطباعة والقالب
   const projSelect = document.getElementById("mon-dr-project");
   const titleProject =
     projSelect.value === "ALL_ACCESSIBLE"
@@ -9750,7 +9767,7 @@ window.renderKpiLogsTable = function (data, container) {
                 <th>اسم الموظف</th>
                 <th>الكود</th>
                 <th>الوظيفة</th>
-                <th>المشروع</th>
+               <th>المشروع</th>
                 <th>المُقيّمون (المديرين)</th>
                 <th style="text-align:center;">النتيجة النهائية</th>
             </tr>
@@ -9758,8 +9775,8 @@ window.renderKpiLogsTable = function (data, container) {
         <tbody>`;
 
   data.forEach((row) => {
-    // ال=�لوان الافتراضية لحالة (N/A)
-    let bgColor = "#6c757d"; // رص��صي قوي
+    // اللوان الافتراضية لحالة (N/A)
+    let bgColor = "#6c757d"; // رصصي قوي
     let textColor = "#ffffff"; // أبيض
     let scoreDisplay = "N/A (لم يتواجد)";
 
@@ -10127,7 +10144,7 @@ window.renderTrackingTable = function (data, container) {
   container.innerHTML = html;
 };
 // دالة تصدير سجل التقييمات إلى ملف Excel احترافي
-// دالة تصدير سجل التقييمات إلى ملف Excel احترافي
+// دالة تصدير سجل التقييمات إ ى ملف Excel احترافي
 window.exportKpiLogsToExcel = function () {
   if (!window.currentKpiLogsData || window.currentKpiLogsData.length === 0) {
     alert("لا توجد بيانات لتصديرها.");
@@ -10544,7 +10561,7 @@ if (vehForm) {
       gpsUser: document.getElementById("veh-gps-user").value,
       gpsPass: document.getElementById("veh-gps-pass").value,
 
-      // إذا كانت خانة الاسم مفتوحة للكتابة، إذاً هذا عامل جديد يجب حفظه في الداتابيز
+      // إذا كانت خاة الاسم مفتوحة للكتابة، إذاً هذا عامل جديد يجب  في الداتابيز
       driverIsNew: !nameInput.readOnly,
     };
 
@@ -10606,71 +10623,61 @@ const vehicleChecklistItems = [
   "جهاز التنبيه عند الرجوع للخلف - Reverse Alarm",
   "جهاز تتبع GPS - GPS tracking device",
 ];
-
 let currentProjectVehicles = [];
 
 window.initVehicleInspectionPage = function () {
   const projSelect = document.getElementById("v-insp-project");
-
-  // (*** التعديل هنا: استدعاء الحاوية الجديدة بدل الـ tbody ***)
   const container = document.getElementById("v-insp-cards-container");
 
   // تعبئة المشاريع
   if (projSelect && projSelect.options.length <= 1) {
     const userProj = (currentUser.projects || "").toString();
     let acc = [];
-
     if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
       acc =
         userProj === "ALL"
           ? ppeLocations
           : ppeLocations.filter((p) => userProj.includes(p));
-      fillSelect(projSelect, acc);
     } else if (initialData && initialData.projects) {
       acc =
         userProj === "ALL"
           ? initialData.projects
           : initialData.projects.filter((p) => userProj.includes(p));
-      fillSelect(projSelect, acc);
     }
+    fillSelect(projSelect, acc);
   }
 
-  // توليد أسئلة الفحص (نظام الكروت للموبايل)
-  if (container && container.children.length === 0) {
+  // رسم كروت فحص السيارات بالشكل الرايق
+  if (container) {
     let html = "";
     vehicleChecklistItems.forEach((item, index) => {
       const i = index + 1;
-
-      // فصل النص الإنجليزي عن العربي لو حابب تخليه شكله أشيك
       const parts = item.split(" - ");
       const arText = parts[0];
       const enText = parts[1]
-        ? `<br><small style="color:#666; font-weight:normal;">${parts[1]}</small>`
+        ? `<br><small style="color:#666; font-weight:normal; font-size:0.85rem;">${parts[1]}</small>`
         : "";
 
       html += `
-        <div class="insp-item-card">
-            <div class="insp-item-title">
-                <span class="badge-num">${i}</span> ${arText} ${enText}
-            </div>
-
-            <div class="insp-options-group">
-                <label class="insp-opt-label">
-                    <input type="radio" name="chk-${i}" value="S">
-                    <div class="insp-opt-btn"><i class="fas fa-check"></i> S</div>
-                </label>
-
-                <label class="insp-opt-label">
-                    <input type="radio" name="chk-${i}" value="U">
-                    <div class="insp-opt-btn"><i class="fas fa-times"></i> U</div>
-                </label>
-
-                <label class="insp-opt-label">
-                    <input type="radio" name="chk-${i}" value="NA">
-                    <div class="insp-opt-btn"><i class="fas fa-minus"></i> NA</div>
-                </label>
-            </div>
-        </div>`;
+                <div class="insp-item-card">
+                    <div class="insp-item-title">
+                        <span class="badge-num">${i}</span> ${arText} ${enText}
+                    </div>
+                    <div class="insp-options-group">
+                        <label class="insp-opt-label">
+                            <input type="radio" name="v-chk-${i}" value="S" required>
+                            <div class="insp-opt-btn"><i class="fas fa-check"></i> S</div>
+                        </label>
+                        <label class="insp-opt-label">
+                            <input type="radio" name="v-chk-${i}" value="U" required>
+                            <div class="insp-opt-btn"><i class="fas fa-times"></i> U</div>
+                        </label>
+                        <label class="insp-opt-label">
+                            <input type="radio" name="v-chk-${i}" value="NA" required>
+                            <div class="insp-opt-btn"><i class="fas fa-minus"></i> NA</div>
+                        </label>
+                    </div>
+                </div>`;
     });
     container.innerHTML = html;
   }
@@ -10680,7 +10687,6 @@ window.updateInspectionVehicles = async function () {
   const proj = document.getElementById("v-insp-project").value;
   const plateSelect = document.getElementById("v-insp-plate");
 
-  // تصفير الخانات
   document.getElementById("v-insp-cont").value = "";
   document.getElementById("v-insp-type").value = "";
   document.getElementById("v-insp-driver").value = "";
@@ -10705,8 +10711,7 @@ window.updateInspectionVehicles = async function () {
       });
       plateSelect.disabled = false;
     } else {
-      plateSelect.innerHTML =
-        '<option value="">لا توجد سيارات مسجلة بهذا المشروع</option>';
+      plateSelect.innerHTML = '<option value="">لا توجد سيارات مسجلة</option>';
     }
   } catch (e) {
     plateSelect.innerHTML = "<option>خطأ في التحميل</option>";
@@ -10716,7 +10721,6 @@ window.updateInspectionVehicles = async function () {
 window.autoFillVehicleDetails = function () {
   const plate = document.getElementById("v-insp-plate").value;
   if (!plate) return;
-
   const vehicle = currentProjectVehicles.find((v) => v.plate === plate);
   if (vehicle) {
     document.getElementById("v-insp-cont").value = vehicle.contractor;
@@ -10724,6 +10728,61 @@ window.autoFillVehicleDetails = function () {
     document.getElementById("v-insp-driver").value = vehicle.driver;
   }
 };
+
+const vehInspForm = document.getElementById("veh-insp-form");
+if (vehInspForm) {
+  const newVehInspForm = vehInspForm.cloneNode(true);
+  vehInspForm.parentNode.replaceChild(newVehInspForm, vehInspForm);
+
+  newVehInspForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("v-insp-save-btn");
+    const msg = document.getElementById("v-insp-save-msg");
+
+    let checklistResults = {};
+    for (let i = 1; i <= vehicleChecklistItems.length; i++) {
+      const selected = document.querySelector(
+        `input[name="v-chk-${i}"]:checked`,
+      );
+      if (!selected) {
+        alert(`الرجاء تقييم النقطة رقم ${i}`);
+        return;
+      }
+      checklistResults[`Q${i}`] = selected.value;
+    }
+
+    const data = {
+      project: document.getElementById("v-insp-project").value,
+      plate: document.getElementById("v-insp-plate").value,
+      contractor: document.getElementById("v-insp-cont").value,
+      type: document.getElementById("v-insp-type").value,
+      driver: document.getElementById("v-insp-driver").value,
+      checklist: checklistResults,
+      comments: {
+        text: document.getElementById("v-insp-comments").value,
+        targetDate: document.getElementById("v-insp-target-date").value,
+      },
+    };
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+      const r = await callApi("saveVehicleInspection", {
+        data: data,
+        userInfo: currentUser,
+      });
+      showMessage(msg, r.message, true);
+      newVehInspForm.reset();
+      window.initVehicleInspectionPage();
+    } catch (err) {
+      showMessage(msg, err.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> اعتماد وحفظ الفحص';
+    }
+  });
+}
 
 const inspForm = document.getElementById("veh-insp-form");
 if (inspForm) {
@@ -11381,6 +11440,854 @@ window.deleteVehicle = async function (id, plate) {
     });
     alert(r.message);
     window.loadManageVehicles(); // ريفريش الجدول
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    window.hideLoader();
+  }
+};
+
+// =================================================================
+// --- وحدة تسجيل المعدات (Equipment Registration) ---
+// =================================================================
+
+// مصفوفة بنود فحص المعدات (يمكنك تعديل الأسئلة وزيادتها حسب الشيت الخاص بك)
+const equipmentChecklistItems = [
+  "وثائق المعدة (شهادة الفحص / الطرف الثالث) - Third Party Certificate",
+  "رخصة المعداتي / المشغل - Operator License",
+  "الهيكل الخارجي العام للمعدة - General Body Condition",
+  "حالة الإطارات أو الجنزير - Tires / Tracks Condition",
+  "المحرك وعدم وجود تسريب زيوت أو وقود - Engine & Leaks",
+  "النظام الهيدروليكي وخراطيم الضغط - Hydraulic System & Hoses",
+  "حالة الفرامل (الأساسية واليدوية) - Brakes",
+  "الإضاءة الأمامية والخلفية والإشارات - Lights & Signals",
+  "إنذار الرجوع للخلف وآلة التنبيه (البوق) - Reverse Alarm & Horn",
+  "المرايا والرؤية من الكابينة - Mirrors & Visibility",
+  "توفر وصلاحية طفاية الحريق - Fire Extinguisher",
+  "حالة حزام الأمان - Seat Belt Condition",
+  "حالة هوك الرفع والواير (للأوناش) - Lifting Hook & Wire Ropes",
+  "مفاتيح الإيقاف الطارئ ومحددات الأمان - Emergency Stop Buttons & Limiters",
+];
+
+window.initNewEquipmentPage = async function () {
+  const eqProject = document.getElementById("eq-project");
+  const eqDate = document.getElementById("eq-date");
+  const eqTime = document.getElementById("eq-time");
+
+  // 1. ضبط التاريخ والوقت
+  const now = new Date();
+  if (eqDate) eqDate.valueAsDate = now;
+  if (eqTime) {
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    eqTime.value = `${hh}:${mm}`;
+  }
+
+  // 2. تحميل البيانات الأولية إذا لم تكن محملة
+  if (!window.ppeLocations || window.ppeLocations.length === 0) {
+    try {
+      const r = await callApi("getInventoryInitData", {
+        userInfo: currentUser,
+      });
+      if (r.status === "success") {
+        window.ppeLocations = r.locations;
+      }
+    } catch (e) {
+      console.error("فشل التحميل الأولي للمعدات:", e);
+    }
+  }
+
+  // 3. تعبئة المشاريع
+  if (eqProject && eqProject.options.length <= 1) {
+    const userProj = (currentUser.projects || "").toString();
+    let acc = [];
+    if (
+      typeof window.ppeLocations !== "undefined" &&
+      window.ppeLocations.length > 0
+    ) {
+      acc =
+        userProj === "ALL"
+          ? window.ppeLocations
+          : window.ppeLocations.filter((p) => userProj.includes(p));
+    } else if (initialData && initialData.projects) {
+      acc =
+        userProj === "ALL"
+          ? initialData.projects
+          : initialData.projects.filter((p) => userProj.includes(p));
+    }
+    fillSelect(eqProject, acc);
+  }
+
+  window.toggleEqCert(); // تهيئة حقول الشهادة
+};
+
+// جلب المقاولين عند تغيير المشروع
+window.updateEqContractors = async function () {
+  const proj = document.getElementById("eq-project").value;
+  const eqContractor = document.getElementById("eq-contractor");
+
+  if (!proj) {
+    eqContractor.innerHTML =
+      '<option value="">-- اختر المشروع أولاً --</option>';
+    eqContractor.disabled = true;
+    return;
+  }
+
+  eqContractor.innerHTML = "<option>جاري التحميل...</option>";
+  eqContractor.disabled = true;
+
+  try {
+    const r = await callApi("getContractorsForProject", { projectName: proj });
+    if (r.status === "success" && r.contractors && r.contractors.length > 0) {
+      fillSelect(eqContractor, r.contractors);
+      eqContractor.disabled = false;
+    } else {
+      eqContractor.innerHTML =
+        '<option value="">لا يوجد مقاولين مسجلين</option>';
+    }
+  } catch (e) {
+    eqContractor.innerHTML = "<option>خطأ في التحميل</option>";
+  }
+};
+
+// إظهار/إخفاء حقول الشهادة
+window.toggleEqCert = function () {
+  const hasCert = document.getElementById("eq-has-cert").value;
+  const certGroup = document.getElementById("eq-cert-group");
+  const certIssuer = document.getElementById("eq-cert-issuer");
+  const certExp = document.getElementById("eq-cert-exp");
+  const certSerial = document.getElementById("eq-cert-serial"); // السيريال الجديد
+
+  if (hasCert === "نعم") {
+    certGroup.style.display = "flex";
+    certIssuer.setAttribute("required", "required");
+    certExp.setAttribute("required", "required");
+    certSerial.setAttribute("required", "required");
+  } else {
+    certGroup.style.display = "none";
+    certIssuer.removeAttribute("required");
+    certExp.removeAttribute("required");
+    certSerial.removeAttribute("required");
+    certIssuer.value = "";
+    certExp.value = "";
+    certSerial.value = "";
+  }
+};
+
+// حفظ النموذج وإرساله للسيرفر
+const eqForm = document.getElementById("equipment-form");
+if (eqForm) {
+  const newEqForm = eqForm.cloneNode(true);
+  eqForm.parentNode.replaceChild(newEqForm, eqForm);
+
+  newEqForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const btn = document.getElementById("eq-save-btn");
+    const msg = document.getElementById("eq-save-msg");
+    let checklistResults = {};
+    // اللف على عدد أسئلة المعدات (تأكد أن equipmentChecklistItems معرفة لديك)
+    for (let i = 1; i <= equipmentChecklistItems.length; i++) {
+      const selectEl = document.getElementById(`eq-chk-${i}`);
+      if (selectEl) {
+        checklistResults[`Q${i}`] = selectEl.value; // سيخزن (أخضر، أصفر، أزرق، أبيض)
+      }
+    }
+    const eqData = {
+      date: document.getElementById("eq-date").value,
+      time: document.getElementById("eq-time").value,
+      project: document.getElementById("eq-project").value,
+      contractor: document.getElementById("eq-contractor").value,
+      ownerCompany: document.getElementById("eq-owner-company").value,
+
+      type: document.getElementById("eq-type").value,
+      plateChassis:
+        document.getElementById("eq-plate-chassis").value || "غير محدد",
+      capacity: document.getElementById("eq-capacity").value || "غير محدد",
+
+      operatorName: document.getElementById("eq-operator-name").value,
+      operatorNid: document.getElementById("eq-operator-nid").value,
+      operatorLicenseExp: document.getElementById("eq-operator-license-exp")
+        .value,
+
+      hasCert: document.getElementById("eq-has-cert").value,
+      colorCode: document.getElementById("eq-color-code").value,
+      certSerial: document.getElementById("eq-cert-serial")
+        ? document.getElementById("eq-cert-serial").value
+        : "لا يوجد",
+      certIssuer: document.getElementById("eq-cert-issuer").value || "لا يوجد",
+      certExp: document.getElementById("eq-cert-exp").value || "لا يوجد",
+      checklist: checklistResults,
+    };
+
+    if (!eqData.contractor) {
+      alert("الرجاء اختيار المقاول المورد للمعدة.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+      const r = await callApi("saveEquipmentRecord", {
+        eqData: eqData,
+        userInfo: currentUser,
+      });
+      showMessage(msg, r.message, true);
+      newEqForm.reset();
+      window.initNewEquipmentPage();
+    } catch (err) {
+      showMessage(msg, err.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> تسجيل المعدة في الموقع';
+    }
+  });
+}
+// دالة لتغيير لون القائمة المنسدلة بناءً على التقييم المختار
+// دالة تلوين قائمة كود الشهر
+window.updateEqColorSelect = function (selectEl) {
+  const val = selectEl.value;
+  selectEl.style.color = "#000"; // افتراضي
+
+  if (val === "أخضر") {
+    selectEl.style.backgroundColor = "#28a745";
+    selectEl.style.color = "#fff";
+  } else if (val === "أصفر") {
+    selectEl.style.backgroundColor = "#ffc107";
+  } else if (val === "أزرق") {
+    selectEl.style.backgroundColor = "#007bff";
+    selectEl.style.color = "#fff";
+  } else {
+    selectEl.style.backgroundColor = "#ffffff";
+  }
+};
+// =================================================================
+// --- وحدة الفحص الدوري للمعدات (Equipment Inspection) ---
+// =================================================================
+
+const heavyEqChecklistItems = [
+  "شهادات المعايرة والرخص وجدول الاحمال ومرشد المستخدم - Calibration Certificates, Load Chart and manual",
+  "كابينة القيادة (زجاج-مرايا-مساحات-حزام-طريق وصول) - Operating Unit status",
+  "التلفيات وحالة البنوز - Damages and pins status",
+  "حالة النظام الهيدروليكي - Hydraulic system condition",
+  "حالة المحرك (مستوى المياه والزيت) - Engine status",
+  "جنزير الكاتينة والاطارات - Crawling Parts, Tires and Wheels",
+  "حالة البطاريات ومستوى ماؤها - Batteries status",
+  "تسرب الزيوت - Oil leak",
+  "الفرامل - Mechanical brake",
+  "تانك الوقود ومستواه - Fuel tank and Level",
+  "العلامات التحذيرية - Warning signs",
+  "حالة الذراع - Boom status",
+  "الأسلاك الكهربية والإضاءات والإشارات وسارينة الإنذار - Electrical wiring, lights, alarms",
+  "وسائل حماية الأجزاء الساخنة والمتحركة - Hot/Rotating parts protection",
+  "التشحيم - Lubrication",
+  "طفاية الحريق - Fire Extinguishers",
+  "حالة إسطوانة الدك - Roller status",
+  "حالة الكبشة - Bucket Status",
+  "حالة الدقاق - Jack Hammer Status",
+  "حالة العادم الخارج من المعدة - Exhausts status / Emissions",
+];
+
+const liftingEqChecklistItems = [
+  "شهادات المعايرة والرخص وجدول الاحمال ومرشد المستخدم - Calibration Certificates, Load chart and manual",
+  "كابينة القيادة (زجاج-مرايا-مساحات-حزام-طريق وصول) - Operating Unit status",
+  "حالة أسلاك الرفع وحالة الخطاف ومانع إنزلاق الحمولة - Wire, hook block and Load safety latch",
+  "حالة البكرة - Sheave condition",
+  "الحاسب الآلى - Computer system",
+  "حالة البطاريات ومستوى ماؤها - Batteries status",
+  "تسرب الزيوت - Oil leak",
+  "الفرامل - Mechanical brakes",
+  "الركائز والقواعد (Outrigger) - Outrigger and pads",
+  "تانك الوقود ومستواه - Fuel tank and level",
+  "حالة ذراع الرفع - Boom status",
+  "نظام الأمان اليدوى في حالات الطوارئ - Manual system for emergency cases",
+  "حالة المحرك (مستوى المياه والزيت) - Engine status",
+  "الأسلاك الكهربية والإضاءات والإشارات وسارينة الإنذار - Electrical wiring, lights, alarms",
+  "وسائل حماية الأجزاء الساخنة والمتحركة - Hot/Rotating parts protection",
+  "مفتاح إيقاف الرفع الآلى - Limit switches",
+  "التشحيم - Lubrication",
+  "العلامات التحذيرية - Warning signs",
+  "طفاية الحريق - Fire extinguishers",
+  "جنزير الكاتينة والاطارات - Crawling parts, tires and wheels",
+  "حالة النظام الهيدروليكي - Hydraulic system condition",
+  "التلفيات وحالة البنوز - Mechanical damages and pins",
+  "حالة الشوكة - Fork status",
+  "حالة الباسكت - Basket Status",
+];
+
+let currentProjectEquipments = [];
+
+window.initEquipmentInspectionPage = function () {
+  const projSelect = document.getElementById("e-insp-project");
+
+  // تعبئة المشاريع
+  if (projSelect && projSelect.options.length <= 1) {
+    const userProj = (currentUser.projects || "").toString();
+    let acc = [];
+    if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+      acc =
+        userProj === "ALL"
+          ? ppeLocations
+          : ppeLocations.filter((p) => userProj.includes(p));
+    } else if (initialData && initialData.projects) {
+      acc =
+        userProj === "ALL"
+          ? initialData.projects
+          : initialData.projects.filter((p) => userProj.includes(p));
+    }
+    window.fillSelect(projSelect, acc);
+  }
+  window.renderEquipmentChecklist();
+};
+
+window.updateEqColorSelect = function (selectEl) {
+  const val = selectEl.value;
+  selectEl.style.color = "#000";
+
+  if (val === "أخضر") {
+    selectEl.style.backgroundColor = "#28a745";
+    selectEl.style.color = "#fff";
+  } else if (val === "أصفر") {
+    selectEl.style.backgroundColor = "#ffc107";
+  } else if (val === "أزرق") {
+    selectEl.style.backgroundColor = "#007bff";
+    selectEl.style.color = "#fff";
+  } else if (val === "أحمر") {
+    selectEl.style.backgroundColor = "#dc3545";
+    selectEl.style.color = "#fff";
+  } else {
+    selectEl.style.backgroundColor = "#ffffff";
+  }
+};
+
+window.renderEquipmentChecklist = function () {
+  const container = document.getElementById("e-insp-cards-container");
+  if (!container) return;
+
+  const typeRadio = document.querySelector(
+    'input[name="eq-insp-type"]:checked',
+  );
+  if (!typeRadio) return;
+
+  const type = typeRadio.value;
+  const items =
+    type === "Heavy" ? heavyEqChecklistItems : liftingEqChecklistItems;
+
+  let html = "";
+  items.forEach((item, index) => {
+    const i = index + 1;
+    const parts = item.split(" - ");
+    const arText = parts[0];
+    const enText = parts[1]
+      ? `<br><small style="color:#666; font-weight:normal; font-size:0.85rem;">${parts[1]}</small>`
+      : "";
+
+    // رسم كروت فحص المعدات بنفس الشكل الرايق
+    html += `
+            <div class="insp-item-card">
+                <div class="insp-item-title">
+                    <span class="badge-num">${i}</span> ${arText} ${enText}
+                </div>
+                <div class="insp-options-group">
+                    <label class="insp-opt-label">
+                        <input type="radio" name="eq-chk-${i}" value="S" required>
+                        <div class="insp-opt-btn"><i class="fas fa-check"></i> S</div>
+                    </label>
+                    <label class="insp-opt-label">
+                        <input type="radio" name="eq-chk-${i}" value="U" required>
+                        <div class="insp-opt-btn"><i class="fas fa-times"></i> U</div>
+                    </label>
+                    <label class="insp-opt-label">
+                        <input type="radio" name="eq-chk-${i}" value="NA" required>
+                        <div class="insp-opt-btn"><i class="fas fa-minus"></i> NA</div>
+                    </label>
+                </div>
+            </div>`;
+  });
+  container.innerHTML = html;
+};
+
+window.updateInspectionEquipments = async function () {
+  const proj = document.getElementById("e-insp-project").value;
+  const plateSelect = document.getElementById("e-insp-plate");
+
+  document.getElementById("e-insp-cont").value = "";
+  document.getElementById("e-insp-type").value = "";
+
+  if (!proj) {
+    plateSelect.innerHTML =
+      '<option value="">-- اختر المشروع أولاً --</option>';
+    plateSelect.disabled = true;
+    return;
+  }
+
+  plateSelect.innerHTML = "<option>جاري التحميل...</option>";
+  plateSelect.disabled = true;
+
+  try {
+    const r = await callApi("getProjectEquipments", { projectName: proj });
+    if (r.status === "success" && r.equipments && r.equipments.length > 0) {
+      currentProjectEquipments = r.equipments;
+      plateSelect.innerHTML = '<option value="">-- اختر المعدة --</option>';
+      r.equipments.forEach((e) => {
+        plateSelect.add(
+          new Option(`${e.plateChassis} (${e.type})`, e.plateChassis),
+        );
+      });
+      plateSelect.disabled = false;
+    } else {
+      plateSelect.innerHTML = '<option value="">لا توجد معدات مسجلة</option>';
+    }
+  } catch (e) {
+    plateSelect.innerHTML = "<option>خطأ في التحميل</option>";
+  }
+};
+
+window.autoFillEquipDetails = function () {
+  const plate = document.getElementById("e-insp-plate").value;
+  if (!plate) return;
+
+  const eq = currentProjectEquipments.find((v) => v.plateChassis === plate);
+  if (eq) {
+    document.getElementById("e-insp-cont").value =
+      eq.contractor || eq.ownerCompany || "غير محدد";
+    document.getElementById("e-insp-type").value = eq.type;
+  }
+};
+
+const eqInspForm = document.getElementById("eq-insp-form");
+if (eqInspForm) {
+  const newEqInspForm = eqInspForm.cloneNode(true);
+  eqInspForm.parentNode.replaceChild(newEqInspForm, eqInspForm);
+
+  newEqInspForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("e-insp-save-btn");
+    const msg = document.getElementById("e-insp-save-msg");
+
+    const type = document.querySelector(
+      'input[name="eq-insp-type"]:checked',
+    ).value;
+    const itemsCount =
+      type === "Heavy"
+        ? heavyEqChecklistItems.length
+        : liftingEqChecklistItems.length;
+
+    let checklistResults = {};
+    for (let i = 1; i <= itemsCount; i++) {
+      const selected = document.querySelector(
+        `input[name="eq-chk-${i}"]:checked`,
+      );
+      if (!selected) {
+        alert(`الرجاء تقييم النقطة رقم ${i}`);
+        return;
+      }
+      checklistResults[`Q${i}`] = selected.value;
+    }
+
+    const data = {
+      project: document.getElementById("e-insp-project").value,
+      plateChassis: document.getElementById("e-insp-plate").value,
+      contractor: document.getElementById("e-insp-cont").value,
+      type: document.getElementById("e-insp-type").value,
+      inspectionType: type,
+      colorCode: document.getElementById("e-insp-color").value,
+      checklist: checklistResults,
+      comments: document.getElementById("e-insp-comments").value,
+      targetDate: document.getElementById("e-insp-target-date").value,
+    };
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+      const r = await callApi("saveEquipmentInspection", {
+        data: data,
+        userInfo: currentUser,
+      });
+      showMessage(msg, r.message, true);
+
+      newEqInspForm.reset();
+      document.getElementById("e-insp-cont").value = "";
+      document.getElementById("e-insp-type").value = "";
+
+      const colorSelect = document.getElementById("e-insp-color");
+      if (colorSelect) {
+        colorSelect.style.backgroundColor = "#fff";
+        colorSelect.style.color = "#000";
+      }
+      window.renderEquipmentChecklist();
+    } catch (err) {
+      showMessage(msg, err.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> اعتماد وحفظ الفحص';
+    }
+  });
+}
+// =================================================================
+// --- وحدة إدارة ومتابعة المعدات (Manage Equipment) ---
+// =================================================================
+
+window.allEquipmentData = [];
+
+window.initManageEquipmentPage = async function () {
+  const projSelect = document.getElementById("manage-eq-project");
+
+  if (projSelect && projSelect.options.length <= 1) {
+    const userProj = (currentUser.projects || "").toString();
+    let acc = [];
+    if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+      acc =
+        userProj === "ALL"
+          ? ppeLocations
+          : ppeLocations.filter((p) => userProj.includes(p));
+    } else if (initialData && initialData.projects) {
+      acc =
+        userProj === "ALL"
+          ? initialData.projects
+          : initialData.projects.filter((p) => userProj.includes(p));
+    }
+
+    // تصفير الخيارات القديمة ثم إضافتها
+    projSelect.innerHTML =
+      '<option value="ALL_ACCESSIBLE">كل المشاريع</option>';
+    acc.forEach((p) => projSelect.add(new Option(p, p)));
+  }
+
+  // استدعاء جلب البيانات فوراً
+  window.loadManageEquipment();
+};
+
+window.loadManageEquipment = async function () {
+  const container = document.getElementById("manage-eq-results");
+  const projFilter = document.getElementById("manage-eq-project").value;
+
+  container.innerHTML =
+    '<div class="loader-small">جاري جلب بيانات المعدات...</div>';
+
+  try {
+    const r = await callApi("getAllEquipments", { userInfo: currentUser });
+    if (r.status === "success") {
+      if (projFilter !== "ALL_ACCESSIBLE") {
+        window.allEquipmentData = r.equipments.filter(
+          (e) => e.project === projFilter,
+        );
+      } else {
+        window.allEquipmentData = r.equipments;
+      }
+      window.renderManageEquipment(window.allEquipmentData);
+    } else {
+      container.innerHTML = `<p class="error-message">${r.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">خطأ: ${e.message}</p>`;
+  }
+};
+
+window.renderManageEquipment = function (data) {
+  const container = document.getElementById("manage-eq-results");
+  document.getElementById("eq-alerts-dashboard").style.display = "grid";
+
+  let total = data.length;
+  let warning = 0;
+  let danger = 0;
+
+  if (total === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; padding:20px;">لا توجد معدات مسجلة.</p>';
+    document.getElementById("eq-count-total").textContent = "0";
+    document.getElementById("eq-count-warning").textContent = "0";
+    document.getElementById("eq-count-danger").textContent = "0";
+    return;
+  }
+
+  let html = `<table class="results-table" style="font-size:0.85rem;">
+        <thead>
+            <tr>
+                <th>الكود/الشاسيه</th>
+                <th>المشروع والمقاول</th>
+                <th>النوع والمشغل</th>
+                <th>شهادة المعايرة</th>
+                <th>رخصة المشغل</th>
+                <th style="text-align:center;">كود الفحص</th>
+                <th style="text-align:center;">إجراءات وتفاصيل</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+  data.forEach((eq) => {
+    const certExp = checkLicenseStatus(eq.certExp);
+    const opExp = checkLicenseStatus(eq.operatorLicExp);
+
+    let isRejected = eq.colorCode && eq.colorCode.includes("أحمر");
+
+    if (
+      isRejected ||
+      certExp.status === "expired" ||
+      opExp.status === "expired"
+    ) {
+      danger++;
+    } else if (certExp.status === "warning" || opExp.status === "warning") {
+      warning++;
+    }
+
+    // تجهيز شكل كود اللون
+    let colorBg = "#6c757d";
+    let colorTxt = "#fff";
+    let colorDisplay = eq.colorCode;
+
+    if (eq.colorCode.includes("أخضر")) colorBg = "#28a745";
+    else if (eq.colorCode.includes("أصفر")) {
+      colorBg = "#ffc107";
+      colorTxt = "#000";
+    } else if (eq.colorCode.includes("أزرق")) colorBg = "#007bff";
+    else if (eq.colorCode.includes("أحمر")) {
+      colorBg = "#dc3545";
+      colorDisplay = "مرفوضة / إيقاف";
+    } else if (eq.colorCode.includes("أبيض")) {
+      colorBg = "#f8f9fa";
+      colorTxt = "#000";
+    }
+
+    html += `<tr>
+            <td style="font-weight:bold; font-size:1.1em; color:#0056b3;">${eq.plate}</td>
+            <td><strong>${eq.project}</strong><br><small style="color:#666;">${eq.contractor}</small></td>
+            <td><strong>${eq.type}</strong><br><small style="color:#666;">${eq.operator}</small></td>
+            <td>
+                ${eq.certExp}<br>
+                <span class="badge ${certExp.badge}" style="font-size:0.7em;">${certExp.text}</span>
+            </td>
+            <td>
+                ${eq.operatorLicExp}<br>
+                <span class="badge ${opExp.badge}" style="font-size:0.7em;">${opExp.text}</span>
+            </td>
+            <td style="text-align:center;">
+                <span class="badge" style="background-color:${colorBg}; color:${colorTxt}; padding: 6px 10px; font-size: 0.85em;">
+                    ${colorDisplay}
+                </span>
+            </td>
+            <td style="text-align:center;">
+                <div style="display:flex; justify-content:center; gap:5px; margin-bottom:5px;">
+                    <button class="btn-small btn-secondary" onclick="window.viewEquipmentInspections('${eq.plate}')" style="background:#28a745; border:none; color:white; width:100%;" title="سجل الفحوصات">
+                        <i class="fas fa-clipboard-check"></i> الفحوصات
+                    </button>
+                </div>
+                <div style="display:flex; justify-content:center; gap:5px;">
+                    <button class="btn-small btn-secondary" onclick="window.openEditEquipment('${eq.id}')" style="background:#ffc107; border:none; color:#000; flex:1;" title="تعديل البيانات">
+                        <i class="fas fa-edit"></i> تعديل
+                    </button>
+                    <button class="btn-small btn-danger" onclick="window.deleteEquipment('${eq.id}', '${eq.plate}')" style="flex:1;" title="مسح من الموقع">
+                        <i class="fas fa-trash-alt"></i> إزالة
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+
+  document.getElementById("eq-count-total").textContent = total;
+  document.getElementById("eq-count-warning").textContent = warning;
+  document.getElementById("eq-count-danger").textContent = danger;
+};
+
+window.filterManageEquipment = function () {
+  const query = document.getElementById("manage-eq-search").value.toLowerCase();
+  const filtered = window.allEquipmentData.filter(
+    (e) =>
+      e.plate.toLowerCase().includes(query) ||
+      e.operator.toLowerCase().includes(query) ||
+      e.contractor.toLowerCase().includes(query),
+  );
+  window.renderManageEquipment(filtered);
+};
+
+// --- سجل الفحوصات للمعدة ---
+window.viewEquipmentInspections = async function (plate) {
+  const modal = document.getElementById("eq-insp-history-modal");
+  const container = document.getElementById("eq-history-results");
+
+  document.getElementById("eq-history-plate").textContent = plate;
+  modal.style.display = "flex";
+  container.innerHTML =
+    '<div class="loader-small">جاري جلب سجل فحوصات المعدة...</div>';
+
+  try {
+    const r = await callApi("getEquipmentInspections", { plate: plate });
+    if (r.status === "success") {
+      if (r.data.length === 0) {
+        container.innerHTML =
+          '<p style="text-align:center; padding:20px; color:#666;">لم يتم إجراء أي فحوصات لهذه المعدة حتى الآن.</p>';
+      } else {
+        let html = `<div style="display: flex; flex-direction: column; gap: 15px;">`;
+
+        r.data.forEach((insp, inspIndex) => {
+          const itemsArr =
+            insp.inspectionType === "Heavy"
+              ? heavyEqChecklistItems
+              : liftingEqChecklistItems;
+          let checklistHtml = "";
+
+          itemsArr.forEach((item, idx) => {
+            const qKey = `Q${idx + 1}`;
+            const score = insp.checklist[qKey] || "-";
+
+            let badgeColor = "#6c757d";
+            let scoreLabel = score;
+            if (score === "S") {
+              badgeColor = "#28a745";
+              scoreLabel = "سليم (S)";
+            } else if (score === "U") {
+              badgeColor = "#dc3545";
+              scoreLabel = "غير سليم (U)";
+            } else if (score === "NA") {
+              badgeColor = "#6c757d";
+              scoreLabel = "لا ينطبق";
+            }
+
+            const arText = item.split(" - ")[0];
+
+            checklistHtml += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 8px 0;">
+                                <span style="flex: 1; padding-left: 10px; font-size: 0.85rem; color:#333;">${idx + 1}. ${arText}</span>
+                                <span class="badge" style="background-color: ${badgeColor}; color: white; padding: 4px 8px; font-size: 0.75rem;">${scoreLabel}</span>
+                            </div>`;
+          });
+
+          const isFirst = inspIndex === 0;
+          const displayStyle = isFirst ? "block" : "none";
+          const iconClass = isFirst ? "fa-chevron-up" : "fa-chevron-down";
+
+          // لون كود الفحص في الهيدر
+          let histColorBg = "#6c757d";
+          if (insp.colorCode.includes("أخضر")) histColorBg = "#28a745";
+          else if (insp.colorCode.includes("أصفر")) histColorBg = "#ffc107";
+          else if (insp.colorCode.includes("أزرق")) histColorBg = "#007bff";
+          else if (insp.colorCode.includes("أحمر")) histColorBg = "#dc3545";
+
+          html += `
+                        <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                            <div style="background: #f8f9fa; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; border-right: 5px solid ${histColorBg};" 
+                                 onclick="const details = this.nextElementSibling; const icon = this.querySelector('.toggle-icon'); if(details.style.display === 'none'){ details.style.display = 'block'; icon.classList.replace('fa-chevron-down', 'fa-chevron-up'); } else { details.style.display = 'none'; icon.classList.replace('fa-chevron-up', 'fa-chevron-down'); }">
+                                <div>
+                                    <strong style="color: #2C2A29; font-size: 1.1rem;">تاريخ الفحص: ${insp.date}</strong> <br>
+                                    <small style="color: #0056b3;"><i class="fas fa-user-shield"></i> المفتش: ${insp.inspector}</small><br>
+                                    <small style="color: #555;"><i class="fas fa-tag"></i> كود اللون: ${insp.colorCode}</small>
+                                </div>
+                                <div style="color: #666; font-weight: bold; font-size: 0.9rem;">
+                                    عرض التفاصيل <i class="fas ${iconClass} toggle-icon" style="margin-right: 5px;"></i>
+                                </div>
+                            </div>
+                            <div style="display: ${displayStyle}; padding: 15px;">
+                                <div style="margin-bottom: 15px; background: #fff3cd; padding: 12px; border-right: 4px solid #ffc107; border-radius: 4px;">
+                                    <p style="margin: 0 0 8px 0; color: #333; line-height: 1.5;"><strong><i class="fas fa-comment-dots"></i> الملاحظات:</strong><br> ${insp.comments}</p>
+                                    <p style="margin: 0; color: #dc3545; font-weight: bold;">
+                                        <i class="fas fa-calendar-times"></i> تاريخ الهدف للإصلاح: ${insp.targetDate && insp.targetDate !== "-" ? insp.targetDate : "غير محدد"}
+                                    </p>
+                                </div>
+                                <h4 style="margin-bottom: 10px; color: #17a2b8; border-bottom: 2px dashed #eee; padding-bottom: 5px;">
+                                    <i class="fas fa-list-ul"></i> تفاصيل أسئلة الفحص:
+                                </h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0 20px;">
+                                    ${checklistHtml}
+                                </div>
+                            </div>
+                        </div>`;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+      }
+    } else {
+      container.innerHTML = `<p class="error-message">${r.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">حدث خطأ: ${e.message}</p>`;
+  }
+};
+
+// --- التعديل والإزالة ---
+window.openEditEquipment = function (id) {
+  const eq = window.allEquipmentData.find((v) => v.id === id);
+  if (!eq) return;
+
+  document.getElementById("e-eq-id").value = eq.id;
+  document.getElementById("e-eq-plate").value = eq.plate;
+  document.getElementById("e-eq-type").value = eq.type;
+
+  try {
+    document.getElementById("e-eq-cert-exp").value = new Date(
+      eq.certExp.split("/").reverse().join("-"),
+    )
+      .toISOString()
+      .split("T")[0];
+    document.getElementById("e-eq-op-exp").value = new Date(
+      eq.operatorLicExp.split("/").reverse().join("-"),
+    )
+      .toISOString()
+      .split("T")[0];
+  } catch (e) {}
+
+  document.getElementById("e-eq-op-name").value = eq.operator;
+  document.getElementById("e-eq-op-nid").value = eq.operatorNid;
+
+  document.getElementById("edit-eq-modal").style.display = "flex";
+};
+
+const eEqForm = document.getElementById("edit-eq-form");
+if (eEqForm) {
+  eEqForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("e-eq-save-btn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    const data = {
+      id: document.getElementById("e-eq-id").value,
+      plate: document.getElementById("e-eq-plate").value,
+      type: document.getElementById("e-eq-type").value,
+      certExp: document.getElementById("e-eq-cert-exp").value,
+      opExp: document.getElementById("e-eq-op-exp").value,
+      opName: document.getElementById("e-eq-op-name").value,
+      opNid: document.getElementById("e-eq-op-nid").value,
+    };
+
+    try {
+      const r = await callApi("updateEquipmentData", {
+        eqData: data,
+        userInfo: currentUser,
+      });
+      alert(r.message);
+      document.getElementById("edit-eq-modal").style.display = "none";
+      window.loadManageEquipment();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "حفظ التعديلات";
+    }
+  });
+}
+
+window.deleteEquipment = async function (id, plate) {
+  if (
+    !confirm(
+      `هل أنت متأكد من إزالة المعدة رقم/كود (${plate}) نهائياً من الموقع؟\n(هذا الإجراء لا يمكن التراجع عنه)`,
+    )
+  )
+    return;
+
+  window.showLoader("جاري إزالة المعدة...");
+  try {
+    const r = await callApi("deleteEquipmentRecord", {
+      eqId: id,
+      userInfo: currentUser,
+    });
+    alert(r.message);
+    window.loadManageEquipment();
   } catch (e) {
     alert(e.message);
   } finally {

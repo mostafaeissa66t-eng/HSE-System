@@ -319,6 +319,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewEquipment: "fas fa-snowplow",
     EquipmentInspection: "fas fa-clipboard-check",
     ManageEquipment: "fas fa-toolbox",
+    ProjectsLeaderboard: "fas fa-trophy", // الأيقونة
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -358,6 +359,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewEquipment: "تسجيل معدة",
     EquipmentInspection: "فحص المعدات",
     ManageEquipment: "إدارة ومتابعة المعدات",
+    ProjectsLeaderboard: "لوحة شرف المشاريع", // الاسم
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -456,6 +458,7 @@ document.addEventListener("DOMContentLoaded", function () {
       icon: "fas fa-chart-line",
       children: ["DailyHseReport", "DailyApprovals", "MonitorDailyReports"], // سنضيف قسم الاعتماد والسجل لاحقاً هنا
     },
+    { type: "link", id: "ProjectsLeaderboard" }, // <--- أضف هذا السطر
     {
       type: "group",
       title: "لوحة تحكم الإدارة",
@@ -894,6 +897,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "NewEquipment") window.initNewEquipmentPage();
       if (sectionId === "EquipmentInspection")
         window.initEquipmentInspectionPage();
+      if (sectionId === "ProjectsLeaderboard") window.initLeaderboardPage();
       if (sectionId === "MonitorDailyReports")
         window.initMonitorDailyReportsPage();
     } else {
@@ -2476,14 +2480,14 @@ document.addEventListener("DOMContentLoaded", function () {
   // --- نهاية وحدة المخازن ---
 
   // =================================================================
-  // --- (*** جديد ***) وحدة تقرير أرصدة المخازن ---
+  // --- (*** جديد***) وحدة تقرير أرصدة المخازن ---
   // =================================================================
 
   /**
    * دالة بدء تشغيل صفحة تقرير المخزن
    */
   async function initStockReportPage() {
-    console.log("بدء تشغيل صفحة تقرير الأرصدة...");
+    console.log("بدء تشغيل صفحة تقرير الارصدة...");
     stockReportResultsTable.innerHTML = "";
     showMessage(
       stockReportMessage,
@@ -7669,7 +7673,7 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
     accInspection: document.getElementById("dr-acc-insp").value || 0,
     weeklyWalkdown: document.getElementById("dr-weekly-walk").value || 0,
     monthlySiteTour: document.getElementById("dr-monthly-tour").value || 0,
-    // --- الخااd لديدة ---
+    // ---  لديدi� ---
     drill: document.getElementById("dr-drill")
       ? document.getElementById("dr-drill").value || 0
       : 0,
@@ -12292,5 +12296,154 @@ window.deleteEquipment = async function (id, plate) {
     alert(e.message);
   } finally {
     window.hideLoader();
+  }
+};
+// =================================================================
+// --- وحدة لوحة شرف المشاريع التراكمية (Cumulative Leaderboard) ---
+// =================================================================
+
+window.initLeaderboardPage = function () {
+  const fromInput = document.getElementById("leaderboard-from");
+  const toInput = document.getElementById("leaderboard-to");
+  const now = new Date();
+
+  // افتراضياً: من بداية السنة الحالية إلى الشهر الحالي
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const startOfYearStr = `${now.getFullYear()}-01`;
+
+  if (!fromInput.value) fromInput.value = startOfYearStr;
+  if (!toInput.value) toInput.value = currentMonthStr;
+
+  window.loadLeaderboard();
+};
+
+window.loadLeaderboard = async function () {
+  const container = document.getElementById("leaderboard-results");
+  const fromStr = document.getElementById("leaderboard-from").value;
+  const toStr = document.getElementById("leaderboard-to").value;
+
+  if (!fromStr || !toStr) return;
+
+  if (new Date(fromStr) > new Date(toStr)) {
+    alert("تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية!");
+    return;
+  }
+
+  container.innerHTML =
+    '<div style="text-align:center; padding:50px; color:#0056b3;"><i class="fas fa-spinner fa-spin fa-3x"></i><h3 style="margin-top:20px;">جاري تجميع البيانات وحساب التقييم التراكمي...</h3><p>برجاء الانتظار، يتم الآن فحص كافة السجلات للفترة المحددة.</p></div>';
+
+  try {
+    const r = await callApi("getProjectsLeaderboard", {
+      fromMonth: fromStr,
+      toMonth: toStr,
+    });
+
+    if (r.status === "success") {
+      if (r.leaderboard.length === 0) {
+        container.innerHTML =
+          '<div style="text-align:center; padding:40px; color:#777;"><i class="fas fa-folder-open fa-3x" style="color:#ccc;"></i><p>لا توجد بيانات مسجلة في أي مشروع خلال هذه الفترة التراكمية.</p></div>';
+        return;
+      }
+
+      let html = "";
+      r.leaderboard.forEach((proj, index) => {
+        let rankBadge = `<span style="font-size:1.5rem; font-weight:bold; color:#777;">#${index + 1}</span>`;
+        let cardBorder = "border: 1px solid #ddd;";
+        let bgTitle = "#f8f9fa";
+
+        if (index === 0) {
+          rankBadge = `<i class="fas fa-medal fa-2x" style="color:#ffd700;" title="المركز الأول"></i>`;
+          cardBorder =
+            "border: 2px solid #ffd700; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);";
+          bgTitle = "#fffcf0";
+        } else if (index === 1) {
+          rankBadge = `<i class="fas fa-medal fa-2x" style="color:#c0c0c0;" title="المركز الثاني"></i>`;
+          cardBorder = "border: 2px solid #c0c0c0;";
+        } else if (index === 2) {
+          rankBadge = `<i class="fas fa-medal fa-2x" style="color:#cd7f32;" title="المركز الثالث"></i>`;
+          cardBorder = "border: 2px solid #cd7f32;";
+        }
+
+        let scoreColor = "#28a745";
+        if (proj.score < 70) scoreColor = "#dc3545";
+        else if (proj.score < 90) scoreColor = "#ffc107";
+
+        const d = proj.details;
+
+        html += `
+                    <div style="background:#fff; border-radius:12px; overflow:hidden; ${cardBorder} margin-bottom:10px;">
+
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:${bgTitle}; padding:15px 20px; border-bottom:1px solid #eee;">
+                            <div style="display:flex; align-items:center; gap:15px;">
+                                <div style="width:40px; text-align:center;">${rankBadge}</div>
+                                <h3 style="margin:0; color:#2c2a29; font-size:1.4rem;">${proj.project}</h3>
+                            </div>
+                            <div style="text-align:right;">
+                                <span style="font-size:0.9rem; color:#666;">التقييم التراكمي للمشروع</span><br>
+                                <span style="font-size:1.8rem; font-weight:900; color:${scoreColor};">${proj.score}<small style="font-size:1rem;">%</small></span>
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; padding:20px; background:#fafafa;">
+
+                            <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
+                                <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-eye" style="color:#007bff;"></i> إغلاق الملاحظات</div>
+                                <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.obsRate}%</div>
+                                <div style="font-size:0.75rem; color:#999;">(${d.obsClosed} من ${d.obsTotal})</div>
+                            </div>
+
+                            <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
+                                <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-exclamation-circle" style="color:#fd7e14;"></i> إغلاق الهازرد</div>
+                                <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.hazRate}%</div>
+                                <div style="font-size:0.75rem; color:#999;">(${d.hazClosed} من ${d.hazTotal})</div>
+                            </div>
+
+                            <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
+                                <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-file-signature" style="color:#6f42c1;"></i> إغلاق الـ NCR</div>
+                                <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.ncrRate}%</div>
+                                <div style="font-size:0.75rem; color:#999;">(${d.ncrClosed} من ${d.ncrTotal})</div>
+                            </div>
+
+                            <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
+                                <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-ambulance" style="color:#dc3545;"></i> إغلاق الحوادث</div>
+                                <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.accRate}%</div>
+                                <div style="font-size:0.75rem; color:#999;">(${d.accClosed} من ${d.accTotal})</div>
+                            </div>
+
+                            <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; display:flex; justify-content:space-around; align-items:center;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.8rem; color:#666;"><i class="fas fa-chalkboard-teacher" style="color:#20c997;"></i> دورات تدريبية</div>
+                                    <div style="font-weight:bold; font-size:1.1rem; color:#333;">${d.train}</div>
+                                </div>
+                                <div style="width:1px; height:30px; background:#eee;"></div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.8rem; color:#666;"><i class="fas fa-ban" style="color:#dc3545;"></i> المخالفات</div>
+                                    <div style="font-weight:bold; font-size:1.1rem; color:${d.vio > 0 ? "#dc3545" : "#28a745"};">${d.vio}</div>
+                                </div>
+                            </div>
+
+                            <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; display:flex; justify-content:space-around; align-items:center;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.8rem; color:#666;"><i class="fas fa-fire-extinguisher" style="color:#e91e63;"></i> تجارب إخلاء</div>
+                                    <div style="font-weight:bold; font-size:1.1rem; color:#333;">${d.drills}</div>
+                                </div>
+                                <div style="width:1px; height:30px; background:#eee;"></div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.8rem; color:#666;"><i class="fas fa-bullhorn" style="color:#007bff;"></i> حملات توعية</div>
+                                    <div style="font-weight:bold; font-size:1.1rem; color:#333;">${d.campaigns}</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+      });
+
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = `<p class="error-message">${r.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">حدث خطأ في الاتصال بالخادم: ${e.message}</p>`;
   }
 };

@@ -2694,7 +2694,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // (هام جداً) تعبئة المصفوفة العالمية للموظفن ليراها المودال
         window.ppeEmployees = r.employees;
 
-        // تعبئة المشاريع والمواضيع والمقاولين في القوائم المنسدلة
+        // تعبئة  �لo�شاريع والمواضيع والمقاولين في القوائم المنسدلة
         const userProj = (currentUser.projects || "").toString();
         let accProj =
           userProj === "ALL"
@@ -7673,7 +7673,7 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
     accInspection: document.getElementById("dr-acc-insp").value || 0,
     weeklyWalkdown: document.getElementById("dr-weekly-walk").value || 0,
     monthlySiteTour: document.getElementById("dr-monthly-tour").value || 0,
-    // ---  لديدi� ---
+    // ---  =�ديدi� ---
     drill: document.getElementById("dr-drill")
       ? document.getElementById("dr-drill").value || 0
       : 0,
@@ -7880,7 +7880,7 @@ async function initDailyApprovalsPage() {
       "beforeend",
       `
              <h4 style="margin-bottom:15px; color:#555;">
-                 <i class="fas fa-clipboard-check"></i> تقارير مرفوعة بانتظار المراجعة والاعتماد:
+                 <i class="fas fa-clipboard-check"></i> تقارير مرفوعة بانتظار المراجعة و الاعتماد:
              </h4>`,
     );
 
@@ -8229,7 +8229,7 @@ window.closeReportModal = function () {
   document.getElementById("report-details-modal").style.display = "none";
 };
 
-// 1. متغير عالمي مؤقت لحظ قائمة المش فين عشان نهرب من مشكلة الـ JSON في الـ HTML
+// 1. متغير عالمي مؤقت لحظ قائمy� المش  �ين عشان نهرب من مشكلة الـ JSON في الـ HTML
 let tempSupervisorsList = [];
 
 /**
@@ -9759,7 +9759,7 @@ window.initMonitorKpiPage = function () {
 window.renderKpiLogsTable = function (data, container) {
   if (!data || data.length === 0) {
     container.innerHTML =
-      '<p style="text-align:center; font-weight:bold; color:#c8102e; padding:20px;">لا توجد تقييمات نهائية لهذه المعايير.</p>';
+      '<p style="text-align:center; font-weight:bold; color:#c8102e; padding:20px;">لا توجد تقييمات نهائية لهذه المعاير.</p>';
     return;
   }
 
@@ -10158,7 +10158,7 @@ window.exportKpiLogsToExcel = function () {
   window.showLoader("جاري تجهيز ملف الإكسيل...");
 
   try {
-    // 1. تجهيز البيانات بالعناوين العربية (تم إضافة القسم)
+    // 1. تجهيز ال��يانات بالعناوين العربية (تم إضافة القسم)
     const excelData = window.currentKpiLogsData.map((row, index) => {
       let percentageText = row.percentage + "%";
       if (row.percentage === "N/A") percentageText = "لم يتواجد (N/A)";
@@ -12447,3 +12447,196 @@ window.loadLeaderboard = async function () {
     container.innerHTML = `<p class="error-message">حدث خطأ في الاتصال بالخادم: ${e.message}</p>`;
   }
 };
+
+// ==========================================
+// وحدة المساعد الذكي (النص والصوت)
+// ==========================================
+
+// إعدادات الصوت (Speech Recognition)
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition;
+
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.lang = "ar-EG"; // اللغة العربية
+  recognition.interimResults = false;
+
+  recognition.onstart = function () {
+    document.getElementById("mic-btn").classList.add("mic-active");
+  };
+
+  recognition.onresult = function (event) {
+    const transcript = event.results[0][0].transcript;
+    document.getElementById("ai-chat-input").value = transcript;
+    sendAiMessage(); // إرسال الرسالة تلقائياً بعد التحدث
+  };
+
+  recognition.onerror = function (event) {
+    console.error("Voice Error: ", event.error);
+    document.getElementById("mic-btn").classList.remove("mic-active");
+  };
+
+  recognition.onend = function () {
+    document.getElementById("mic-btn").classList.remove("mic-active");
+  };
+}
+
+function startVoiceRecognition() {
+  if (recognition) {
+    recognition.start();
+  } else {
+    alert("عذراً، متصفحك لا يدعم خاصية التحدث الصوتي.");
+  }
+}
+
+// ==========================================
+// وحدة التحكم في القراءة الصوتية (Text to Speech)
+// ==========================================
+
+// ==========================================
+// وحدة التحكم في القراءة الصوتية (Text to Speech)
+// ==========================================
+
+let isAiVoiceEnabled = true; // الصوت شغال افتراضياً
+
+// دالة تشغيل/إيقاف الصوت من الزرار
+function toggleAiVoice() {
+  isAiVoiceEnabled = !isAiVoiceEnabled;
+  const btnIcon = document.querySelector("#ai-voice-toggle-btn i");
+
+  if (isAiVoiceEnabled) {
+    btnIcon.className = "fas fa-volume-up";
+  } else {
+    btnIcon.className = "fas fa-volume-mute";
+    window.speechSynthesis.cancel(); // السطر ده بيسكت البوت فوراً
+  }
+}
+
+// دالة نطق رد البوت (محسنة لإجبار المتصفح على قراءة العربي)
+function speakText(text) {
+  if (!isAiVoiceEnabled) return;
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel(); // إيقاف أي كلام قديم
+
+    // 1. تنظيف النص من الرموز والـ HTML
+    let cleanText = text.replace(/<[^>]*>?/gm, " ");
+    cleanText = cleanText.replace(/[*_#`\[\]\-]/g, "");
+
+    // 2. إزالة الإيموجيز بشكل كامل عشان متعملش تشويش للصوت
+    cleanText = cleanText.replace(
+      /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu,
+      "",
+    );
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    // 3. إجبار المتصفح على اللغة العربية
+    utterance.lang = "ar-SA";
+    utterance.rate = 1.0; // سرعة القراءة
+
+    // دالة لاختيار الصوت العربي بذكاء
+    function playWithArabicVoice() {
+      let voices = window.speechSynthesis.getVoices();
+
+      // البحث عن أي صوت عربي (حتى لو اسمه بالإنجليزي زي Tarik أو Laila)
+      let arabicVoice = voices.find(
+        (v) =>
+          v.lang.startsWith("ar") ||
+          v.name.includes("Arabic") ||
+          v.name.includes("العربية") ||
+          v.name.includes("Magid") ||
+          v.name.includes("Tarik") ||
+          v.name.includes("Laila"),
+      );
+
+      if (arabicVoice) {
+        utterance.voice = arabicVoice;
+      }
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // 4. حل مشكلة تأخر المتصفح في تحميل الأصوات
+    if (window.speechSynthesis.getVoices().length === 0) {
+      // لو الأصوات لسه محملتش، استنى لحد ما تحمل وبعدين اتكلم
+      window.speechSynthesis.addEventListener(
+        "voiceschanged",
+        playWithArabicVoice,
+        { once: true },
+      );
+    } else {
+      // لو محملة جاهزة، اتكلم فوراً
+      playWithArabicVoice();
+    }
+  }
+}
+
+// دالة فتح وإغلاق الشات وإخفاء الأيقونة
+function toggleAiChat() {
+  const modal = document.getElementById("ai-chat-modal");
+  const triggerBtn = document.getElementById("ai-chat-trigger-btn");
+
+  if (modal.style.display === "none" || modal.style.display === "") {
+    modal.style.display = "flex"; // فتح الشات
+    triggerBtn.style.display = "none"; // إخفاء الأيقونة الدائرية
+  } else {
+    modal.style.display = "none"; // إغلاق الشات
+    triggerBtn.style.display = "flex"; // إظهار الأيقونة الدائرية
+  }
+}
+
+// دالة إرسال الرسالة
+async function sendAiMessage() {
+  const input = document.getElementById("ai-chat-input");
+  const msgsContainer = document.getElementById("ai-chat-messages");
+  const query = input.value.trim();
+
+  if (!query) return;
+
+  // عرض رسالة المستخدم (يمين)
+  msgsContainer.innerHTML += `
+        <div style="align-self: flex-start; background: #c8102e; color: white; padding: 12px 15px; border-radius: 15px 15px 0 15px; max-width: 85%; font-size: 0.95rem; margin-bottom: 10px;">
+            ${window.escapeHTML ? window.escapeHTML(query) : query}
+        </div>
+    `;
+  input.value = "";
+
+  // عرض اللودر (يسار)
+  const loaderId = "loader-" + Date.now();
+  msgsContainer.innerHTML += `
+        <div id="${loaderId}" style="align-self: flex-end; background: #e9ecef; color: #333; padding: 12px 15px; border-radius: 15px 15px 15px 0; max-width: 85%; font-size: 0.9rem; margin-bottom: 10px;">
+            <i class="fas fa-spinner fa-spin"></i> جاري فحص البيانات...
+        </div>
+    `;
+  msgsContainer.scrollTop = msgsContainer.scrollHeight;
+
+  try {
+    // إصلاح الخطأ: تأكدنا أن اسم العملية هو 'askSmartAssistant' كما في السيرفر
+    const result = await window.callApi("askSmartAssistant", { query: query });
+
+    const loader = document.getElementById(loaderId);
+    if (loader) loader.remove();
+
+    if (result && result.status === "success") {
+      msgsContainer.innerHTML += `
+            <div style="align-self: flex-start; background: #fff; padding: 12px 15px; border-radius: 15px 15px 15px 0; max-width: 90%; font-size: 0.95rem; border: 1px solid #ddd; line-height: 1.6; color: #333; margin-bottom: 10px; white-space: pre-wrap;">
+                ${result.answer}
+            </div>
+        `;
+      if (typeof speakText === "function") speakText(result.answer);
+    } else {
+      throw new Error(result.message || "حدث خطأ غير معروف.");
+    }
+  } catch (err) {
+    const loader = document.getElementById(loaderId);
+    if (loader) loader.remove();
+    msgsContainer.innerHTML += `
+            <div style="align-self: flex-end; background: #fff5f5; color: #dc3545; padding: 12px 15px; border-radius: 15px 15px 15px 0; max-width: 85%; font-size: 0.9rem; border: 1px solid #f5c6cb; margin-bottom: 10px;">
+                عذراً: ${err.message}
+            </div>
+        `;
+  }
+  msgsContainer.scrollTop = msgsContainer.scrollHeight;
+}

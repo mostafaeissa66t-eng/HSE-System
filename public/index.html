@@ -6752,6 +6752,84 @@
                         ></div>
                     </div>
                 </div>
+                <div id="ai-chat-modal" style="display: none">
+                    <div id="ai-chat-header">
+                        <span>🤖 مساعد السويدي الذكي</span>
+                        <div
+                            style="
+                                display: flex;
+                                gap: 15px;
+                                align-items: center;
+                            "
+                        >
+                            <button
+                                id="ai-voice-toggle-btn"
+                                onclick="toggleAiVoice()"
+                                style="
+                                    background: none;
+                                    border: none;
+                                    color: white;
+                                    cursor: pointer;
+                                    font-size: 1.2rem;
+                                "
+                                title="تشغيل/إيقاف القراءة الصوتية"
+                            >
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+
+                            <button
+                                onclick="toggleAiChat()"
+                                style="
+                                    background: none;
+                                    border: none;
+                                    color: white;
+                                    cursor: pointer;
+                                    font-size: 1.2rem;
+                                "
+                                title="إغلاق الشات"
+                            >
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="ai-chat-messages">
+                        <div class="ai-message bot">
+                            أهلاً بك! أنا المساعد الذكي. حالياً تم تدريبي
+                            بالكامل على إدارة <b>(التصاريح)</b>. يمكنك التحدث
+                            إلي أو الكتابة لمساعدتك.
+                        </div>
+                    </div>
+                    <div id="ai-chat-input-area">
+                        <button
+                            class="ai-btn"
+                            id="mic-btn"
+                            onclick="startVoiceRecognition()"
+                            title="تحدث معي"
+                        >
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <input
+                            type="text"
+                            id="ai-chat-input"
+                            placeholder="اكتب سؤالك هنا..."
+                            onkeypress="if(event.key === 'Enter') sendAiMessage()"
+                        />
+                        <button
+                            class="ai-btn"
+                            onclick="sendAiMessage()"
+                            title="إرسال"
+                        >
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                <button
+                    id="ai-chat-trigger-btn"
+                    onclick="toggleAiChat()"
+                    title="المساعد الذكي"
+                >
+                    <i class="fas fa-robot"></i>
+                </button>
             </main>
         </div>
 

@@ -12393,7 +12393,7 @@ window.loadLeaderboard = async function () {
                             </div>
 
                             <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
-                                <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-exclamation-circle" style="color:#fd7e14;"></i> إغلاق الهازرد</div>
+                                <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-exclamation-circle" style="color:#fd7e14;"></i> إغلاق تقارير الخطر </div>
                                 <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.hazRate}%</div>
                                 <div style="font-size:0.75rem; color:#999;">(${d.hazClosed} من ${d.hazTotal})</div>
                             </div>

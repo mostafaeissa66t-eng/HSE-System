@@ -270,11 +270,11 @@
 
                         <div class="events-grid">
                             <div class="event-card">
-                                <img src="/one.jpg" alt="Event 1" />
+                                <img src="/one.png" alt="Event 1" />
                                 <div class="event-overlay">
                                     <span
                                         >اليوم العالمى للسلامة والصحة المهنية
-                                        2026</span
+                                        2025</span
                                     >
                                 </div>
                             </div>
@@ -4252,37 +4252,172 @@
                                 </div>
                             </div>
 
-                            <div class="form-row grid-4">
-                                <div class="form-group">
-                                    <label>Issued PTW:</label
-                                    ><input
+                            <div
+                                style="
+                                    display: flex;
+                                    flex-wrap: wrap;
+                                    gap: 12px;
+                                    margin-bottom: 25px;
+                                    background: #fdfdfd;
+                                    padding: 15px;
+                                    border: 1px solid #eee;
+                                    border-radius: 8px;
+                                "
+                            >
+                                <div
+                                    class="form-group"
+                                    style="flex: 1; min-width: 100px; margin: 0"
+                                >
+                                    <label
+                                        dir="ltr"
+                                        style="
+                                            text-align: center;
+                                            display: block;
+                                            font-size: 0.85rem;
+                                            font-weight: 700;
+                                            color: #555;
+                                            margin-bottom: 8px;
+                                        "
+                                        >Issued PTW</label
+                                    >
+                                    <input
                                         type="number"
                                         id="dr-ptw"
                                         value="0"
+                                        style="
+                                            text-align: center;
+                                            font-weight: bold;
+                                            font-size: 1.1rem;
+                                            color: #1976d2;
+                                            border-radius: 6px;
+                                            border: 1px solid #ccc;
+                                        "
                                     />
                                 </div>
-                                <div class="form-group">
-                                    <label>Hazard Rep.:</label
-                                    ><input
+
+                                <div
+                                    class="form-group"
+                                    style="flex: 1; min-width: 100px; margin: 0"
+                                >
+                                    <label
+                                        dir="ltr"
+                                        style="
+                                            text-align: center;
+                                            display: block;
+                                            font-size: 0.85rem;
+                                            font-weight: 700;
+                                            color: #555;
+                                            margin-bottom: 8px;
+                                        "
+                                        >Hazard Rep.</label
+                                    >
+                                    <input
                                         type="number"
                                         id="dr-hazards"
                                         value="0"
+                                        style="
+                                            text-align: center;
+                                            font-weight: bold;
+                                            font-size: 1.1rem;
+                                            color: #d32f2f;
+                                            border-radius: 6px;
+                                            border: 1px solid #ccc;
+                                        "
                                     />
                                 </div>
-                                <div class="form-group">
-                                    <label>Site Obs.:</label
-                                    ><input
+
+                                <div
+                                    class="form-group"
+                                    style="flex: 1; min-width: 100px; margin: 0"
+                                >
+                                    <label
+                                        dir="ltr"
+                                        style="
+                                            text-align: center;
+                                            display: block;
+                                            font-size: 0.85rem;
+                                            font-weight: 700;
+                                            color: #555;
+                                            margin-bottom: 8px;
+                                        "
+                                        >Site Obs.</label
+                                    >
+                                    <input
                                         type="number"
                                         id="dr-total-obs"
                                         value="0"
+                                        style="
+                                            text-align: center;
+                                            font-weight: bold;
+                                            font-size: 1.1rem;
+                                            color: #f57c00;
+                                            border-radius: 6px;
+                                            border: 1px solid #ccc;
+                                        "
                                     />
                                 </div>
-                                <div class="form-group">
-                                    <label>Equip. Insp.:</label
-                                    ><input
+
+                                <div
+                                    class="form-group"
+                                    style="flex: 1; min-width: 100px; margin: 0"
+                                >
+                                    <label
+                                        dir="ltr"
+                                        style="
+                                            text-align: center;
+                                            display: block;
+                                            font-size: 0.8rem;
+                                            font-weight: 700;
+                                            color: #555;
+                                            margin-bottom: 8px;
+                                        "
+                                        >Eqp Insp (Int)</label
+                                    >
+                                    <input
                                         type="number"
-                                        id="dr-equip"
+                                        id="dr-equip-int"
                                         value="0"
+                                        title="فحص معدات داخلي"
+                                        style="
+                                            text-align: center;
+                                            font-weight: bold;
+                                            font-size: 1.1rem;
+                                            color: #388e3c;
+                                            border-radius: 6px;
+                                            border: 1px solid #ccc;
+                                        "
+                                    />
+                                </div>
+
+                                <div
+                                    class="form-group"
+                                    style="flex: 1; min-width: 100px; margin: 0"
+                                >
+                                    <label
+                                        dir="ltr"
+                                        style="
+                                            text-align: center;
+                                            display: block;
+                                            font-size: 0.8rem;
+                                            font-weight: 700;
+                                            color: #555;
+                                            margin-bottom: 8px;
+                                        "
+                                        >Eqp Insp (Ext)</label
+                                    >
+                                    <input
+                                        type="number"
+                                        id="dr-equip-ext"
+                                        value="0"
+                                        title="فحص معدات خارجي"
+                                        style="
+                                            text-align: center;
+                                            font-weight: bold;
+                                            font-size: 1.1rem;
+                                            color: #388e3c;
+                                            border-radius: 6px;
+                                            border: 1px solid #ccc;
+                                        "
                                     />
                                 </div>
                             </div>

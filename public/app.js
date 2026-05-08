@@ -2694,7 +2694,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // (هام جداً) تعبئة المصفوفة العالمية للموظفن ليراها المودال
         window.ppeEmployees = r.employees;
 
-        // تعبئة  �لo�شاريع والمواضيع والمقاولين في القوائم المنسدلة
+        // تعبئة  oشاريع والمواضيع والمقاولين في القوائم المنسدلة
         const userProj = (currentUser.projects || "").toString();
         let accProj =
           userProj === "ALL"
@@ -6850,7 +6850,7 @@ window.buildKpiForm = function (kpis) {
   });
 };
 
-// 3. دالة تحميل البنود (إخاء الإرشاد ت وإظهار الفورم)
+// 3. دالة تحميل البنود (إخاء الإرشاد ت وإظهار الورم)
 window.loadKpisForEmployee = async function (employeeId, period) {
   const listContainer = document.getElementById("kpi-list-container");
   const guidelines = document.getElementById("kpi-guidelines-container");
@@ -7653,7 +7653,7 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
     if (!confirmSolo) return;
   }
 
-  // 1. تجميع البيانات العالمية للموقع (بما فيها الخانات الجديدة)
+  // 1. تجميع البيانات العالمية للموقع (تم فصل المعدات هنا)
   const globalData = {
     projectName: document.getElementById("dr-project").value,
     reportDate: document.getElementById("dr-date").value,
@@ -7667,13 +7667,13 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
     ptwCount: document.getElementById("dr-ptw").value || 0,
     hazardReports: document.getElementById("dr-hazards").value || 0,
     totalObs: document.getElementById("dr-total-obs").value || 0,
-    equipInspection: document.getElementById("dr-equip").value || 0,
+    equipInspectionInt: document.getElementById("dr-equip-int").value || 0, // داخلي
+    equipInspectionExt: document.getElementById("dr-equip-ext").value || 0, // خارجي
     internalAudit: document.getElementById("dr-int-audit").value || 0,
     externalAudit: document.getElementById("dr-ext-audit").value || 0,
     accInspection: document.getElementById("dr-acc-insp").value || 0,
     weeklyWalkdown: document.getElementById("dr-weekly-walk").value || 0,
     monthlySiteTour: document.getElementById("dr-monthly-tour").value || 0,
-    // ---  =�ديدi� ---
     drill: document.getElementById("dr-drill")
       ? document.getElementById("dr-drill").value || 0
       : 0,
@@ -7682,7 +7682,7 @@ document.getElementById("daily-report-form").onsubmit = async function (e) {
       : 0,
   };
 
-  // 2. تجميع أدا شركة السويدي
+  // 2. تجميع أداء شركة السويدي
   const sewedyPerformance = {
     trainingRegular: document.getElementById("dr-sw-train").value || 0,
     induction: document.getElementById("dr-sw-induct").value || 0,
@@ -7959,31 +7959,31 @@ window.viewDailyReportDetails = function (logId) {
 
   const firstEntity = report.entities[0];
 
-  // استخراج البيانات العامة
+  // استخراج البيانات مع مراعاة الترحيل الجديد للأعمدة
   const stats = {
+    security: firstEntity[20],
     ptw: firstEntity[21],
     hazards: firstEntity[22],
     obs: firstEntity[23],
-    equip: firstEntity[24],
-    intAudit: firstEntity[25],
-    extAudit: firstEntity[26],
-    accInsp: firstEntity[27],
-    weekly: firstEntity[28],
-    monthly: firstEntity[29],
-    security: firstEntity[20],
-    drill: firstEntity[36] || 0, // تم التصحيح لتقرأ من العمود 37 في الشيت
-    campaigns: firstEntity[37] || 0,
+    equipInt: firstEntity[24], // الداخلي (في مكانه القديم)
+    intAudit: firstEntity[25], // رجع مكانه
+    extAudit: firstEntity[26], // رجع مكانه
+    accInsp: firstEntity[27], // رجع مكانه
+    weekly: firstEntity[28], // رجع مكانه
+    monthly: firstEntity[29], // رجع مكانه
+    drill: firstEntity[36] || 0, // رجع مكانه
+    campaigns: firstEntity[37] || 0, // رجع مكانه
+    equipExt: firstEntity[38] || 0, // الخارجي (العمود الجديد في الآخر خالص)
   };
 
-  // 1. ضبط المربع الأبيض الكبير (Modal Content) عشان ميخرجش بره الشاشة أبداً
   const modalContent = document.querySelector(
     "#report-details-modal .modal-content",
   );
   if (modalContent) {
     modalContent.style.display = "flex";
     modalContent.style.flexDirection = "column";
-    modalContent.style.maxHeight = "90vh"; // أقصى طول 90% من الشاشة
-    modalContent.style.overflow = "hidden"; // منع السكرول الخارجي
+    modalContent.style.maxHeight = "90vh";
+    modalContent.style.overflow = "hidden";
   }
 
   const body = document.getElementById("report-details-body");
@@ -8011,7 +8011,10 @@ window.viewDailyReportDetails = function (logId) {
             <div style="font-size:0.7rem; color:#666;">PTW</div><div style="font-size:1.1rem; font-weight:bold; color:#1976d2;">${stats.ptw}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
-            <div style="font-size:0.7rem; color:#666;">Eqp Insp</div><div style="font-size:1.1rem; font-weight:bold; color:#388e3c;">${stats.equip}</div>
+            <div style="font-size:0.6rem; color:#666;">Eqp Insp(Int)</div><div style="font-size:1.1rem; font-weight:bold; color:#388e3c;">${stats.equipInt}</div>
+        </div>
+        <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
+            <div style="font-size:0.6rem; color:#666;">Eqp Insp(Ext)</div><div style="font-size:1.1rem; font-weight:bold; color:#388e3c;">${stats.equipExt}</div>
         </div>
         <div style="background:white; border:1px solid #ddd; border-radius:6px; padding:5px; text-align:center;">
             <div style="font-size:0.7rem; color:#666;">Int Audit</div><div style="font-size:1.1rem; font-weight:bold; color:#555;">${stats.intAudit}</div>
@@ -8035,31 +8038,15 @@ window.viewDailyReportDetails = function (logId) {
             <div style="font-size:0.7rem; color:#666;">Campaigns</div><div style="font-size:1.1rem; font-weight:bold; color:#e91e63;">${stats.campaigns}</div>
         </div>
     </div>
-    <h4 style="color: #333; margin-bottom: 10px; font-size: 0.95rem;"><i class="fas fa-users"></i> تفاصيل العمالة، ال٪دريب، والإصابات</h4>
-    <div style="font-size:0.7rem; color:#856404; background:#fff3cd; padding:5px; margin-bottom:5px; border-radius:4px; text-align:center;">
-        <i class="fas fa-arrows-alt-h"></i> اسحب الجدول لليمين واليسار لرؤية باقي الأعمدة
-    </div>
-
+    <h4 style="color: #333; margin-bottom: 10px; font-size: 0.95rem;"><i class="fas fa-users"></i> تفاصيل العمالة، التدريب، والإصابات</h4>
     <div class="results-table-container" style="overflow-x: auto; border:1px solid #eee; border-radius:5px;">
         <table class="results-table" style="font-size: 0.75rem; min-width: 900px; margin:0;">
             <thead>
                 <tr style="background:#333; color:white;">
-                    <th>الجهة</th>
-                    <th>عمالة</th>
-                    <th>ساعات</th>
-                    <th style="background:#17a2b8;">Train</th>
-                    <th style="background:#17a2b8;">Induct</th>
-                    <th>UA</th>
-                    <th>UC</th>
-                    <th>Env.I</th>
-                    <th>Pos</th>
-                    <th style="background:#4a0000;">Fatal</th>
-                    <th style="background:#4a0000;">LTI</th>
-                    <th style="background:#4a0000;">MTC</th>
-                    <th style="background:#4a0000;">FAC</th>
-                    <th style="background:#4a0000;">NM</th>
-                    <th style="background:#4a0000;">PD</th>
-                    <th style="background:#4a0000;">Env.Inc</th>
+                    <th>الجهة</th><th>عمالة</th><th>ساعات</th>
+                    <th style="background:#17a2b8;">Train</th><th style="background:#17a2b8;">Induct</th>
+                    <th>UA</th><th>UC</th><th>Env.I</th><th>Pos</th>
+                    <th style="background:#4a0000;">Fatal</th><th style="background:#4a0000;">LTI</th><th style="background:#4a0000;">MTC</th><th style="background:#4a0000;">FAC</th><th style="background:#4a0000;">NM</th><th style="background:#4a0000;">PD</th><th style="background:#4a0000;">Env.Inc</th>
                 </tr>
             </thead>
             <tbody>`;
@@ -8094,15 +8081,12 @@ window.viewDailyReportDetails = function (logId) {
   });
 
   html += `</tbody></table></div>`;
-
   body.innerHTML = html;
 
-  // 3. ضبط السكرول ليكون للمحتوى فقط (Body)
   body.style.flexGrow = "1";
   body.style.overflowY = "auto";
   body.style.padding = "10px";
 
-  // 4. إظهار وتنسيق الأزرار في ذيل المودال (Footer) بشكل ثابت
   const footerBtns = document.querySelector(".modal-footer-btns");
   if (footerBtns) {
     footerBtns.style.display = "flex";
@@ -8110,16 +8094,15 @@ window.viewDailyReportDetails = function (logId) {
     footerBtns.style.gap = "10px";
     footerBtns.style.padding = "15px 10px";
     footerBtns.style.borderTop = "1px solid #eee";
-    footerBtns.style.backgroundColor = "#fff"; // عشان لو طلعت فوق الجدول
+    footerBtns.style.backgroundColor = "#fff";
   }
 
-  // 5. ربط وضبط الأزرار نفسها
   const btnApprove = document.getElementById("btn-approve-final");
   const btnReject = document.getElementById("btn-reject-final");
 
   if (btnApprove) {
     btnApprove.innerHTML = '<i class="fas fa-check-circle"></i> اعتماد التقرير';
-    btnApprove.style.flex = "1 1 45%"; // يأخذ نص الشاشة أو كاملها حسب الحجم
+    btnApprove.style.flex = "1 1 45%";
     btnApprove.style.minWidth = "140px";
     btnApprove.onclick = () => finalizeAction(logId, "APPROVE");
   }
@@ -8130,7 +8113,6 @@ window.viewDailyReportDetails = function (logId) {
     btnReject.onclick = () => finalizeAction(logId, "REJECT");
   }
 
-  // إظهار المودال
   document.getElementById("report-details-modal").style.display = "flex";
 };
 
@@ -8229,7 +8211,7 @@ window.closeReportModal = function () {
   document.getElementById("report-details-modal").style.display = "none";
 };
 
-// 1. متغير عالمي مؤقت لحظ قائمy� المش  �ين عشان نهرب من مشكلة الـ JSON في الـ HTML
+// 1. متغير عالمي مؤقت لحظ قائمy المش ين عشان نهرب من مشكلة الـ JSON في الـ HTML
 let tempSupervisorsList = [];
 
 /**
@@ -8821,7 +8803,8 @@ window.printDailyReportPDF = function (logId) {
             <div class="stat-box"><div class="title">PTW</div><div class="val" style="color:#1976d2">${g.ptw}</div></div>
             <div class="stat-box"><div class="title">Hazards</div><div class="val">${g.hazards}</div></div>
             <div class="stat-box"><div class="title">Observations</div><div class="val" style="color:#f57c00">${g.obs}</div></div>
-            <div class="stat-box"><div class="title">Equip. Insp.</div><div class="val" style="color:#388e3c">${g.equip}</div></div>
+            <div class="stat-box"><div class="title">Equip. (Int)</div><div class="val" style="color:#388e3c">${g.equipInspectionInt || g.equipInt || 0}</div></div>
+            <div class="stat-box"><div class="title">Equip. (Ext)</div><div class="val" style="color:#388e3c">${g.equipInspectionExt || g.equipExt || 0}</div></div>
             <div class="stat-box"><div class="title">Internal Audit</div><div class="val" style="color:#555">${g.intAudit}</div></div>
             <div class="stat-box"><div class="title">External Audit</div><div class="val" style="color:#555">${g.extAudit}</div></div>
             <div class="stat-box"><div class="title">Accomp. Insp.</div><div class="val" style="color:#009688">${g.accInsp}</div></div>
@@ -8957,13 +8940,14 @@ window.generateConsolidatedDailyReport = function () {
     ptw: 0,
     hazards: 0,
     obs: 0,
-    equip: 0,
+    equipInt: 0,
+    equipExt: 0, // تم التعديل هنا
     intAudit: 0,
     extAudit: 0,
     accInsp: 0,
     weekly: 0,
     monthly: 0,
-    drill: 0, // <--- ضيف دي
+    drill: 0,
     campaigns: 0,
   };
 
@@ -9055,7 +9039,12 @@ window.generateConsolidatedDailyReport = function () {
     aggGlobal.ptw += parseFloat(r.globalStats.ptw || 0);
     aggGlobal.hazards += parseFloat(r.globalStats.hazards || 0);
     aggGlobal.obs += parseFloat(r.globalStats.obs || 0);
-    aggGlobal.equip += parseFloat(r.globalStats.equip || 0);
+    aggGlobal.equipInt += parseFloat(
+      r.globalStats.equipInspectionInt || r.globalStats.equipInt || 0,
+    ); // تعديل
+    aggGlobal.equipExt += parseFloat(
+      r.globalStats.equipInspectionExt || r.globalStats.equipExt || 0,
+    ); // تعديل
     aggGlobal.intAudit += parseFloat(r.globalStats.intAudit || 0);
     aggGlobal.extAudit += parseFloat(r.globalStats.extAudit || 0);
     aggGlobal.accInsp += parseFloat(r.globalStats.accInsp || 0);
@@ -9254,7 +9243,8 @@ window.generateConsolidatedDailyReport = function () {
             <div class="stat-box"><div class="title">PTW</div><div class="val" style="color:#1976d2">${aggGlobal.ptw}</div></div>
             <div class="stat-box"><div class="title">Hazards</div><div class="val">${aggGlobal.hazards}</div></div>
             <div class="stat-box"><div class="title">Observations</div><div class="val" style="color:#f57c00">${aggGlobal.obs}</div></div>
-            <div class="stat-box"><div class="title">Equip. Insp.</div><div class="val" style="color:#388e3c">${aggGlobal.equip}</div></div>
+            <div class="stat-box"><div class="title">Equip. (Int)</div><div class="val" style="color:#388e3c">${aggGlobal.equipInt}</div></div>
+            <div class="stat-box"><div class="title">Equip. (Ext)</div><div class="val" style="color:#388e3c">${aggGlobal.equipExt}</div></div>
             <div class="stat-box"><div class="title">Internal Audit</div><div class="val" style="color:#555">${aggGlobal.intAudit}</div></div>
             <div class="stat-box"><div class="title">External Audit</div><div class="val" style="color:#555">${aggGlobal.extAudit}</div></div>
             <div class="stat-box"><div class="title">Accomp. Insp.</div><div class="val" style="color:#009688">${aggGlobal.accInsp}</div></div>
@@ -10158,7 +10148,7 @@ window.exportKpiLogsToExcel = function () {
   window.showLoader("جاري تجهيز ملف الإكسيل...");
 
   try {
-    // 1. تجهيز ال��يانات بالعناوين العربية (تم إضافة القسم)
+    // 1. تجهيز اليانات بالعناوين العربية (تم إضافة القسم)
     const excelData = window.currentKpiLogsData.map((row, index) => {
       let percentageText = row.percentage + "%";
       if (row.percentage === "N/A") percentageText = "لم يتواجد (N/A)";
@@ -10565,7 +10555,7 @@ if (vehForm) {
       gpsUser: document.getElementById("veh-gps-user").value,
       gpsPass: document.getElementById("veh-gps-pass").value,
 
-      // إذا كانت خاة الاسم مفتوحة للكتابة، إذاً هذا عامل جديد يجب  في الداتابيز
+      // إذا كانت خاة الاسم مفتوحة للكتابة، إذاً هذا عامل جديد يجب  فيز
       driverIsNew: !nameInput.readOnly,
     };
 
@@ -11787,7 +11777,7 @@ window.renderEquipmentChecklist = function () {
       ? `<br><small style="color:#666; font-weight:normal; font-size:0.85rem;">${parts[1]}</small>`
       : "";
 
-    // رسم كروت فحص المعدات بنفس الشكل الرايق
+    // رسم كروت فحص ال عدات بنفس الشكل الرايق
     html += `
             <div class="insp-item-card">
                 <div class="insp-item-title">
@@ -12393,7 +12383,7 @@ window.loadLeaderboard = async function () {
                             </div>
 
                             <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
-                                <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-exclamation-circle" style="color:#fd7e14;"></i> إغلاق تقارير الخطر </div>
+                                <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-exclamation-circle" style="color:#fd7e14;"></i> إغلاق الهازرد</div>
                                 <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.hazRate}%</div>
                                 <div style="font-size:0.75rem; color:#999;">(${d.hazClosed} من ${d.hazTotal})</div>
                             </div>

@@ -12591,52 +12591,59 @@ window.initManageSafetyTeam = async function () {
   }
 };
 
-// رسم الجدول بذكاء لمنع تعديل الصلاحيات الذاتية
+// 2. رسم الجدول
 function renderSafetyTeamTable(data) {
-  const container = document.getElementById("safety-team-results");
+    const container = document.getElementById("safety-team-results");
 
-  if (data.length === 0) {
-    container.innerHTML =
-      '<p style="text-align:center; padding:20px;">لا يوجد موظفين تحت إدارتك حالياً.</p>';
-    return;
-  }
+    if (data.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:20px;">لا يوجد موظفين تحت إدارتك حالياً.</p>';
+        return;
+    }
 
-  let html = `
+    let html = `
         <table class="results-table" id="safety-team-table">
             <thead>
                 <tr>
                     <th>الاسم بالكامل</th>
+                    <th>المسمى الوظيفي</th>
                     <th>اسم المستخدم</th>
                     <th>تاريخ التعيين</th>
                     <th>نوع التعيين</th>
                     <th>المشروع الحالي (من التصاريح)</th>
                     <th>صلاحيات المشاريع</th>
                     <th style="text-align:center;">KPI</th>
-                    <th style="text-align:center;">إجراءات</th>
+                    <th style="text-align:center;" class="no-print">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-  data.forEach((emp) => {
-    let kpiColor = "#dc3545";
-    if (emp.kpi >= 90) kpiColor = "#28a745";
-    else if (emp.kpi >= 70) kpiColor = "#ffc107";
+    data.forEach(emp => {
+        let kpiColor = "#dc3545";
+        if(emp.kpi >= 90) kpiColor = "#28a745";
+        else if (emp.kpi >= 70) kpiColor = "#ffc107";
 
-    html += `
+        html += `
             <tr>
                 <td style="font-weight:bold;">${emp.fullName}</td>
+                <td style="font-weight:bold; color:var(--primary-color);">${emp.role}</td>
                 <td style="color:#0056b3;">${emp.username}</td>
                 <td>${emp.hireDate}</td>
                 <td><span class="badge" style="background:#e9ecef; color:#333;">${emp.hireType}</span></td>
                 <td style="font-weight:bold;">${emp.currentProject}</td>
                 <td style="font-size:0.85em; max-width:150px; overflow:hidden; text-overflow:ellipsis;" title="${emp.projectsAccess}">${emp.projectsAccess}</td>
-                <td style="text-align:center; font-weight:bold; color:${kpiColor};">${emp.kpi}%</td>
-                <td style="text-align:center; white-space:nowrap;">
-                    ${
-                      emp.username === currentUser.username
-                        ? `<span style="color:#aaa; font-size:0.8rem;">إداري النظام</span>`
-                        : `<button class="btn-small" style="background:#007bff; color:white; border:none; margin-left:5px;" onclick="window.openEditProjectsModal('${emp.username}', '${emp.projectsAccess}')" title="تعديل المشاريع">
+
+                <!-- عرض شهر التقييم كتلميح عند الوقوف على الرقم -->
+                <td style="text-align:center; font-weight:bold; color:${kpiColor};" title="هذا التقييم يخص شهر: ${emp.kpiPeriod}">
+                    ${emp.kpi}%
+                    <div style="font-size:0.7em; color:#888; font-weight:normal;">${emp.kpiPeriod !== "غير محدد" ? emp.kpiPeriod : ""}</div>
+                </td>
+
+                <td style="text-align:center; white-space:nowrap;" class="no-print">
+                    ${emp.username === currentUser.username ? 
+                      `<span style="color:#aaa; font-size:0.8rem;">إداري النظام</span>` 
+                      : 
+                      `<button class="btn-small" style="background:#007bff; color:white; border:none; margin-left:5px;" onclick="window.openEditProjectsModal('${emp.username}', '${emp.projectsAccess}')" title="تعديل المشاريع">
                           <i class="fas fa-edit"></i>
                       </button>
                       <button class="btn-small" style="background:#dc3545; color:white; border:none;" onclick="window.openResignModal('${emp.username}')" title="استقالة">
@@ -12646,10 +12653,10 @@ function renderSafetyTeamTable(data) {
                 </td>
             </tr>
         `;
-  });
+    });
 
-  html += `</tbody></table>`;
-  container.innerHTML = html;
+    html += `</tbody></table>`;
+    container.innerHTML = html;
 }
 
 // فتح نافذة المشاريع بالخيارات المتاحة فقط

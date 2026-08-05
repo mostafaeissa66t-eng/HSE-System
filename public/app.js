@@ -1,6 +1,6 @@
 // =================================== */
 // CLIENT-SIDE LOGIC (app.js - Secured V8)
-// =================================== */ 
+// =================================== */
 
 // --- التعريفات العالمية (Global Scope) ---
 let initialData = null;
@@ -304,6 +304,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewContractor: "fas fa-file-upload", // أيقونة رفع ملف
     ContractorAnalytics: "fas fa-chart-pie",
     EmployeeReports: "fas fa-id-card", // (جديد)
+    ManageSafetyTeam: "fas fa-user-shield", // أو يمكنك استخدام "fas fa-users-cog"
     NewNearMiss: "fas fa-exclamation-triangle", // Example
     AccidentReport: "fas fa-car-crash",
     MonitorAccidents: "fas fa-file-medical-alt",
@@ -344,6 +345,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewContractor: "تسجيل مقاولين (اشتراطات)",
     ContractorAnalytics: "تحليلات أداء المقاولين",
     EmployeeReports: "تقارير الموظفين", // (جديد)
+    ManageSafetyTeam: "إدارة أفراد السلامة",
     AccidentReport: "تسجيل حادث",
     MonitorAccidents: "تقارير مفتوحة",
     NewNearMiss: "Near Miss", // Example
@@ -444,7 +446,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type: "group",
       title: "إدارة الموظفين",
       icon: "fas fa-users",
-      children: ["EmployeeReports"], // "EmployeeReports" هو id السكشن
+      children: ["EmployeeReports", "ManageSafetyTeam"],
     },
     {
       type: "group",
@@ -845,6 +847,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "PpeTransactions") {
         initPpePage(); // (*** هذا هو السطر الجديد ***)
       }
+      if (sectionId === "ManageSafetyTeam") window.initManageSafetyTeam();
       if (sectionId === "NewTraining") {
         initTrainingPage();
       }
@@ -1632,7 +1635,7 @@ document.addEventListener("DOMContentLoaded", function () {
           response.employees.forEach((emp) => {
             const option = new Option(`${emp.name} (${emp.id})`, emp.id);
 
-            // (*** التعديل هنا ***)
+            // (*** التعد=�ل هنا ***)
             option.dataset.jobtitle = emp.jobTitle;
             option.dataset.project = emp.project; // تخزين اسم المشروع
             // (*** نهاية التعديل ***)
@@ -8417,7 +8420,7 @@ window.executeExtension = async function (proj, date) {
   }
 };
 // جلب وعرض التنبيهات للتقارير ال رفوضة
-// جلب وعرض التنبيهات للتقارير المرفوضة (نخة متوافقة تماماً مع الموبايل)
+// جلب وعرض الت �بيهات للتقارير المرفوضة (نخة متوافقة تماماً مع الموبايل)
 async function loadRejectedReportsAlert() {
   const section = document.getElementById("DailyHseReport");
   let alertDiv = document.getElementById("rejected-alerts");
@@ -12562,6 +12565,243 @@ function speakText(text) {
     }
   }
 }
+
+// =================================================================
+// --- وحدة إدارة أفراد السلامة (Safety Personnel Management) ---
+// =================================================================
+
+// 1. التهيئة وجلب البيانات
+window.initManageSafetyTeam = async function () {
+  const container = document.getElementById("safety-team-results");
+  if (!container) return;
+
+  container.innerHTML =
+    '<div class="loader-small">جاري جلب بيانات القسم...</div>';
+
+  try {
+    const res = await callApi("getSafetyTeamData", { userInfo: currentUser });
+
+    if (res.status === "success") {
+      renderSafetyTeamTable(res.data);
+    } else {
+      container.innerHTML = `<p class="error-message" style="display:block;">${res.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message" style="display:block;">${e.message}</p>`;
+  }
+};
+
+// رسم الجدول بذكاء لمنع تعديل الصلاحيات الذاتية
+function renderSafetyTeamTable(data) {
+  const container = document.getElementById("safety-team-results");
+
+  if (data.length === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; padding:20px;">لا يوجد موظفين تحت إدارتك حالياً.</p>';
+    return;
+  }
+
+  let html = `
+        <table class="results-table" id="safety-team-table">
+            <thead>
+                <tr>
+                    <th>الاسم بالكامل</th>
+                    <th>اسم المستخدم</th>
+                    <th>تاريخ التعيين</th>
+                    <th>نوع التعيين</th>
+                    <th>المشروع الحالي (من التصاريح)</th>
+                    <th>صلاحيات المشاريع</th>
+                    <th style="text-align:center;">KPI</th>
+                    <th style="text-align:center;">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+  data.forEach((emp) => {
+    let kpiColor = "#dc3545";
+    if (emp.kpi >= 90) kpiColor = "#28a745";
+    else if (emp.kpi >= 70) kpiColor = "#ffc107";
+
+    html += `
+            <tr>
+                <td style="font-weight:bold;">${emp.fullName}</td>
+                <td style="color:#0056b3;">${emp.username}</td>
+                <td>${emp.hireDate}</td>
+                <td><span class="badge" style="background:#e9ecef; color:#333;">${emp.hireType}</span></td>
+                <td style="font-weight:bold;">${emp.currentProject}</td>
+                <td style="font-size:0.85em; max-width:150px; overflow:hidden; text-overflow:ellipsis;" title="${emp.projectsAccess}">${emp.projectsAccess}</td>
+                <td style="text-align:center; font-weight:bold; color:${kpiColor};">${emp.kpi}%</td>
+                <td style="text-align:center; white-space:nowrap;">
+                    ${
+                      emp.username === currentUser.username
+                        ? `<span style="color:#aaa; font-size:0.8rem;">إداري النظام</span>`
+                        : `<button class="btn-small" style="background:#007bff; color:white; border:none; margin-left:5px;" onclick="window.openEditProjectsModal('${emp.username}', '${emp.projectsAccess}')" title="تعديل المشاريع">
+                          <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn-small" style="background:#dc3545; color:white; border:none;" onclick="window.openResignModal('${emp.username}')" title="استقالة">
+                          <i class="fas fa-user-times"></i>
+                      </button>`
+                    }
+                </td>
+            </tr>
+        `;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+// فتح نافذة المشاريع بالخيارات المتاحة فقط
+window.openEditProjectsModal = function(username, currentProjects) {
+    document.getElementById("edit-proj-username").value = username;
+
+    const checkboxesContainer = document.getElementById("edit-proj-checkboxes");
+    checkboxesContainer.innerHTML = '';
+
+    // 1. تحديد المشاريع التي يملكها المدير الحالي (اللي فاتح السيستم)
+    let myProjects = [];
+    if (currentUser.projects.toUpperCase() === "ALL") {
+        myProjects = initialData.projects; // المدير العام يمتلك كل المشاريع
+    } else {
+        myProjects = currentUser.projects.split(',').map(p => p.trim());
+    }
+
+    // 2. رسم القائمة
+    if (myProjects && myProjects.length > 0) {
+        const currentArr = currentProjects.split(',').map(p => p.trim());
+        const isCurrentAll = currentProjects.toUpperCase() === "ALL";
+
+        myProjects.forEach(proj => {
+            const isChecked = isCurrentAll || currentArr.includes(proj);
+            const div = document.createElement("div");
+            div.style.cssText = "margin-bottom: 8px; display: flex; align-items: center; gap: 10px;";
+            div.innerHTML = `
+                <input type="checkbox" class="proj-cb" value="${proj}" id="cb_${proj}" ${isChecked ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="cb_${proj}" style="margin:0; cursor:pointer; font-size: 0.95rem;">${proj}</label>
+            `;
+            checkboxesContainer.appendChild(div);
+        });
+    } else {
+         checkboxesContainer.innerHTML = '<p style="color:red; text-align:center;">لا تملك صلاحية على أي مشاريع لمنحها.</p>';
+    }
+
+    document.getElementById("edit-projects-modal").style.display = "flex";
+};
+
+// حفظ التعديلات بعد الاختيار
+window.submitEditProjects = async function() {
+    const username = document.getElementById("edit-proj-username").value;
+    const selected = Array.from(document.querySelectorAll(".proj-cb:checked")).map(cb => cb.value);
+    const newProjects = selected.join(",");
+
+    if(!newProjects) { alert("يرجى اختيار مشروع واحد على الأقل للمشرف!"); return; }
+
+    showLoader("جاري تحديث الصلاحيات...");
+    try {
+        const res = await callApi("updatePersonnelProjects", { username, newProjects, userInfo: currentUser });
+        alert(res.message);
+        document.getElementById("edit-projects-modal").style.display = "none";
+        window.initManageSafetyTeam();
+    } catch(e) { alert(e.message); }
+    finally { hideLoader(); }
+};
+
+window.toggleAllEditProjects = function (source) {
+  const cbs = document.querySelectorAll(".proj-cb");
+  cbs.forEach((cb) => {
+    cb.checked = false;
+  });
+};
+
+window.uncheckAllToggle = function () {
+  document.getElementById("edit-proj-all").checked = false;
+};
+
+
+// إصلاح دالة البحث بالرقم القومي (ReferenceError)
+window.handleTrnNidInput = function () {
+  const nidInput = document.getElementById("trn-cont-nid");
+  const nameInput = document.getElementById("trn-cont-name");
+  const nidVal = nidInput.value;
+
+  const worker = currentContractorWorkers.find((w) => w.id === nidVal);
+
+  if (worker) {
+    nameInput.value = worker.name;
+    nameInput.readOnly = true;
+    nameInput.style.backgroundColor = "#f0f0f0";
+  } else {
+    nameInput.value = "";
+    nameInput.readOnly = false;
+    nameInput.style.backgroundColor = "#fff";
+  }
+};
+
+// 4. نوافذ الاستقالة
+window.openResignModal = function (username) {
+  document.getElementById("resign-username").value = username;
+  document.getElementById("resign-date").valueAsDate = new Date();
+  document.getElementById("resign-reason").value = "";
+  document.getElementById("resign-modal").style.display = "flex";
+};
+
+window.submitResignation = async function () {
+  const username = document.getElementById("resign-username").value;
+  const resignDate = document.getElementById("resign-date").value;
+  const reason = document.getElementById("resign-reason").value;
+
+  if (!resignDate || !reason) {
+    alert("تاريخ وسبب الاستقالة مطلوبان!");
+    return;
+  }
+
+  if (
+    !confirm(
+      `هل أنت متأكد من إنهاء خدمة "${username}" ونقله للمستقيلين؟ لا يمكن التراجع عن هذا الإجراء.`,
+    )
+  )
+    return;
+
+  showLoader("جاري تنفيذ الاستقالة...");
+  try {
+    const res = await callApi("processResignation", {
+      username,
+      resignDate,
+      reason,
+      userInfo: currentUser,
+    });
+    alert(res.message);
+    document.getElementById("resign-modal").style.display = "none";
+    initManageSafetyTeam(); // تحديث الجدول
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    hideLoader();
+  }
+};
+
+// 5. دالة تصدير الجدول لملف إكسيل
+window.exportSafetyTeamExcel = function () {
+  const table = document.getElementById("safety-team-table");
+  if (!table) {
+    alert("لا توجد بيانات لتصديرها!");
+    return;
+  }
+
+  // استخدام مكتبة XLSX الموجودة في نظامك
+  const wb = XLSX.utils.table_to_book(table, { sheet: "Safety Personnel" });
+
+  // استبعاد عمود "الإجراءات" الأخير من الشيت المصدر (اختياري لجمال الشيت)
+  const ws = wb.Sheets["Safety Personnel"];
+
+  // توليد وتنزيل الملف
+  const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "-");
+  XLSX.writeFile(wb, `Safety_Personnel_Report_${today}.xlsx`);
+};
+
+// لا تنسى استدعاء التهيئة في دالة showSection
+// if (sectionId === "ManageSafetyTeam") initManageSafetyTeam();
 
 // دالة فتح وإغلاق الشات وإخفاء الأيقونة
 function toggleAiChat() {

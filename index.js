@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
 // !!! --- === === === === === === === === === === === === --- !!!
 // !!! --- رابط جوجل آب سكريبت الخاص بك --- !!!
 const GOOGLE_SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbyxBqhbymJWr912M2o-cMax4OidKcq0WJEG92qZzJk5Nj85tHE09tVQEufY9OTCV2OmHg/exec";
+    "https://script.google.com/macros/s/AKfycby1cnXSth_lgtaWsk-Vs-NjqvsjO_XX0TT89kx24bXumSBmg-t9ErPhKhIdRMdtCsvSyw/exec";
 // !!! --- === === === === === === === === === === === === --- !!!
 
 // Log initial value

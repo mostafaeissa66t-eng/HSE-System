@@ -321,6 +321,9 @@ document.addEventListener("DOMContentLoaded", function () {
     EquipmentInspection: "fas fa-clipboard-check",
     ManageEquipment: "fas fa-toolbox",
     ProjectsLeaderboard: "fas fa-trophy", // الأيقونة
+    NewScaffold: "fas fa-layer-group",
+    ActiveScaffolds: "fas fa-check-double",
+    MonitorScaffolds: "fas fa-archive",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -362,6 +365,9 @@ document.addEventListener("DOMContentLoaded", function () {
     EquipmentInspection: "فحص المعدات",
     ManageEquipment: "إدارة ومتابعة المعدات",
     ProjectsLeaderboard: "لوحة شرف المشاريع", // الاسم
+    NewScaffold: "تسجيل سقالة جديدة",
+    ActiveScaffolds: "السقالات الحالية بالموقع",
+    MonitorScaffolds: "السجل الشامل للسقالات",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -461,6 +467,12 @@ document.addEventListener("DOMContentLoaded", function () {
       children: ["DailyHseReport", "DailyApprovals", "MonitorDailyReports"], // سنضيف قسم الاعتماد والسجل لاحقاً هنا
     },
     { type: "link", id: "ProjectsLeaderboard" }, // <--- أضف هذا السطر
+    {
+      type: "group",
+      title: "إدارة السقالات",
+      icon: "fas fa-layer-group",
+      children: ["NewScaffold", "ActiveScaffolds", "MonitorScaffolds"],
+    },
     {
       type: "group",
       title: "لوحة تحكم الإدارة",
@@ -900,6 +912,13 @@ document.addEventListener("DOMContentLoaded", function () {
       if (sectionId === "NewEquipment") window.initNewEquipmentPage();
       if (sectionId === "EquipmentInspection")
         window.initEquipmentInspectionPage();
+      if (sectionId === "NewScaffold") window.initNewScaffoldPage();
+      if (sectionId === "ActiveScaffolds") window.loadActiveScaffolds();
+      if (sectionId === "MonitorScaffolds") {
+        populateMonitorDropdowns(document.getElementById("mon-scaf-project"));
+        document.getElementById("mon-scaf-results").innerHTML =
+          '<p style="text-align: center; padding: 20px; color: #666;">حدد معايير البحث...</p>';
+      }
       if (sectionId === "ProjectsLeaderboard") window.initLeaderboardPage();
       if (sectionId === "MonitorDailyReports")
         window.initMonitorDailyReportsPage();
@@ -12593,14 +12612,15 @@ window.initManageSafetyTeam = async function () {
 
 // 2. رسم الجدول
 function renderSafetyTeamTable(data) {
-    const container = document.getElementById("safety-team-results");
+  const container = document.getElementById("safety-team-results");
 
-    if (data.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px;">لا يوجد موظفين تحت إدارتك حالياً.</p>';
-        return;
-    }
+  if (data.length === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; padding:20px;">لا يوجد موظفين تحت إدارتك حالياً.</p>';
+    return;
+  }
 
-    let html = `
+  let html = `
         <table class="results-table" id="safety-team-table">
             <thead>
                 <tr>
@@ -12618,12 +12638,12 @@ function renderSafetyTeamTable(data) {
             <tbody>
     `;
 
-    data.forEach(emp => {
-        let kpiColor = "#dc3545";
-        if(emp.kpi >= 90) kpiColor = "#28a745";
-        else if (emp.kpi >= 70) kpiColor = "#ffc107";
+  data.forEach((emp) => {
+    let kpiColor = "#dc3545";
+    if (emp.kpi >= 90) kpiColor = "#28a745";
+    else if (emp.kpi >= 70) kpiColor = "#ffc107";
 
-        html += `
+    html += `
             <tr>
                 <td style="font-weight:bold;">${emp.fullName}</td>
                 <td style="font-weight:bold; color:var(--primary-color);">${emp.role}</td>
@@ -12640,10 +12660,10 @@ function renderSafetyTeamTable(data) {
                 </td>
 
                 <td style="text-align:center; white-space:nowrap;" class="no-print">
-                    ${emp.username === currentUser.username ? 
-                      `<span style="color:#aaa; font-size:0.8rem;">إداري النظام</span>` 
-                      : 
-                      `<button class="btn-small" style="background:#007bff; color:white; border:none; margin-left:5px;" onclick="window.openEditProjectsModal('${emp.username}', '${emp.projectsAccess}')" title="تعديل المشاريع">
+                    ${
+                      emp.username === currentUser.username
+                        ? `<span style="color:#aaa; font-size:0.8rem;">إداري النظام</span>`
+                        : `<button class="btn-small" style="background:#007bff; color:white; border:none; margin-left:5px;" onclick="window.openEditProjectsModal('${emp.username}', '${emp.projectsAccess}')" title="تعديل المشاريع">
                           <i class="fas fa-edit"></i>
                       </button>
                       <button class="btn-small" style="background:#dc3545; color:white; border:none;" onclick="window.openResignModal('${emp.username}')" title="استقالة">
@@ -12653,65 +12673,79 @@ function renderSafetyTeamTable(data) {
                 </td>
             </tr>
         `;
-    });
+  });
 
-    html += `</tbody></table>`;
-    container.innerHTML = html;
+  html += `</tbody></table>`;
+  container.innerHTML = html;
 }
 
 // فتح نافذة المشاريع بالخيارات المتاحة فقط
-window.openEditProjectsModal = function(username, currentProjects) {
-    document.getElementById("edit-proj-username").value = username;
+window.openEditProjectsModal = function (username, currentProjects) {
+  document.getElementById("edit-proj-username").value = username;
 
-    const checkboxesContainer = document.getElementById("edit-proj-checkboxes");
-    checkboxesContainer.innerHTML = '';
+  const checkboxesContainer = document.getElementById("edit-proj-checkboxes");
+  checkboxesContainer.innerHTML = "";
 
-    // 1. تحديد المشاريع التي يملكها المدير الحالي (اللي فاتح السيستم)
-    let myProjects = [];
-    if (currentUser.projects.toUpperCase() === "ALL") {
-        myProjects = initialData.projects; // المدير العام يمتلك كل المشاريع
-    } else {
-        myProjects = currentUser.projects.split(',').map(p => p.trim());
-    }
+  // 1. تحديد المشاريع التي يملكها المدير الحالي (اللي فاتح السيستم)
+  let myProjects = [];
+  if (currentUser.projects.toUpperCase() === "ALL") {
+    myProjects = initialData.projects; // المدير العام يمتلك كل المشاريع
+  } else {
+    myProjects = currentUser.projects.split(",").map((p) => p.trim());
+  }
 
-    // 2. رسم القائمة
-    if (myProjects && myProjects.length > 0) {
-        const currentArr = currentProjects.split(',').map(p => p.trim());
-        const isCurrentAll = currentProjects.toUpperCase() === "ALL";
+  // 2. رسم القائمة
+  if (myProjects && myProjects.length > 0) {
+    const currentArr = currentProjects.split(",").map((p) => p.trim());
+    const isCurrentAll = currentProjects.toUpperCase() === "ALL";
 
-        myProjects.forEach(proj => {
-            const isChecked = isCurrentAll || currentArr.includes(proj);
-            const div = document.createElement("div");
-            div.style.cssText = "margin-bottom: 8px; display: flex; align-items: center; gap: 10px;";
-            div.innerHTML = `
-                <input type="checkbox" class="proj-cb" value="${proj}" id="cb_${proj}" ${isChecked ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
+    myProjects.forEach((proj) => {
+      const isChecked = isCurrentAll || currentArr.includes(proj);
+      const div = document.createElement("div");
+      div.style.cssText =
+        "margin-bottom: 8px; display: flex; align-items: center; gap: 10px;";
+      div.innerHTML = `
+                <input type="checkbox" class="proj-cb" value="${proj}" id="cb_${proj}" ${isChecked ? "checked" : ""} style="width: 16px; height: 16px; cursor: pointer;">
                 <label for="cb_${proj}" style="margin:0; cursor:pointer; font-size: 0.95rem;">${proj}</label>
             `;
-            checkboxesContainer.appendChild(div);
-        });
-    } else {
-         checkboxesContainer.innerHTML = '<p style="color:red; text-align:center;">لا تملك صلاحية على أي مشاريع لمنحها.</p>';
-    }
+      checkboxesContainer.appendChild(div);
+    });
+  } else {
+    checkboxesContainer.innerHTML =
+      '<p style="color:red; text-align:center;">لا تملك صلاحية على أي مشاريع لمنحها.</p>';
+  }
 
-    document.getElementById("edit-projects-modal").style.display = "flex";
+  document.getElementById("edit-projects-modal").style.display = "flex";
 };
 
 // حفظ التعديلات بعد الاختيار
-window.submitEditProjects = async function() {
-    const username = document.getElementById("edit-proj-username").value;
-    const selected = Array.from(document.querySelectorAll(".proj-cb:checked")).map(cb => cb.value);
-    const newProjects = selected.join(",");
+window.submitEditProjects = async function () {
+  const username = document.getElementById("edit-proj-username").value;
+  const selected = Array.from(
+    document.querySelectorAll(".proj-cb:checked"),
+  ).map((cb) => cb.value);
+  const newProjects = selected.join(",");
 
-    if(!newProjects) { alert("يرجى اختيار مشروع واحد على الأقل للمشرف!"); return; }
+  if (!newProjects) {
+    alert("يرجى اختيار مشروع واحد على الأقل للمشرف!");
+    return;
+  }
 
-    showLoader("جاري تحديث الصلاحيات...");
-    try {
-        const res = await callApi("updatePersonnelProjects", { username, newProjects, userInfo: currentUser });
-        alert(res.message);
-        document.getElementById("edit-projects-modal").style.display = "none";
-        window.initManageSafetyTeam();
-    } catch(e) { alert(e.message); }
-    finally { hideLoader(); }
+  showLoader("جاري تحديث الصلاحيات...");
+  try {
+    const res = await callApi("updatePersonnelProjects", {
+      username,
+      newProjects,
+      userInfo: currentUser,
+    });
+    alert(res.message);
+    document.getElementById("edit-projects-modal").style.display = "none";
+    window.initManageSafetyTeam();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    hideLoader();
+  }
 };
 
 window.toggleAllEditProjects = function (source) {
@@ -12724,7 +12758,6 @@ window.toggleAllEditProjects = function (source) {
 window.uncheckAllToggle = function () {
   document.getElementById("edit-proj-all").checked = false;
 };
-
 
 // إصلاح دالة البحث بالرقم القومي (ReferenceError)
 window.handleTrnNidInput = function () {
@@ -12809,7 +12842,199 @@ window.exportSafetyTeamExcel = function () {
 
 // لا تنسى استدعاء التهيئة في دالة showSection
 // if (sectionId === "ManageSafetyTeam") initManageSafetyTeam();
+// =================================================================
+// --- وحدة إدارة السقالات (Scaffolding Module) ---
+// =================================================================
 
+// تهيئة صفحة السقالة الجديدة
+window.initNewScaffoldPage = function () {
+  const projSelect = document.getElementById("scaf-project");
+  const hseSup = document.getElementById("scaf-hse-sup");
+  const dateInput = document.getElementById("scaf-date");
+
+  if (hseSup && currentUser) hseSup.value = currentUser.username;
+  if (dateInput) dateInput.valueAsDate = new Date();
+
+  if (projSelect && projSelect.options.length <= 1) {
+    if (typeof ppeLocations !== "undefined" && ppeLocations.length > 0) {
+      const userProj = (currentUser.projects || "").toString();
+      const acc =
+        userProj === "ALL"
+          ? ppeLocations
+          : ppeLocations.filter((p) => userProj.includes(p));
+      fillSelect(projSelect, acc);
+    } else {
+      // كاش باك آب
+      callApi("getInventoryInitData", { userInfo: currentUser }).then((r) => {
+        if (r.status === "success") {
+          ppeLocations = r.locations;
+          const userProj = (currentUser.projects || "").toString();
+          const acc =
+            userProj === "ALL"
+              ? r.locations
+              : r.locations.filter((p) => userProj.includes(p));
+          fillSelect(projSelect, acc);
+        }
+      });
+    }
+  }
+};
+
+// حفظ السقالة الجديدة
+const scafForm = document.getElementById("scaffold-form");
+if (scafForm) {
+  scafForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const btn = document.getElementById("scaf-save-btn");
+    const data = {
+      project: document.getElementById("scaf-project").value,
+      creationDate: document.getElementById("scaf-date").value,
+      tagNumber: document.getElementById("scaf-tag").value,
+      location: document.getElementById("scaf-location").value,
+      executionSupervisor: document.getElementById("scaf-exec-sup").value,
+    };
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التسجيل...';
+
+    try {
+      const res = await callApi(
+        "saveScaffoldRecord",
+        {
+          project: data.project,
+          creationDate: data.creationDate,
+          tagNumber: data.tagNumber,
+          location: data.location,
+          executionSupervisor: data.executionSupervisor,
+        },
+        false,
+      );
+      alert("✅ " + res.message);
+      scafForm.reset();
+      window.initNewScaffoldPage();
+    } catch (err) {
+      alert("❌ خطأ: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> تسجيل السقالة بالموقع';
+    }
+  });
+}
+
+// جلب السقالات الحالية
+window.loadActiveScaffolds = async function () {
+  const container = document.getElementById("active-scaffolds-list");
+  if (!container) return;
+  container.innerHTML =
+    '<div class="loader-small">جاري تحميل السقالات المفتوحة...</div>';
+
+  try {
+    const res = await callApi("getActiveScaffolds", {}, false);
+    if (res.status === "success") {
+      if (res.data.length === 0) {
+        container.innerHTML =
+          '<p style="text-align:center; padding:20px; color:#28a745; font-weight:bold;">لا يوجد سقالات معلقة، الموقع آمن!</p>';
+        return;
+      }
+
+      let html = `<table class="results-table">
+                <thead><tr><th>كارت الفحص</th><th>تاريخ الإنشاء</th><th>المشروع</th><th>المكان</th><th>مشرف التنفيذ</th><th>إجراء</th></tr></thead>
+                <tbody>`;
+      res.data.forEach((s) => {
+        html += `<tr>
+                    <td style="font-weight:bold; color:var(--primary-color);">${s.tag}</td>
+                    <td>${s.date}</td><td>${s.project}</td><td>${s.location}</td><td>${s.execSup}</td>
+                    <td><button class="btn-small" style="background:#ff9800; color:white; border:none;" onclick="window.openDismantleModal('${s.id}')"><i class="fas fa-hammer"></i> فك السقالة</button></td>
+                </tr>`;
+      });
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = `<p class="error-message">${res.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">${e.message}</p>`;
+  }
+};
+
+// نوافذ الفك
+window.openDismantleModal = function (id) {
+  document.getElementById("dismantle-scaffold-id").value = id;
+  document.getElementById("dismantle-date").valueAsDate = new Date();
+  document.getElementById("dismantle-notes").value = "";
+  document.getElementById("dismantle-modal").style.display = "flex";
+};
+
+window.submitDismantle = async function () {
+  const scaffoldId = document.getElementById("dismantle-scaffold-id").value;
+  const dismantleDate = document.getElementById("dismantle-date").value;
+  const notes = document.getElementById("dismantle-notes").value;
+
+  if (!dismantleDate) {
+    alert("يرجى إدخال تاريخ الفك.");
+    return;
+  }
+
+  showLoader("جاري إزالة السقالة...");
+  try {
+    const res = await callApi(
+      "dismantleScaffold",
+      { scaffoldId, dismantleDate, notes },
+      false,
+    );
+    alert(res.message);
+    document.getElementById("dismantle-modal").style.display = "none";
+    window.loadActiveScaffolds();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    hideLoader();
+  }
+};
+
+// السجل الشامل
+window.searchScaffoldsLog = async function () {
+  const container = document.getElementById("mon-scaf-results");
+  container.innerHTML = '<div class="loader-small">جاري البحث...</div>';
+
+  const filters = {
+    project: document.getElementById("mon-scaf-project").value,
+    status: document.getElementById("mon-scaf-status").value,
+    fromDate: document.getElementById("mon-scaf-from").value,
+    toDate: document.getElementById("mon-scaf-to").value,
+  };
+
+  try {
+    const res = await callApi("searchScaffolds", { filters }, false);
+    if (res.status === "success") {
+      if (res.data.length === 0) {
+        container.innerHTML =
+          '<p style="text-align:center;">لا توجد سقالات مطابقة للبحث.</p>';
+        return;
+      }
+      let html = `<table class="results-table">
+                <thead><tr><th>رقم الكارت</th><th>المشروع</th><th>تاريخ الإنشاء</th><th>المكان</th><th>مشرف التنفيذ</th><th>مستلم السلامة</th><th>الحالة</th><th>تاريخ الفك</th></tr></thead>
+                <tbody>`;
+      res.data.forEach((s) => {
+        const badge =
+          s.status === "Active"
+            ? '<span class="badge bg-danger">قائمة</span>'
+            : '<span class="badge bg-success">تم الفك</span>';
+        html += `<tr>
+                    <td style="font-weight:bold;">${s.tag}</td><td>${s.project}</td><td>${s.date}</td>
+                    <td>${s.location}</td><td>${s.execSup}</td><td>${s.hseSup}</td>
+                    <td>${badge}</td><td>${s.dismantleDate || "-"}</td>
+                </tr>`;
+      });
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = `<p class="error-message">${res.message}</p>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">${e.message}</p>`;
+  }
+};
 // دالة فتح وإغلاق الشات وإخفاء الأيقونة
 function toggleAiChat() {
   const modal = document.getElementById("ai-chat-modal");

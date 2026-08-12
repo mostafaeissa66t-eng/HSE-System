@@ -12933,7 +12933,7 @@ window.loadActiveScaffolds = async function () {
     if (res.status === "success") {
       if (res.data.length === 0) {
         container.innerHTML =
-          '<p style="text-align:center; padding:20px; color:#28a745; font-weight:bold;">لا يوجد سقالات معلقة، الموقع آمن!</p>';
+          '<p style="text-align:center; padding:20px; color:#28a745; font-weight:bold;">لا يوجد سقالات ، الموقع آمن!</p>';
         return;
       }
 

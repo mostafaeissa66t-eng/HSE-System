@@ -6874,6 +6874,245 @@
                         </div>
                     </div>
                 </section>
+                <!-- ========================================== -->
+                <!-- قسم إدارة السقالات (Scaffolding Management) -->
+                <!-- ========================================== -->
+
+                <section
+                    id="NewScaffold"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-layer-group"></i> تسجيل سقالة جديدة
+                    </h2>
+                    <p
+                        style="
+                            color: #666;
+                            font-size: 0.9rem;
+                            margin-bottom: 20px;
+                        "
+                    >
+                        نلتزم بتوفير السقالات المطلوبة للعمال بشكل آمن وسليم.
+                    </p>
+
+                    <form id="scaffold-form" class="app-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>مشرف السلامة (المستلم):</label>
+                                <input
+                                    type="text"
+                                    id="scaf-hse-sup"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="required">المشروع:</label>
+                                <select id="scaf-project" required></select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="required"
+                                    >تاريخ إنشاء السقالة:</label
+                                >
+                                <input type="date" id="scaf-date" required />
+                            </div>
+                            <div class="form-group">
+                                <label class="required"
+                                    >رقم كارت الفحص (Tag Number):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="scaf-tag"
+                                    placeholder="أدخل رقم الكارت الأخضر..."
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="required"
+                                    >مكان السقالة (Location):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="scaf-location"
+                                    placeholder="مثال: الواجهة الشمالية - مبنى A..."
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="required"
+                                    >اسم مشرف التنفيذ:</label
+                                >
+                                <input
+                                    type="text"
+                                    id="scaf-exec-sup"
+                                    placeholder="المهندس أو المشرف المسؤول عن التركيب..."
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="scaf-save-btn"
+                            class="btn btn-primary"
+                            style="width: 100%; margin-top: 15px"
+                        >
+                            <i class="fas fa-save"></i> تسجيل السقالة بالموقع
+                        </button>
+                    </form>
+                </section>
+
+                <section
+                    id="ActiveScaffolds"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-check-double"></i> السقالات الحالية
+                        بالموقع (Active)
+                    </h2>
+                    <div class="app-form">
+                        <button
+                            class="btn btn-secondary"
+                            onclick="window.loadActiveScaffolds()"
+                            style="margin-bottom: 15px"
+                        >
+                            <i class="fas fa-sync"></i> تحديث القائمة
+                        </button>
+                        <div
+                            id="active-scaffolds-list"
+                            class="results-table-container"
+                        >
+                            <p style="text-align: center">جاري التحميل...</p>
+                        </div>
+                    </div>
+
+                    <!-- نافذة فك السقالة -->
+                    <div
+                        id="dismantle-modal"
+                        class="modal"
+                        style="display: none"
+                        onclick="if(event.target == this) this.style.display='none'"
+                    >
+                        <div class="modal-content" style="max-width: 500px">
+                            <span
+                                class="close"
+                                onclick="document.getElementById('dismantle-modal').style.display='none'"
+                                >&times;</span
+                            >
+                            <h3 style="color: #ff9800">
+                                <i class="fas fa-hammer"></i> تسجيل فك / نقل
+                                السقالة
+                            </h3>
+
+                            <input type="hidden" id="dismantle-scaffold-id" />
+
+                            <div class="form-group" style="margin-top: 15px">
+                                <label class="required"
+                                    >تاريخ الفك/النقل:</label
+                                >
+                                <input
+                                    type="date"
+                                    id="dismantle-date"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>ملاحظات (اختياري):</label>
+                                <textarea
+                                    id="dismantle-notes"
+                                    rows="3"
+                                    class="modern-input"
+                                    placeholder="اكتب أي ملاحظات حول عملية الفك..."
+                                ></textarea>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="btn"
+                                style="
+                                    background: #ff9800;
+                                    color: white;
+                                    width: 100%;
+                                "
+                                onclick="window.submitDismantle()"
+                            >
+                                تأكيد إزالة السقالة من الموقع
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    id="MonitorScaffolds"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-archive"></i> السجل الشامل للسقالات
+                        (Archive)
+                    </h2>
+                    <div class="app-form">
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select id="mon-scaf-project">
+                                    <option value="ALL_ACCESSIBLE">الكل</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>الحالة:</label>
+                                <select id="mon-scaf-status">
+                                    <option value="ALL">الكل</option>
+                                    <option value="Active">
+                                        قائمة (Active)
+                                    </option>
+                                    <option value="Dismantled">
+                                        مفككة (Dismantled)
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>من:</label
+                                    ><input type="date" id="mon-scaf-from" />
+                                </div>
+                                <div class="form-group">
+                                    <label>إلى:</label
+                                    ><input type="date" id="mon-scaf-to" />
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn"
+                                onclick="window.searchScaffoldsLog()"
+                            >
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+                        <div
+                            id="mon-scaf-results"
+                            class="results-table-container"
+                        >
+                            <p
+                                style="
+                                    text-align: center;
+                                    padding: 20px;
+                                    color: #666;
+                                "
+                            >
+                                حدد معايير البحث...
+                            </p>
+                        </div>
+                    </div>
+                </section>
                 <div
                     id="attendees-modal"
                     class="modal"

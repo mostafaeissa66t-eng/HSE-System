@@ -7531,12 +7531,18 @@ window.generateEmployeeProfilePDF = function (empData, tablesHtml) {
 let drAddedEntities = [];
 
 window.initDailyHseReportPage = async function () {
+  // قفل الخانات آلياً فور فتح الصفحة
+  window.lockDailyReportFields();
+
   const drForm = document.getElementById("daily-report-form");
-  if (document.getElementById("dr-date")) {
-    document.getElementById("dr-date").valueAsDate = new Date();
+  const drDateInput = document.getElementById("dr-date");
+
+  // 1. ضبط تاريخ اليوم
+  if (drDateInput && !drDateInput.value) {
+    drDateInput.valueAsDate = new Date();
   }
 
-  // --- التعديل الجذري لتحميل المشاريع ---
+  // 2. تحميل المشاريع الخاصة بالمستخدم
   const drProjectSelect = document.getElementById("dr-project");
   if (drProjectSelect && drProjectSelect.options.length <= 1) {
     drProjectSelect.innerHTML = '<option value="">جاري التحميل...</option>';
@@ -7562,19 +7568,51 @@ window.initDailyHseReportPage = async function () {
     }
   }
 
-  // تم إلغاء حظر الوقت ليصبح التسجيل متاحاً طوال اليوم
+  // 3. ضبط حالة الأزرار والتنبيهات
   const submitBtn = document.getElementById("dr-submit-btn");
   const warningDiv = document.getElementById("daily-time-warning");
 
   if (warningDiv) warningDiv.style.display = "none";
   if (submitBtn) submitBtn.disabled = false;
 
+  // 4. تصفير سلة المقاولين
   drAddedEntities = [];
   if (typeof renderDrEntitiesTable === "function") renderDrEntitiesTable();
 
-  // استدعاء التنبيهات للمشرف إذا كان لديه تقارير مرفوضة
-  if (typeof loadRejectedReportsAlert === "function")
+  // 5. ربط مستمعات الأحداث (Event Listeners) لمنع تكرار الربط
+  if (drProjectSelect && !drProjectSelect.dataset.listenerAttached) {
+    // (التعديل هنا) استخدام دالة التحكم الموحدة لضمان عمل اللودر
+    drProjectSelect.addEventListener("change", window.handleDailyReportChange);
+    drProjectSelect.dataset.listenerAttached = "true";
+  }
+
+  if (drDateInput && !drDateInput.dataset.listenerAttached) {
+    // (التعديل هنا) استخدام دالة التحكم الموحدة عند تغيير التاريخ أيضاً
+    drDateInput.addEventListener("change", window.handleDailyReportChange);
+    drDateInput.dataset.listenerAttached = "true";
+  }
+
+  const drEntSelect = document.getElementById("dr-ent-name");
+  if (drEntSelect && !drEntSelect.dataset.listenerAttached) {
+    drEntSelect.addEventListener("change", window.onContractorSelected);
+    drEntSelect.dataset.listenerAttached = "true";
+  }
+
+  // 6. تشغيل السحب التلقائي الأولي إذا كان هناك مشروع وتاريخ محددان
+  if (
+    drProjectSelect &&
+    drProjectSelect.value &&
+    drDateInput &&
+    drDateInput.value
+  ) {
+    // (التعديل هنا) تشغيل السحب الموحد عند فتح الصفحة
+    window.handleDailyReportChange();
+  }
+
+  // 7. استدعاء التنبيهات للمشرف إذا كان لديه تقارير مرفوضة
+  if (typeof loadRejectedReportsAlert === "function") {
     loadRejectedReportsAlert();
+  }
 };
 
 window.updateDrContractors = async function () {
@@ -7583,7 +7621,12 @@ window.updateDrContractors = async function () {
   if (!proj) return;
 
   try {
-    const r = await callApi("getContractorsForProject", { projectName: proj });
+    // إضافة true في النهاية ليكون الاتصال صامتاً ولا يغلق اللودر الرئيسي
+    const r = await callApi(
+      "getContractorsForProject",
+      { projectName: proj },
+      true,
+    );
     entSelect.innerHTML = '<option value="">-- اختر المقاول --</option>';
     if (r.contractors) {
       r.contractors.forEach((c) => {
@@ -7628,7 +7671,7 @@ window.addEntityToDailyReport = function () {
 
   // منع تكرار المقاول في نفس اليوم
   if (drAddedEntities.find((e) => e.name === entName)) {
-    alert("هذا المقاول مضاف بالفعل في القائمة");
+    alert("هذا المقاول م �اف بالفعل في القائمة");
     return;
   }
 
@@ -9112,7 +9155,7 @@ window.generateConsolidatedDailyReport = function () {
       target.envInc += parseFloat(ent.envInc || 0);
     });
 
-    // (*** الجديد ***): تحديث أرقام المشروع الواحد
+    // (*** الجديد ***): تحديث أرقh�م المشروع الواحد
     if (dailySewedy > projectManpowerStats[proj].maxSewedy) {
       projectManpowerStats[proj].maxSewedy = dailySewedy;
     }
@@ -9169,7 +9212,7 @@ window.generateConsolidatedDailyReport = function () {
 
     Object.keys(grandTotals).forEach((key) => (grandTotals[key] += ent[key]));
 
-    // توضيح طريقة الحساب جنب الرقم
+    // توضيح طريقة  �لحساب جنب الرقم
     let calcNote = ent.name.includes("السويدي")
       ? '<span style="font-size:8px; color:#888;">(مجموع Max)</span>'
       : '<span style="font-size:8px; color:#888;">(مجموع Avg)</span>';
@@ -13102,3 +13145,229 @@ async function sendAiMessage() {
   }
   msgsContainer.scrollTop = msgsContainer.scrollHeight;
 }
+// متغير عالمي لحفظ إحصائيات المقاولين لليوم المحدد
+// متغير عالمي لحفظ إحصائيات المقاولين لليوم المحدد
+let currentLiveDailyStats = null;
+
+// دالة لقفل الخانات التلقائية برمجياً لمنع التعديل
+window.lockDailyReportFields = function () {
+  const readOnlyFields = [
+    "dr-ptw",
+    "dr-hazards",
+    "dr-total-obs",
+    "dr-sw-train",
+    "dr-sw-induct",
+    "dr-sw-ua",
+    "dr-sw-uc",
+    "dr-sw-env",
+    "dr-sw-pos",
+    "dr-sw-fatal",
+    "dr-sw-lti",
+    "dr-sw-mtc",
+    "dr-sw-fac",
+    "dr-sw-nm",
+    "dr-sw-pd",
+    "dr-sw-env-inc",
+    "dr-ent-train",
+    "dr-ent-induct",
+    "dr-ent-ua",
+    "dr-ent-uc",
+    "dr-ent-env",
+    "dr-ent-pos",
+    "dr-ent-fatal",
+    "dr-ent-lti",
+    "dr-ent-mtc",
+    "dr-ent-fac",
+    "dr-ent-nm",
+    "dr-ent-pd",
+    "dr-ent-env-inc",
+  ];
+
+  readOnlyFields.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.readOnly = true;
+      el.style.backgroundColor = "#e9ecef"; // لون رمادي
+      el.style.color = "#495057";
+      el.style.cursor = "not-allowed";
+    }
+  });
+};
+
+// ==========================================================
+// 2. دالة السحب الآلي للبيانات (تقفل الشاشة حتى الانتهاء التام)
+// ==========================================================
+window.fetchDailyLiveStats = async function () {
+  const project = document.getElementById("dr-project")?.value;
+  const reportDate = document.getElementById("dr-date")?.value;
+
+  if (!project || !reportDate) return;
+
+  const submitBtn = document.getElementById("dr-submit-btn");
+  if (submitBtn) submitBtn.disabled = true; // إيقاف زر الحفظ لمنع الإرسال أثناء التحميل
+
+  // إظهار اللودر بشكل إجباري وقوي
+  const loaderEl = document.getElementById("loader-overlay");
+  if (loaderEl) {
+    const loaderText = loaderEl.querySelector("p");
+    if (loaderText)
+      loaderText.textContent = "جاري سحب ومطابقة السجلات آلياً...";
+    loaderEl.style.display = "flex";
+  }
+
+  try {
+    const res = await callApi(
+      "getDailyLiveStats",
+      { projectName: project, reportDate: reportDate },
+      true,
+    );
+
+    if (res.status === "success") {
+      currentLiveDailyStats = res.data;
+      const g = res.data.global;
+      const sw = res.data.sewedy;
+
+      // تعبئة البيانات في الخانات المغلقة
+      if (document.getElementById("dr-ptw"))
+        document.getElementById("dr-ptw").value = g.ptw;
+      if (document.getElementById("dr-hazards"))
+        document.getElementById("dr-hazards").value = g.hazards;
+      if (document.getElementById("dr-total-obs"))
+        document.getElementById("dr-total-obs").value = g.totalObs;
+
+      if (document.getElementById("dr-sw-train"))
+        document.getElementById("dr-sw-train").value = sw.train.regular;
+      if (document.getElementById("dr-sw-induct"))
+        document.getElementById("dr-sw-induct").value = sw.train.induction;
+
+      if (document.getElementById("dr-sw-ua"))
+        document.getElementById("dr-sw-ua").value = sw.obs.ua;
+      if (document.getElementById("dr-sw-uc"))
+        document.getElementById("dr-sw-uc").value = sw.obs.uc;
+      if (document.getElementById("dr-sw-env"))
+        document.getElementById("dr-sw-env").value = sw.obs.env;
+      if (document.getElementById("dr-sw-pos"))
+        document.getElementById("dr-sw-pos").value = sw.obs.pos;
+
+      if (document.getElementById("dr-sw-fatal"))
+        document.getElementById("dr-sw-fatal").value = sw.acc.fatal;
+      if (document.getElementById("dr-sw-lti"))
+        document.getElementById("dr-sw-lti").value = sw.acc.lti;
+      if (document.getElementById("dr-sw-mtc"))
+        document.getElementById("dr-sw-mtc").value = sw.acc.mtc;
+      if (document.getElementById("dr-sw-fac"))
+        document.getElementById("dr-sw-fac").value = sw.acc.fac;
+      if (document.getElementById("dr-sw-nm"))
+        document.getElementById("dr-sw-nm").value = sw.acc.nm;
+      if (document.getElementById("dr-sw-pd"))
+        document.getElementById("dr-sw-pd").value = sw.acc.pd;
+      if (document.getElementById("dr-sw-env-inc"))
+        document.getElementById("dr-sw-env-inc").value = sw.acc.envInc;
+
+      // تحديث بيانات المقاول لو كان هناك مقاول مختار
+      window.onContractorSelected();
+    }
+  } catch (e) {
+    console.error("Error fetching live stats:", e);
+  } finally {
+    // إخفاء اللودر وإرجاع زر الحفظ (فقط بعد تعبئة كل البيانات)
+    if (submitBtn) submitBtn.disabled = false;
+    if (loaderEl) loaderEl.style.display = "none";
+  }
+};
+
+// دالة تعبئة خانات المقاول تلقائياً عند اختياره من القائمة
+window.onContractorSelected = function () {
+  const contractorName = document.getElementById("dr-ent-name")?.value;
+
+  if (!contractorName || !currentLiveDailyStats) {
+    resetContractorFields();
+    return;
+  }
+
+  const cTrain = currentLiveDailyStats.contractors.train[contractorName] || {
+    regular: 0,
+    induction: 0,
+  };
+  const cObs = currentLiveDailyStats.contractors.obs[contractorName] || {
+    ua: 0,
+    uc: 0,
+    env: 0,
+    pos: 0,
+  };
+  const cAcc = currentLiveDailyStats.contractors.acc[contractorName] || {
+    fatal: 0,
+    lti: 0,
+    mtc: 0,
+    fac: 0,
+    nm: 0,
+    pd: 0,
+    envInc: 0,
+  };
+
+  if (document.getElementById("dr-ent-train"))
+    document.getElementById("dr-ent-train").value = cTrain.regular;
+  if (document.getElementById("dr-ent-induct"))
+    document.getElementById("dr-ent-induct").value = cTrain.induction;
+
+  if (document.getElementById("dr-ent-ua"))
+    document.getElementById("dr-ent-ua").value = cObs.ua;
+  if (document.getElementById("dr-ent-uc"))
+    document.getElementById("dr-ent-uc").value = cObs.uc;
+  if (document.getElementById("dr-ent-env"))
+    document.getElementById("dr-ent-env").value = cObs.env;
+  if (document.getElementById("dr-ent-pos"))
+    document.getElementById("dr-ent-pos").value = cObs.pos;
+
+  if (document.getElementById("dr-ent-fatal"))
+    document.getElementById("dr-ent-fatal").value = cAcc.fatal;
+  if (document.getElementById("dr-ent-lti"))
+    document.getElementById("dr-ent-lti").value = cAcc.lti;
+  if (document.getElementById("dr-ent-mtc"))
+    document.getElementById("dr-ent-mtc").value = cAcc.mtc;
+  if (document.getElementById("dr-ent-fac"))
+    document.getElementById("dr-ent-fac").value = cAcc.fac;
+  if (document.getElementById("dr-ent-nm"))
+    document.getElementById("dr-ent-nm").value = cAcc.nm;
+  if (document.getElementById("dr-ent-pd"))
+    document.getElementById("dr-ent-pd").value = cAcc.pd;
+  if (document.getElementById("dr-ent-env-inc"))
+    document.getElementById("dr-ent-env-inc").value = cAcc.envInc;
+};
+function resetContractorFields() {
+  const ids = [
+    "dr-ent-train",
+    "dr-ent-induct",
+    "dr-ent-ua",
+    "dr-ent-uc",
+    "dr-ent-env",
+    "dr-ent-pos",
+    "dr-ent-fatal",
+    "dr-ent-lti",
+    "dr-ent-mtc",
+    "dr-ent-fac",
+    "dr-ent-nm",
+    "dr-ent-pd",
+    "dr-ent-env-inc",
+  ];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "0";
+  });
+}
+
+// ==========================================================
+// 3. دالة التحكم الموحدة (تعمل عند اختيار المشروع)
+// ==========================================================
+window.handleDailyReportChange = async function () {
+  const loaderEl = document.getElementById("loader-overlay");
+  if (loaderEl) {
+    const loaderText = loaderEl.querySelector("p");
+    if (loaderText) loaderText.textContent = "جاري إعداد بيانات الموقع...";
+    loaderEl.style.display = "flex";
+  }
+
+  // ننتظر تحميل المقاولين أولاً، ثم نسحب الأرقام
+  await window.updateDrContractors();
+  await window.fetchDailyLiveStats();
+};

@@ -2821,82 +2821,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  async function addTrnAttendee() {
-    const type = document.getElementById("trn-attendee-type").value;
-    let att = { type: type };
-
-    if (type === "موظف") {
-      // منطق الموظفين (يبقى كما هو)
-      const empName = document.getElementById("trn-emp-name-display").value;
-      const empId = document.getElementById("trn-emp-id-hidden").value;
-      if (!empName) {
-        alert("الرجاء اختيار الموظف من القائمة أولاً");
-        return;
-      }
-      att.id = empId;
-      att.name = empName;
-      att.company = "السويدي";
-    } else {
-      // منطق العمال (المقاولين)
-      const nid = trnContNid.value;
-      const name = trnContName.value;
-      const comp = trnContCompany.value;
-
-      if (!nid || !name || !comp) {
-        showMessage(trnAddMsg, "بيانات المقاول ناقصة", false);
-        return;
-      }
-
-      // --- التعديل الجوهري هنا ---
-      // نعتبر العامل "موجود مسبقاً" إذا كان حقل الاسم مُعطلاً (بعد البحث)
-      // أو إذا كان حقل الرقم القومي "للقراءة فقط" (بعد الاختيار من القائمة أو المودال)
-      const isExistingWorker =
-        trnContName.disabled === true || trnContNid.readOnly === true;
-
-      if (!isExistingWorker) {
-        // فقط إذا كان المستخدم يكتب يدوياً (تسجيل جديد)، نقوم بالفحص
-        try {
-          const checkResult = await callApi("getRecipientByNID", {
-            nationalId: nid,
-          });
-          if (checkResult && checkResult.status === "found") {
-            alert(
-              `عفواً! الرقم القومي (${nid}) مسجل بالفعل باسم: [${checkResult.name}]\nالرجاء مسح الاسم المكتوب والبحث بالرقم القومي مرة أخرى لاستدعاء البيانات الصحيحة.`,
-            );
-            return; // منع الإضافة لأنه سجل جديد برقم موجود فعلياً
-          }
-        } catch (e) {
-          console.error("خطأ في فحص الرقم القومي:", e);
-        }
-      }
-
-      // إذا وصلنا هنا، يعني إما العامل موجود مسبقاً (وتم تخطي الفحص)
-      // أو هو عامل جديد فعلاً ورقمه القومي غير مكرر
-      att.id = nid;
-      att.name = name;
-      att.company = comp;
-      att.isNew = !isExistingWorker;
-    }
-
-    // منع التكرار في القائمة الحالية (السلة)
-    if (trnAttendeesCart.find((x) => x.id === att.id)) {
-      showMessage(trnAddMsg, "هذا الشخص مضاف بالفعل في القائمة", false);
-      return;
-    }
-
-    trnAttendeesCart.push(att);
-    updateTrnCartUI();
-
-    // ريسيت للخانات بعد الإضافة
-    if (type === "مقاول") {
-      trnContNid.value = "";
-      trnContName.value = "";
-      trnContName.disabled = false;
-      trnContNid.readOnly = false; // إعادة ا fقل قابلاً للكتابة
-      trnContNid.style.backgroundColor = "#fff";
-    }
-  }
-
   function updateTrnCartUI() {
     if (trnCount) trnCount.textContent = trnAttendeesCart.length;
     if (trnAttendeesCart.length === 0) {
@@ -2920,12 +2844,14 @@ document.addEventListener("DOMContentLoaded", function () {
     updateTrnCartUI();
   };
 
-  // بحث مقاول
-  // بحث مقاول في قسم التدريب
+  // =========================================================
+  // 1. دالة بحث المقاول (للعرض والتنبيه فقط)
+  // =========================================================
   async function searchTrnCont() {
     const nid = trnContNid.value;
     if (!nid) return;
 
+    const currentComp = trnContCompany.value;
     trnContName.value = "بحث...";
     trnContName.disabled = true;
 
@@ -2933,26 +2859,18 @@ document.addEventListener("DOMContentLoaded", function () {
       const r = await callApi("getRecipientByNID", { nationalId: nid });
 
       if (r.status === "found") {
-        // الرقم موجود بالفعل
         trnContName.value = r.name;
-        trnContName.disabled = true;
-        trnContCompany.value = r.contractor;
-
-        // إظهار الرسالة المطلوبة
-        showMessage(
-          trnAddMsg,
-          "الرقم القومى مسجل بالفعل الرجاء البحث فى قائمة الاسماء",
-          false,
-        );
-
-        // تنبيه إضافي لضمان اانتباه
-        alert(
-          "تنبيه: الرقم القومى مسجل بالفعل باسم ( " +
-            r.name +
-            " ). الرجاء استخدامه مباشرة.",
-        );
+        // لو الشركة مختلفة، نديله تنبيه لطيف إنه هيتنقل
+        if (currentComp && r.contractor !== currentComp) {
+          showMessage(
+            trnAddMsg,
+            `ملاحظة: العامل مسجل على شركة (${r.contractor}). سيُطلب منك تحديث بياناته عند الإضافة.`,
+            true,
+          );
+        } else {
+          showMessage(trnAddMsg, "تم إيجاد بيانات العامل بنجاح.", true);
+        }
       } else {
-        // الرقم جديد
         trnContName.value = "";
         trnContName.placeholder = "اسم جديد...";
         trnContName.disabled = false;
@@ -2967,6 +2885,122 @@ document.addEventListener("DOMContentLoaded", function () {
       trnContName.value = "";
       trnContName.disabled = false;
       showMessage(trnAddMsg, "خطأ في الاتصال بقاعدة البيانات", false);
+    }
+  }
+
+  // =========================================================
+  // 2. دالة إضافة الحاضر للقائمة (بها ذكاء النقل الآلي للعمالة)
+  // =========================================================
+  async function addTrnAttendee() {
+    const type = document.getElementById("trn-attendee-type").value;
+    let att = { type: type };
+
+    if (type === "موظف") {
+      // منطق موظفي السويدي
+      const empName = document.getElementById("trn-emp-name-display").value;
+      const empId = document.getElementById("trn-emp-id-hidden").value;
+      if (!empName) {
+        alert("الرجاء اختيار الموظف من القائمة أولاً");
+        return;
+      }
+      att.id = empId;
+      att.name = empName;
+      att.company = "السويدي";
+    } else {
+      // منطق عمال المقاولين
+      const nid = trnContNid.value;
+      const name = trnContName.value;
+      const comp = trnContCompany.value;
+
+      if (!nid || !name || !comp) {
+        showMessage(trnAddMsg, "بيانات المقاول ناقصة", false);
+        return;
+      }
+
+      // إظهار لودر على الزرار أثناء الفحص في الداتا بيز
+      const originalBtnText = trnAddBtn.innerHTML;
+      trnAddBtn.disabled = true;
+      trnAddBtn.innerHTML =
+        '<i class="fas fa-spinner fa-spin"></i> جاري الفحص...';
+
+      try {
+        // الفحص الإجباري في الداتا بيز قبل الإضافة لتجنب أي تكرار
+        const checkResult = await callApi("getRecipientByNID", {
+          nationalId: nid,
+        });
+
+        if (checkResult && checkResult.status === "found") {
+          // --- العامل مسجل في الداتا بيز ---
+          if (comp !== checkResult.contractor) {
+            // الشركة مختلفة (تم نقله)
+            const confirmUpdate = confirm(
+              `تنبيه: العامل (${checkResult.name}) مسجل مسبقاً على شركة (${checkResult.contractor}).\n\nهل تريد تحديث بياناته ونقله ليكون تابعاً لشركة (${comp}) الحالية؟`,
+            );
+
+            if (confirmUpdate) {
+              att.id = nid;
+              att.name = checkResult.name; // نثبت الاسم الصحيح من الداتا بيز
+              att.company = comp; // الشركة الجديدة
+              att.isNew = false;
+              att.updateCompany = true; // أمر النقل للسيرفر
+            } else {
+              // رفض النقل، هنسجله تبع شركته القديمة
+              att.id = nid;
+              att.name = checkResult.name;
+              att.company = checkResult.contractor;
+              att.isNew = false;
+              att.updateCompany = false;
+            }
+          } else {
+            // الشركة متطابقة (عامل قديم لنفس المقاول)
+            att.id = nid;
+            att.name = checkResult.name;
+            att.company = comp;
+            att.isNew = false;
+            att.updateCompany = false;
+          }
+        } else {
+          // --- العامل جديد كلياً ---
+          att.id = nid;
+          att.name = name;
+          att.company = comp;
+          att.isNew = true;
+          att.updateCompany = false;
+        }
+      } catch (e) {
+        console.error("خطأ في فحص الرقم القومي:", e);
+        showMessage(trnAddMsg, "خطأ في الاتصال بقاعدة البيانات", false);
+        trnAddBtn.disabled = false;
+        trnAddBtn.innerHTML = originalBtnText;
+        return;
+      }
+
+      // إرجاع الزرار لحالته الأصلية
+      trnAddBtn.disabled = false;
+      trnAddBtn.innerHTML = originalBtnText;
+    }
+
+    // منع التكرار في القائمة الحالية (سلة التدريب)
+    if (trnAttendeesCart.find((x) => x.id === att.id)) {
+      showMessage(
+        trnAddMsg,
+        "هذا الشخص مضاف بالفعل في القائمة الحالية!",
+        false,
+      );
+      return;
+    }
+
+    // الإضافة بنجاح للسلة
+    trnAttendeesCart.push(att);
+    updateTrnCartUI();
+
+    // تفريغ الخانات استعداداً لعامل جديد
+    if (type === "مقاول") {
+      trnContNid.value = "";
+      trnContName.value = "";
+      trnContName.disabled = false;
+      trnContNid.readOnly = false;
+      trnContNid.style.backgroundColor = "#fff";
     }
   }
 
@@ -4187,7 +4221,7 @@ document.addEventListener("DOMContentLoaded", function () {
             ppeLocations = r.locations;
             // تحديث القوائم
             fillSelect(ncrProject, r.locations);
-            // تعبئة المشاريع في قسم المخالفات أيضاً لو كان له سلكتور مختلف
+            // تعبئة المشاريع في قسم المخالفات أيضاً لو كان له سلكتور مختلo�
             if (document.getElementById("vio-project"))
               fillSelect(document.getElementById("vio-project"), r.locations);
           }
@@ -7643,7 +7677,7 @@ window.addEntityToDailyReport = function () {
   const entName = document.getElementById("dr-ent-name").value;
   const manpower = document.getElementById("dr-ent-manpower").value;
 
-  // الشرط الجديد: يتأكد إن الاسم موجود، وإن العمالة مش فاضية ومش رقم سالب (لكن الصفر مسموح)
+  // الشرط الجديد: يتأكد إن الاسم موجود، وإن العمالة مش ;�اضية ومش رقم سالب (لكن الصفر مسموح)
   if (!entName || manpower === "" || parseInt(manpower) < 0) {
     alert("الرجاء اختيار المقاول وإدخال عدد العمالة (يمكن أن يكون 0).");
     return;
@@ -7671,7 +7705,7 @@ window.addEntityToDailyReport = function () {
 
   // منع تكرار المقاول في نفس اليوم
   if (drAddedEntities.find((e) => e.name === entName)) {
-    alert("هذا المقاول م �اف بالفعل في القائمة");
+    alert("هذا المقاول مضاف بالفعل في القائمة");
     return;
   }
 

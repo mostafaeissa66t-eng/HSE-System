@@ -7113,6 +7113,32 @@
                         </div>
                     </div>
                 </section>
+                <section
+                    id="StoreApprovals"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-check-circle"></i> اعتمادات مخزن
+                        الهندسية
+                    </h2>
+                    <div class="app-form">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            onclick="window.loadStoreRequests()"
+                            style="margin-bottom: 15px"
+                        >
+                            <i class="fas fa-sync"></i> تحديث الطلبات
+                        </button>
+                        <div
+                            id="store-requests-list"
+                            class="results-table-container"
+                        >
+                            <p style="text-align: center">جاري التحميل...</p>
+                        </div>
+                    </div>
+                </section>
                 <div
                     id="attendees-modal"
                     class="modal"

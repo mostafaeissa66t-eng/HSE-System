@@ -7,6 +7,9 @@ let initialData = null;
 let evaluatedEmpIds = [];
 let currentUser = null;
 const API_URL = "/api";
+// مصفوفة لجنة الاعتمادات (ضع الـ Usernames الصحيحة هنا)
+const STORE_COMMITTEE = ["ahmed.attia", "mostafa.khaled"];
+const CENTRAL_STORE_NAME = "مخزن الهندسية";
 
 // 1. جعل دوال اللودر عالمية ومستقلة (عشان متعملش إيرور قبل التحميل)
 window.showLoader = function (message = "جاري التحميل...") {
@@ -324,6 +327,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewScaffold: "fas fa-layer-group",
     ActiveScaffolds: "fas fa-check-double",
     MonitorScaffolds: "fas fa-archive",
+    StoreApprovals: "fas fa-clipboard-check",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -368,6 +372,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewScaffold: "تسجيل سقالة جديدة",
     ActiveScaffolds: "السقالات الحالية بالموقع",
     MonitorScaffolds: "السجل الشامل للسقالات",
+    StoreApprovals: "اعتمادات الهندسية",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -404,7 +409,7 @@ document.addEventListener("DOMContentLoaded", function () {
       type: "group",
       title: "المخازن والمهمات",
       icon: "fas fa-boxes",
-      children: ["PpeTransactions", "ProjectStockReport"],
+      children: ["PpeTransactions", "ProjectStockReport", "StoreApprovals"],
     },
 
     // 6. نظام التدريب (رابط مباشر - لأنه حاجة واحدة)
@@ -744,16 +749,19 @@ document.addEventListener("DOMContentLoaded", function () {
         if (userSections.includes(item.id)) {
           createSingleLink(item.id, sidebarMenu);
         }
-      }
+      } else if (item.type === "group") {
+        // حماية القسم إذا كان مخصصاً للجنة معينة
+        if (
+          item.restrictedTo &&
+          !item.restrictedTo.includes(currentUser.username)
+        ) {
+          return; // تخطي إضافة هذا القسم
+        }
 
-      // حالة ب: مجموعة منسدلة
-      else if (item.type === "group") {
-        // فلترة الأبناء: هل المستخدم لديه صلاحية لأي من أبناء هذه المجموعة؟
         const allowedChildren = item.children.filter((childId) =>
           userSections.includes(childId),
         );
 
-        // إذا كان لديه صلاحية لواحد على الأقل، اعرض المجموعة
         if (allowedChildren.length > 0) {
           createGroupMenu(item.title, item.icon, allowedChildren, sidebarMenu);
         }
@@ -844,6 +852,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // resetObservationForm(); // <-- امسح القيمة دي لو موجودة
         initObservationPage(); // <-- واستدم الجديدة د
       }
+      if (sectionId === "StoreApprovals") window.loadStoreRequests();
       if (sectionId === "MyObservations") loadMyOpenObservations();
       if (sectionId === "ClosePermit") loadOpenPermits();
       if (sectionId === "MonitorPermits") {
@@ -1606,7 +1615,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "<p style='text-align:center; padding:20px; color:#777;'>الرجاء اختيار الموظف وفترة التقييم لبدء التقييم...</p>";
     if (saveBtn) saveBtn.style.display = "none";
 
-    // ضبط الشهر الحالي تلقائياً لو فاضي
+    // ضط الشهر الحالي تلقائياً لو فاضي
     if (kpiPeriodSelect && !kpiPeriodSelect.value) {
       const now = new Date();
       kpiPeriodSelect.value = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`;
@@ -1654,7 +1663,7 @@ document.addEventListener("DOMContentLoaded", function () {
           response.employees.forEach((emp) => {
             const option = new Option(`${emp.name} (${emp.id})`, emp.id);
 
-            // (*** التعد=�ل هنا ***)
+            // (*** التعل هنا ***)
             option.dataset.jobtitle = emp.jobTitle;
             option.dataset.project = emp.project; // تخزين اسم المشروع
             // (*** نهاية التعديل ***)
@@ -1740,15 +1749,28 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       // (*** التعديل الهام ***) ملء جميع قوائم المخازن
-      // فلترة المشاريع المتاحة للمستخدم
+      // 1. فلترة المشاريع المتاحة للمستخدم (للصرف العادي)
       const userProj = (currentUser.projects || "").toString();
       const availableLocs =
         userProj === "ALL"
           ? ppeLocations
           : ppeLocations.filter((p) => userProj.includes(p));
 
-      populateSelect(ppeRecipientLocation, availableLocs);
-      populateSelect(ppeTransferSource, availableLocs); // "من مخزن" يظهر مشروعاتي فقط
+      // 2. تجهيز قائمة مخصصة لخانة "التحويل من" (تتضمن الهندسية إجبارياً)
+      let transferSourceLocs = [...availableLocs];
+      const centralStore = "مخزن الهندسية";
+
+      // إذا كان المستخدم ليس لديه صلاحية "ALL" ومخزن الهندسية غير موجود في قائمته، نضيفه
+      if (userProj !== "ALL" && !transferSourceLocs.includes(centralStore)) {
+        // نتأكد فقط أن المخزن موجود فعلياً في قاعدة البيانات العامة
+        if (ppeLocations.includes(centralStore)) {
+          transferSourceLocs.push(centralStore);
+        }
+      }
+
+      // 3. تعبئة القوائم
+      populateSelect(ppeRecipientLocation, availableLocs); // الصرف العادي: مشاريعي فقط
+      populateSelect(ppeTransferSource, transferSourceLocs); // التحويل من: مشاريعي + الهندسية
 
       // ب) القوائم التي تظهر كل مشاريع الشركة (إلى أين أورد أو أحول)
       populateSelect(ppeSupplierDest, ppeLocations); // التوريد قد يكون لأي مشروع
@@ -1806,7 +1828,21 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // (*** السطر الجديد: أضفه هنا ***)
-    // بعد ما تخفي وتظهر الحقول، حدث قايمة المهمات
+    // --- (الكود المسؤول عن تغيير زر الحفظ إلى طلب اعتماد) ---
+    const currentType = ppeTransactionType.value;
+    const sourceStore = document.getElementById("ppe-transfer-source").value;
+    const saveBtn = document.getElementById("ppe-save-btn");
+
+    if (currentType === "تحويل" && sourceStore === "مخزن الهندسية") {
+      saveBtn.innerHTML =
+        '<i class="fas fa-paper-plane"></i> إرسال طلب للإدارة';
+      saveBtn.style.backgroundColor = "#ff9800"; // لون مميز للطلبات
+      saveBtn.dataset.isRequest = "true"; // علامة سرية للسيرفر
+    } else {
+      saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الحركة';
+      saveBtn.style.backgroundColor = "";
+      saveBtn.dataset.isRequest = "false";
+    }
     refreshPpeItemsDropdown();
   }
 
@@ -2384,8 +2420,12 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       // 3. الإرسال
-      const response = await callApi("savePpeTransaction", {
-        trx: transactionData, // تأكد ان الاسم في السيرفر هو trx او transactionData
+      // توجيه الطلب حسب نوعه (حفظ مباشر أم طلب اعتماد)
+      const isRequest = ppeSaveBtn.dataset.isRequest === "true";
+      const apiAction = isRequest ? "submitPpeRequest" : "savePpeTransaction";
+
+      const response = await callApi(apiAction, {
+        trx: transactionData,
         userInfo: currentUser,
       });
 
@@ -2480,7 +2520,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   if (ppeTransferSource) {
-    ppeTransferSource.addEventListener("change", refreshPpeItemsDropdown);
+    ppeTransferSource.addEventListener("change", function () {
+      refreshPpeItemsDropdown(); // جلب الرصيد
+      updatePpeFormUI(); // تحديث شكل الزرار (حفظ ولا طلب)
+    });
   }
   if (ppeRecipientType) {
     ppeRecipientType.addEventListener("change", checkRecipientTypeUI);
@@ -4167,7 +4210,7 @@ document.addEventListener("DOMContentLoaded", function () {
   async function initNcrPage() {
     console.log("بدء تشغيل صفحة NCR والمخالفات (النسخة المطورة)...");
 
-    // 1. تصفير حقول الاختيار الجديدة (Popup Inputs) لضمان نظافة السجل
+    // 1. تصفر حقول الاختيار الجديدة (Popup Inputs) لضمان نظافة السجل
     if (document.getElementById("ncr-emp-name-display"))
       document.getElementById("ncr-emp-name-display").value = "";
     if (document.getElementById("ncr-emp-id-hidden"))
@@ -4219,9 +4262,9 @@ document.addEventListener("DOMContentLoaded", function () {
           });
           if (r.status === "success") {
             ppeLocations = r.locations;
-            // تحديث القوائم
+            // تحديث ا قوائم
             fillSelect(ncrProject, r.locations);
-            // تعبئة المشاريع في قسم المخالفات أيضاً لو كان له سلكتور مختلo�
+            // تعبئة المشاريع في قسم المخالفات أيضاً لو كان له سلكتور
             if (document.getElementById("vio-project"))
               fillSelect(document.getElementById("vio-project"), r.locations);
           }
@@ -5902,7 +5945,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const proj = accProject.value;
     if (!proj) return;
 
-    // تحديث قائمة الموظفين (للضحية)
+    // تحدث قائمة الموظفين (للضحية)
     updateAccEmployeeSelect(accVicEmpSelect, accVicEmpAll.checked, proj);
 
     // تحديث قائمة المقاولين (للضحية)
@@ -6794,7 +6837,7 @@ window.selectEmployee = function (id, name, company) {
 
   // حفظ البيانات في الحقول التي تستخدمها دالة trnAddBtn
   // (لأن دالة addTrnAttendee عندك تعتمد على trnEmpSelect)
-  // سنقوم بتعديل بسيط في trnAddBtn لاحقاً
+  // نقوم بتعديل بسيط في trnAddBtn لاحقاً
 
   window.closeEmpSelector();
   if (kpiPeriodSelect) {
@@ -7615,7 +7658,7 @@ window.initDailyHseReportPage = async function () {
 
   // 5. ربط مستمعات الأحداث (Event Listeners) لمنع تكرار الربط
   if (drProjectSelect && !drProjectSelect.dataset.listenerAttached) {
-    // (التعديل هنا) استخدام دالة التحكم الموحدة لضمان عمل اللودر
+    // (اتعديل هنا) استخدام دالة التحكم الموحدة لضمان عمل اللودر
     drProjectSelect.addEventListener("change", window.handleDailyReportChange);
     drProjectSelect.dataset.listenerAttached = "true";
   }
@@ -7677,7 +7720,7 @@ window.addEntityToDailyReport = function () {
   const entName = document.getElementById("dr-ent-name").value;
   const manpower = document.getElementById("dr-ent-manpower").value;
 
-  // الشرط الجديد: يتأكد إن الاسم موجود، وإن العمالة مش ;�اضية ومش رقم سالب (لكن الصفر مسموح)
+  // الشرط الجديد: يتأكد إن الاسم موجود، وإن العمالة مش اضية ومش رقم سالب (لكن الصفر مسموح)
   if (!entName || manpower === "" || parseInt(manpower) < 0) {
     alert("الرجاء اختيار المقاول وإدخال عدد العمالة (يمكن أن يكون 0).");
     return;
@@ -8516,7 +8559,7 @@ window.executeExtension = async function (proj, date) {
   }
 };
 // جلب وعرض التنبيهات للتقارير ال رفوضة
-// جلب وعرض الت �بيهات للتقارير المرفوضة (نخة متوافقة تماماً مع الموبايل)
+// جلب وعرض الت بيهات للتقارير المرفوضة (نخة متوافقة تماماً مع الموبايل)
 async function loadRejectedReportsAlert() {
   const section = document.getElementById("DailyHseReport");
   let alertDiv = document.getElementById("rejected-alerts");
@@ -9189,7 +9232,7 @@ window.generateConsolidatedDailyReport = function () {
       target.envInc += parseFloat(ent.envInc || 0);
     });
 
-    // (*** الجديد ***): تحديث أرقh�م المشروع الواحد
+    // (*** الجديد ***): تحديث أرقم المشروع الواحد
     if (dailySewedy > projectManpowerStats[proj].maxSewedy) {
       projectManpowerStats[proj].maxSewedy = dailySewedy;
     }
@@ -9246,7 +9289,7 @@ window.generateConsolidatedDailyReport = function () {
 
     Object.keys(grandTotals).forEach((key) => (grandTotals[key] += ent[key]));
 
-    // توضيح طريقة  �لحساب جنب الرقم
+    // توضيح طريقة  لحساب جنب الرقم
     let calcNote = ent.name.includes("السويدي")
       ? '<span style="font-size:8px; color:#888;">(مجموع Max)</span>'
       : '<span style="font-size:8px; color:#888;">(مجموع Avg)</span>';
@@ -10493,7 +10536,7 @@ window.searchVehDriverNid = async function () {
   }
 };
 
-// --- فتح بوب أب عمال المقاول (تحديث لايف لمنع القائمة الفاضية) ---
+// --- فتح بوب أب عمال المقاول (تحديث لايف لمنع اقائمة الفاضية) ---
 window.openVehWorkerSelector = async function () {
   const contractorName = document.getElementById("veh-contractor").value;
   if (!contractorName) {
@@ -12168,7 +12211,7 @@ window.renderManageEquipment = function (data) {
                     </button>
                 </div>
                 <div style="display:flex; justify-content:center; gap:5px;">
-                    <button class="btn-small btn-secondary" onclick="window.openEditEquipment('${eq.id}')" style="background:#ffc107; border:none; color:#000; flex:1;" title="تعديل البيانات">
+                    <button class="btn-small btn-secondary" onclick="window.openEditEquipment('${eq.id}')" style="background:#ffc107; border:none; color:#000; flex:1;" title=")تعديل البيانات">
                         <i class="fas fa-edit"></i> تعديل
                     </button>
                     <button class="btn-small btn-danger" onclick="window.deleteEquipment('${eq.id}', '${eq.plate}')" style="flex:1;" title="مسح من الموقع">
@@ -13404,4 +13447,66 @@ window.handleDailyReportChange = async function () {
   // ننتظر تحميل المقاولين أولاً، ثم نسحب الأرقام
   await window.updateDrContractors();
   await window.fetchDailyLiveStats();
+};
+window.loadStoreRequests = async function () {
+  const container = document.getElementById("store-requests-list");
+  if (!container) return;
+
+  container.innerHTML =
+    '<div class="loader-small">جاري جلب الطلبات المعلقة...</div>';
+  try {
+    const r = await callApi("getPendingPpeRequests", { userInfo: currentUser });
+    if (r.requests && r.requests.length > 0) {
+      let html = `<table class="results-table"><thead><tr><th>التاريخ</th><th>الطالب</th><th>المشروع</th><th>التفاصيل</th><th>إجراء</th></tr></thead><tbody>`;
+      r.requests.forEach((req) => {
+        const itemsHtml = req.items
+          .map((i) => `${i.name} (عدد: ${i.qty})`)
+          .join("<br>");
+        html += `<tr>
+                  <td>${req.date}</td>
+                  <td><strong>${req.requester}</strong></td>
+                  <td>${req.destination}</td>
+                  <td style="text-align:right;">${itemsHtml}</td>
+                  <td>
+                      <button class="btn-small" style="background:#28a745; color:white;" onclick="processStoreReq('${req.id}', 'approve')"><i class="fas fa-check"></i> قبول</button>
+                      <button class="btn-small" style="background:#dc3545; color:white;" onclick="processStoreReq('${req.id}', 'reject')"><i class="fas fa-times"></i> رفض</button>
+                  </td>
+              </tr>`;
+      });
+      html += "</tbody></table>";
+      container.innerHTML = html;
+    } else {
+      container.innerHTML =
+        '<p style="text-align:center;">لا توجد طلبات معلقة.</p>';
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message">${e.message}</p>`;
+  }
+};
+
+window.processStoreReq = async function (reqId, action) {
+  let notes = "";
+  if (action === "reject") {
+    notes = prompt("يرجى كتابة سبب الرفض ليتم إرساله في الإيميل:");
+    if (notes === null) return;
+  } else {
+    if (!confirm("هل أنت متأكد من اعتماد الطلب وخصم الرصيد من الهندسية؟"))
+      return;
+  }
+
+  showLoader("جاري تنفيذ الإجراء وإرسال الإيميلات...");
+  try {
+    const r = await callApi("processPpeRequest", {
+      reqId,
+      action,
+      notes,
+      userInfo: currentUser,
+    });
+    alert(r.message);
+    window.loadStoreRequests();
+  } catch (e) {
+    alert("خطأ: " + e.message);
+  } finally {
+    hideLoader();
+  }
 };

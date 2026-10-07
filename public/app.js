@@ -12516,32 +12516,45 @@ window.loadLeaderboard = async function () {
                             </div>
                         </div>
 
+                        
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; padding:20px; background:#fafafa;">
 
+                            <!-- 1. كارت الملاحظات -->
                             <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
                                 <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-eye" style="color:#007bff;"></i> إغلاق الملاحظات</div>
                                 <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.obsRate}%</div>
                                 <div style="font-size:0.75rem; color:#999;">(${d.obsClosed} من ${d.obsTotal})</div>
                             </div>
 
+                            <!-- 2. كارت الهازرد -->
                             <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
                                 <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-exclamation-circle" style="color:#fd7e14;"></i> إغلاق الهازرد</div>
                                 <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.hazRate}%</div>
                                 <div style="font-size:0.75rem; color:#999;">(${d.hazClosed} من ${d.hazTotal})</div>
                             </div>
 
+                            <!-- 3. كارت الـ NCR -->
                             <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
                                 <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-file-signature" style="color:#6f42c1;"></i> إغلاق الـ NCR</div>
                                 <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.ncrRate}%</div>
                                 <div style="font-size:0.75rem; color:#999;">(${d.ncrClosed} من ${d.ncrTotal})</div>
                             </div>
 
+                            <!-- 4. كارت الحوادث -->
                             <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
                                 <div style="font-size:0.85rem; color:#666; margin-bottom:5px;"><i class="fas fa-ambulance" style="color:#dc3545;"></i> إغلاق الحوادث</div>
                                 <div style="font-weight:bold; font-size:1.2rem; color:#333;">${d.accRate}%</div>
                                 <div style="font-size:0.75rem; color:#999;">(${d.accClosed} من ${d.accTotal})</div>
                             </div>
 
+                            <!-- 5. كارت الأوديت (الجديييييد) -->
+                            <div style="background:#fff; border:1px solid #17a2b8; border-radius:8px; padding:10px; text-align:center; box-shadow: 0 2px 4px rgba(23, 162, 184, 0.1);">
+                                <div style="font-size:0.85rem; color:#17a2b8; margin-bottom:5px; font-weight:bold;"><i class="fas fa-clipboard-check"></i> نتيجة التدقيق (Audit)</div>
+                                <div style="font-weight:bold; font-size:1.2rem; color:#17a2b8;">${proj.details.auditScore * 100 || 0}%</div>
+                                <div style="font-size:0.75rem; color:#999;">الرصيد النشط التراكمي</div>
+                            </div>
+
+                            <!-- 6. كارت التدريب والمخالفات المدمج -->
                             <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; display:flex; justify-content:space-around; align-items:center;">
                                 <div style="text-align:center;">
                                     <div style="font-size:0.8rem; color:#666;"><i class="fas fa-chalkboard-teacher" style="color:#20c997;"></i> دورات تدريبية</div>
@@ -12554,6 +12567,7 @@ window.loadLeaderboard = async function () {
                                 </div>
                             </div>
 
+                            <!-- 7. كارت التجارب والحملات المدمج -->
                             <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; display:flex; justify-content:space-around; align-items:center;">
                                 <div style="text-align:center;">
                                     <div style="font-size:0.8rem; color:#666;"><i class="fas fa-fire-extinguisher" style="color:#e91e63;"></i> تجارب إخلاء</div>

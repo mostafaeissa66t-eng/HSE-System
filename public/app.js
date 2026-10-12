@@ -328,6 +328,8 @@ document.addEventListener("DOMContentLoaded", function () {
     ActiveScaffolds: "fas fa-check-double",
     MonitorScaffolds: "fas fa-archive",
     StoreApprovals: "fas fa-clipboard-check",
+    SafetyChampions: "fas fa-medal",
+    AwardsManagement: "fas fa-crown",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -373,6 +375,8 @@ document.addEventListener("DOMContentLoaded", function () {
     ActiveScaffolds: "السقالات الحالية بالموقع",
     MonitorScaffolds: "السجل الشامل للسقالات",
     StoreApprovals: "اعتمادات الهندسية",
+    SafetyChampions: "فرسان السلامة",
+    AwardsManagement: "إدارة التكريمات",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -471,7 +475,12 @@ document.addEventListener("DOMContentLoaded", function () {
       icon: "fas fa-chart-line",
       children: ["DailyHseReport", "DailyApprovals", "MonitorDailyReports"], // سنضيف قسم الاعتماد والسجل لاحقاً هنا
     },
-    { type: "link", id: "ProjectsLeaderboard" }, // <--- أضف هذا السطر
+    {
+      type: "group",
+      title: "التكريمات والجوائز",
+      icon: "fas fa-trophy",
+      children: ["ProjectsLeaderboard", "SafetyChampions", "AwardsManagement"],
+    },
     {
       type: "group",
       title: "إدارة السقالات",
@@ -852,6 +861,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // resetObservationForm(); // <-- امسح القيمة دي لو موجودة
         initObservationPage(); // <-- واستدم الجديدة د
       }
+      if (sectionId === "SafetyChampions") window.initSafetyChampionsPage();
+      if (sectionId === "AwardsManagement") window.initAwardsManagementPage();
       if (sectionId === "StoreApprovals") window.loadStoreRequests();
       if (sectionId === "MyObservations") loadMyOpenObservations();
       if (sectionId === "ClosePermit") loadOpenPermits();
@@ -3306,7 +3317,7 @@ document.addEventListener("DOMContentLoaded", function () {
     renderObsActions();
   };
 
-  // حفظ الملاحظة
+  // حفظ  لملاحظة
   if (obsForm) {
     obsForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -5940,7 +5951,7 @@ document.addEventListener("DOMContentLoaded", function () {
     toggleInjuryCount();
   }
 
-  // --- 2. تحميل بيانات المشروع (للمقاولين والموظفين) ---
+  // --- 2. تحميل بيانت المشروع (للمقاولين والموظفين) ---
   window.loadProjectDataForAccident = async function () {
     const proj = accProject.value;
     if (!proj) return;
@@ -13524,3 +13535,137 @@ window.processStoreReq = async function (reqId, action) {
     hideLoader();
   }
 };
+// =================================================================
+// --- وحدة فرسان السلامة وإدارة التكريمات (Safety Champions & Awards) ---
+// =================================================================
+
+// 1. شاشة العرض العامة (فرسان السلامة)
+window.initSafetyChampionsPage = function () {
+    const fromInput = document.getElementById("champ-from-month");
+    const toInput = document.getElementById("champ-to-month");
+    const now = new Date();
+
+    // افتراضياً يحدد آخر 3 شهور
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    now.setMonth(now.getMonth() - 2); // نرجع شهرين لورا عشان نجيب ربع سنوي
+    const startMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    if (fromInput && !fromInput.value) fromInput.value = startMonthStr;
+    if (toInput && !toInput.value) toInput.value = currentMonthStr;
+
+    window.loadSafetyChampions();
+};
+
+window.loadSafetyChampions = async function () {
+    const container = document.getElementById("champions-container");
+    const fromMonth = document.getElementById("champ-from-month").value;
+    const toMonth = document.getElementById("champ-to-month").value;
+
+    if (!fromMonth || !toMonth) return;
+
+    // تصغير المسافات بين الكروت وتصغير الحد الأدنى لعرض الكارت (عشان يظهروا جنب بعض أكتر)
+    container.style.gridTemplateColumns = "repeat(auto-fit, minmax(220px, 1fr))";
+    container.style.gap = "15px";
+
+    container.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#c8102e;"></i><h4 style="margin-top:10px; color:#555;">جاري حساب التقييمات التراكمية...</h4></div>';
+
+    try {
+        const r = await callApi("getSafetyChampions", { fromMonth: fromMonth, toMonth: toMonth });
+
+        if (r.status === "success") {
+            let html = "";
+
+            // 1. الكارت الذهبي لمدير المشروع (حجم ملموم وأنيق)
+            html += `
+                <div style="grid-column: 1 / -1; background: linear-gradient(145deg, #fffcf0, #fff3cd); border-radius: 12px; border: 2px solid #ffc107; padding: 15px; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.15); text-align: center; margin-bottom: 5px;">
+                    <i class="fas fa-crown" style="color: #ff9800; font-size: 2.2rem; margin-bottom: 5px;"></i>
+                    <h3 style="margin: 0; color: #856404; font-size: 1.2rem;">أفضل مدير مشروع (Best Project Manager)</h3>
+                    <p style="color: #666; font-size: 0.85rem; margin: 3px 0 10px 0;">على مستوى الشركة بقطاع المشروعات</p>
+                    <div style="font-size: 1.4rem; color: #c8102e; font-weight: 900; background: #fff; display: inline-block; padding: 8px 30px; border-radius: 30px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); border: 1px dashed #ff9800;">
+                        ${r.globalPM}
+                    </div>
+                </div>
+            `;
+
+            // 2. كروت المشاريع والموظفين (حجم أصغر وأشيك)
+            if (r.champions.length === 0) {
+                html += '<p style="text-align: center; color: #666; grid-column: 1 / -1; margin-top: 20px;">لا توجد بيانات للموظفين في هذه الفترة.</p>';
+            } else {
+                r.champions.forEach(champ => {
+                    html += `
+                        <div style="background: linear-gradient(145deg, #ffffff, #f9f9f9); border-radius: 10px; border: 1px solid #e0e0e0; padding: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); position: relative; overflow: hidden; transition: transform 0.2s;">
+
+                            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, #28a745, #20c997);"></div>
+
+                            <div style="text-align: center; border-bottom: 1px dashed #eee; padding-bottom: 10px; margin-bottom: 12px;">
+                                <i class="fas fa-building" style="color: #007bff; font-size: 1.4rem; margin-bottom: 8px;"></i>
+                                <h4 style="margin: 0; color: #2c2a29; font-size: 1.1rem;">${champ.project}</h4>
+                            </div>
+
+                            <div style="background: #e8f5e9; border: 1px solid #c3e6cb; border-radius: 6px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.75rem; color: #155724; font-weight: bold; margin-bottom: 5px;"><i class="fas fa-user-check"></i> الموظف المثالي (Best Performer)</div>
+                                <div style="font-size: 1.1rem; color: #28a745; font-weight: 900;">${champ.empName}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `<p class="error-message" style="grid-column: 1 / -1;">${r.message}</p>`;
+        }
+    } catch (e) {
+        container.innerHTML = `<p class="error-message" style="grid-column: 1 / -1;">حدث خطأ: ${e.message}</p>`;
+    }
+};
+
+// 2. شاشة إدارة التكريمات (لوحة التحكم)
+window.initAwardsManagementPage = function () {
+  const projSelect = document.getElementById("override-project");
+  if (projSelect && projSelect.options.length <= 1) {
+      if (initialData && initialData.projects) {
+          fillSelect(projSelect, initialData.projects);
+      } else if (typeof ppeLocations !== "undefined") {
+          fillSelect(projSelect, ppeLocations);
+      }
+  }
+  document.getElementById("awards-override-form").reset();
+};
+
+const overrideForm = document.getElementById("awards-override-form");
+if (overrideForm) {
+    overrideForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("override-save-btn");
+        const msg = document.getElementById("override-save-msg");
+
+        const payload = {
+            fromMonth: document.getElementById("over-from-month").value,
+            toMonth: document.getElementById("over-to-month").value,
+            project: document.getElementById("override-project").value,
+            isHidden: document.getElementById("override-hide-project").checked,
+            manualPM: document.getElementById("override-pm-name").value,
+            manualEmp: document.getElementById("override-emp-name").value,
+            userInfo: currentUser // تعريف هوية المستخدم لكي يقبله السيرفر
+        };
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+        showMessage(msg, "", true);
+
+        try {
+            const r = await callApi("saveAwardsOverride", payload);
+            showMessage(msg, r.message, true);
+
+            // تحديث شاشة العرض لو كانت مفتوحة في الخلفية
+            if(document.getElementById("champ-from-month") && document.getElementById("champ-from-month").value === payload.fromMonth) {
+                window.loadSafetyChampions();
+            }
+        } catch (err) {
+            showMessage(msg, err.message, false);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> حفظ قرارات الإدارة';
+        }
+    });
+}

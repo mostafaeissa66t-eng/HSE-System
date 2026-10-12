@@ -7139,6 +7139,225 @@
                         </div>
                     </div>
                 </section>
+                <!-- 1. شاشة فرسان السلامة -->
+                <section
+                    id="SafetyChampions"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <div
+                        style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-bottom: 2px solid #eee;
+                            padding-bottom: 10px;
+                            margin-bottom: 20px;
+                            flex-wrap: wrap;
+                            gap: 15px;
+                        "
+                    >
+                        <h2 style="margin: 0; color: #c8102e">
+                            <i class="fas fa-medal"></i> فرسان السلامة (أبطال
+                            الربع سنوي)
+                        </h2>
+                        <div
+                            style="
+                                display: flex;
+                                gap: 10px;
+                                align-items: center;
+                                background: #fdf5f6;
+                                padding: 10px;
+                                border-radius: 8px;
+                                border: 1px solid #f5c6cb;
+                            "
+                        >
+                            <label
+                                style="
+                                    font-weight: bold;
+                                    color: #c8102e;
+                                    margin: 0;
+                                "
+                                >من:</label
+                            >
+                            <input
+                                type="month"
+                                id="champ-from-month"
+                                class="modern-input"
+                                style="padding: 5px"
+                            />
+                            <label
+                                style="
+                                    font-weight: bold;
+                                    color: #c8102e;
+                                    margin: 0;
+                                "
+                                >إلى:</label
+                            >
+                            <input
+                                type="month"
+                                id="champ-to-month"
+                                class="modern-input"
+                                style="padding: 5px"
+                            />
+                            <button
+                                class="btn"
+                                style="padding: 5px 15px"
+                                onclick="window.loadSafetyChampions()"
+                            >
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+                    </div>
+                    <div
+                        id="champions-container"
+                        style="
+                            display: grid;
+                            grid-template-columns: repeat(
+                                auto-fit,
+                                minmax(300px, 1fr)
+                            );
+                            gap: 20px;
+                        "
+                    >
+                        <p
+                            style="
+                                text-align: center;
+                                color: #666;
+                                grid-column: 1 / -1;
+                            "
+                        >
+                            اختر فترة التقييم لعرض المكرمين...
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 2. شاشة إدارة التكريمات -->
+                <section
+                    id="AwardsManagement"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <div
+                        class="section-header-box"
+                        style="
+                            border-bottom: 2px solid #eee;
+                            padding-bottom: 10px;
+                            margin-bottom: 20px;
+                        "
+                    >
+                        <h2 style="color: #ff9800; margin: 0">
+                            <i class="fas fa-crown"></i> إدارة التكريمات السري
+                        </h2>
+                    </div>
+
+                    <form id="awards-override-form" class="app-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="required">من شهر:</label>
+                                <input
+                                    type="month"
+                                    id="over-from-month"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="required">إلى شهر:</label>
+                                <input
+                                    type="month"
+                                    id="over-to-month"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="required"
+                                    >المشروع المستهدف:</label
+                                >
+                                <select id="override-project" required>
+                                    <option value="">جاري التحميل...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div
+                            class="form-group"
+                            style="
+                                background: #fff3cd;
+                                padding: 15px;
+                                border-radius: 8px;
+                                border: 1px solid #ffeeba;
+                                margin-bottom: 20px;
+                            "
+                        >
+                            <div
+                                style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 10px;
+                                "
+                            >
+                                <input
+                                    type="checkbox"
+                                    id="override-hide-project"
+                                    style="
+                                        width: 20px;
+                                        height: 20px;
+                                        cursor: pointer;
+                                    "
+                                />
+                                <label
+                                    for="override-hide-project"
+                                    style="
+                                        color: #856404;
+                                        font-weight: bold;
+                                        cursor: pointer;
+                                        margin: 0;
+                                        font-size: 1.1rem;
+                                    "
+                                >
+                                    استبعاد هذا المشروع بالكامل من التكريم
+                                </label>
+                            </div>
+                        </div>
+
+                        <h4
+                            style="
+                                color: #0056b3;
+                                border-bottom: 1px dashed #ccc;
+                                padding-bottom: 5px;
+                            "
+                        >
+                            تجاوز الاختيار الآلي (اكتب الاسم لتثبيته كفائز)
+                        </h4>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>أفضل مدير مشروع (Best PM):</label>
+                                <input type="text" id="override-pm-name" />
+                            </div>
+                            <div class="form-group">
+                                <label
+                                    >أفضل موظف / مهندس (Best Employee):</label
+                                >
+                                <input type="text" id="override-emp-name" />
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="override-save-btn"
+                            class="btn btn-success"
+                            style="width: 100%; margin-top: 15px"
+                        >
+                            <i class="fas fa-save"></i> حفظ قرارات الإدارة
+                        </button>
+                        <p
+                            id="override-save-msg"
+                            class="success-message"
+                            style="display: none"
+                        ></p>
+                    </form>
+                </section>
                 <div
                     id="attendees-modal"
                     class="modal"

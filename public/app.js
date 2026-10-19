@@ -858,8 +858,7 @@ document.addEventListener("DOMContentLoaded", function () {
       target.style.display = "block";
       if (sectionId === "NewPermit") resetPermitForm();
       if (sectionId === "NewObservation") {
-        // resetObservationForm(); // <-- امسح القيمة دي لو موجودة
-        initObservationPage(); // <-- واستدم الجديدة د
+        window.initObservationPageFixed();
       }
       if (sectionId === "SafetyChampions") window.initSafetyChampionsPage();
       if (sectionId === "AwardsManagement") window.initAwardsManagementPage();
@@ -3317,60 +3316,6 @@ document.addEventListener("DOMContentLoaded", function () {
     renderObsActions();
   };
 
-  // حفظ  لملاحظة
-  if (obsForm) {
-    obsForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      // تجميع البيانات
-      const data = {
-        project: obsProject.value,
-        locationDetail: document.getElementById("obs-location-detail").value,
-        source: document.getElementById("obs-source").value,
-        type: document.getElementById("obs-type").value,
-        hazard: obsHazard.value,
-        description: document.getElementById("obs-desc").value,
-        responsibility: document.querySelector('input[name="obs-resp"]:checked')
-          .value,
-        actions: obsActionsCart,
-      };
-
-      // اسم الشركة
-      if (data.responsibility === "مقاول") {
-        data.companyName = obsContractorSelect.value;
-        if (!data.companyName) {
-          alert("اختر المقاول");
-          return;
-        }
-      } else {
-        data.companyName = "السويدي";
-      }
-
-      if (data.actions.length === 0) {
-        if (!confirm("لم تضف أي إجراءات تصحيحية. هل تريد الحفظ بدون إجراءات؟"))
-          return;
-      }
-
-      obsSaveBtn.disabled = true;
-      obsSaveBtn.innerHTML =
-        '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
-      try {
-        const r = await callApi("saveObservationFull", {
-          obsData: data,
-          userInfo: currentUser,
-        });
-        showMessage(obsSaveMsg, r.message, true);
-        obsForm.reset();
-        initObservationPage(); // إعادة تهيئة
-      } catch (err) {
-        alert("خطأ: " + err.message);
-      } finally {
-        obsSaveBtn.disabled = false;
-        obsSaveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الملاحظة';
-      }
-    });
-  }
-
   // Events
   if (obsProject)
     obsProject.addEventListener("change", () => {
@@ -3381,7 +3326,7 @@ document.addEventListener("DOMContentLoaded", function () {
       r.addEventListener("change", toggleObsContractor),
     );
   }
-  if (obsAddActionBtn) obsAddActionBtn.addEventListener("click", addObsAction);
+
   // =================================================================
   // --- (جديد) وحدة متابعة وإغلاق الملاحظات ---
   // =================================================================
@@ -3912,10 +3857,8 @@ document.addEventListener("DOMContentLoaded", function () {
       monHazTable.innerHTML = e.message;
     }
   }
-
-  // دالة عامة لرسم الجدول (لأنهم شبه بعض)
-  // 1. تحديث جدول المتابعة (Monitor Observations Table) - تأكيد وجود المصدر
   function renderMonitorTable(data, container) {
+    window.updateToursAndAuditsStats(data);
     if (!data || data.length === 0) {
       container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
       return;
@@ -3924,7 +3867,8 @@ document.addEventListener("DOMContentLoaded", function () {
     let html = `<table class="results-table">
           <thead>
               <tr>
-                  <th>الكود</th>
+                  <th>سريال الملاحظة</th>
+                  <th>كود الجولة / الأوديت</th>
                   <th>التاريخ</th>
                   <th>المسجل</th>
                   <th>المشروع</th>
@@ -3944,13 +3888,26 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       } catch (e) {}
 
+      // استخراج كود الجولة الموحد من العمود الجديد أو من السريال المركب (مثل WWD-20261016-01)
+      let sessionCode = row.sessionId || "-";
+      const idStr = String(row.id || "");
+      if (
+        sessionCode === "-" &&
+        (idStr.startsWith("WWD-") ||
+          idStr.startsWith("MST-") ||
+          idStr.startsWith("AUD-"))
+      ) {
+        sessionCode = idStr.split("-").slice(0, 3).join("-");
+      }
+
       html += `<tr>
               <td style="white-space:nowrap;"><strong>${row.id}</strong></td>
+              <td style="white-space:nowrap;"><span class="badge" style="background:#e9ecef; color:#0056b3; font-weight:bold;">${sessionCode}</span></td>
               <td style="white-space:nowrap;">${dateDisplay}</td>
               <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
               <td>${row.project}</td>
-
-              <td style="font-weight:bold;">${row.source || "-"}</td> <td class="desc-cell">${row.desc}</td>
+              <td style="font-weight:bold;">${row.source || "-"}</td>
+              <td class="desc-cell">${row.desc}</td>
               <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
           </tr>`;
     });
@@ -4247,7 +4204,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (document.getElementById("ncr-issuer") && currentUser)
       document.getElementById("ncr-issuer").value = currentUser.username;
 
-    // 3. التأكد من جلب يانات الموظفين وتخزينها في window لكي يراها المودال
+    // 3. التأكد من جلب ينات الموظفين وتخزينها في window لكي يراها المودال
     if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
       try {
         const r = await callApi("getInventoryInitData", {
@@ -12527,7 +12484,7 @@ window.loadLeaderboard = async function () {
                             </div>
                         </div>
 
-                        
+
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; padding:20px; background:#fafafa;">
 
                             <!-- 1. كارت الملاحظات -->
@@ -13541,42 +13498,46 @@ window.processStoreReq = async function (reqId, action) {
 
 // 1. شاشة العرض العامة (فرسان السلامة)
 window.initSafetyChampionsPage = function () {
-    const fromInput = document.getElementById("champ-from-month");
-    const toInput = document.getElementById("champ-to-month");
-    const now = new Date();
+  const fromInput = document.getElementById("champ-from-month");
+  const toInput = document.getElementById("champ-to-month");
+  const now = new Date();
 
-    // افتراضياً يحدد آخر 3 شهور
-    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    now.setMonth(now.getMonth() - 2); // نرجع شهرين لورا عشان نجيب ربع سنوي
-    const startMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  // افتراضياً يحدد آخر 3 شهور
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  now.setMonth(now.getMonth() - 2); // نرجع شهرين لورا عشان نجيب ربع سنوي
+  const startMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-    if (fromInput && !fromInput.value) fromInput.value = startMonthStr;
-    if (toInput && !toInput.value) toInput.value = currentMonthStr;
+  if (fromInput && !fromInput.value) fromInput.value = startMonthStr;
+  if (toInput && !toInput.value) toInput.value = currentMonthStr;
 
-    window.loadSafetyChampions();
+  window.loadSafetyChampions();
 };
 
 window.loadSafetyChampions = async function () {
-    const container = document.getElementById("champions-container");
-    const fromMonth = document.getElementById("champ-from-month").value;
-    const toMonth = document.getElementById("champ-to-month").value;
+  const container = document.getElementById("champions-container");
+  const fromMonth = document.getElementById("champ-from-month").value;
+  const toMonth = document.getElementById("champ-to-month").value;
 
-    if (!fromMonth || !toMonth) return;
+  if (!fromMonth || !toMonth) return;
 
-    // تصغير المسافات بين الكروت وتصغير الحد الأدنى لعرض الكارت (عشان يظهروا جنب بعض أكتر)
-    container.style.gridTemplateColumns = "repeat(auto-fit, minmax(220px, 1fr))";
-    container.style.gap = "15px";
+  // تصغير المسافات بين الكروت وتصغير الحد الأدنى لعرض الكارت (عشان يظهروا جنب بعض أكتر)
+  container.style.gridTemplateColumns = "repeat(auto-fit, minmax(220px, 1fr))";
+  container.style.gap = "15px";
 
-    container.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#c8102e;"></i><h4 style="margin-top:10px; color:#555;">جاري حساب التقييمات التراكمية...</h4></div>';
+  container.innerHTML =
+    '<div style="grid-column: 1 / -1; text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#c8102e;"></i><h4 style="margin-top:10px; color:#555;">جاري حساب التقييمات التراكمية...</h4></div>';
 
-    try {
-        const r = await callApi("getSafetyChampions", { fromMonth: fromMonth, toMonth: toMonth });
+  try {
+    const r = await callApi("getSafetyChampions", {
+      fromMonth: fromMonth,
+      toMonth: toMonth,
+    });
 
-        if (r.status === "success") {
-            let html = "";
+    if (r.status === "success") {
+      let html = "";
 
-            // 1. الكارت الذهبي لمدير المشروع (حجم ملموم وأنيق)
-            html += `
+      // 1. الكارت الذهبي لمدير المشروع (حجم ملموم وأنيق)
+      html += `
                 <div style="grid-column: 1 / -1; background: linear-gradient(145deg, #fffcf0, #fff3cd); border-radius: 12px; border: 2px solid #ffc107; padding: 15px; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.15); text-align: center; margin-bottom: 5px;">
                     <i class="fas fa-crown" style="color: #ff9800; font-size: 2.2rem; margin-bottom: 5px;"></i>
                     <h3 style="margin: 0; color: #856404; font-size: 1.2rem;">أفضل مدير مشروع (Best Project Manager)</h3>
@@ -13587,12 +13548,13 @@ window.loadSafetyChampions = async function () {
                 </div>
             `;
 
-            // 2. كروت المشاريع والموظفين (حجم أصغر وأشيك)
-            if (r.champions.length === 0) {
-                html += '<p style="text-align: center; color: #666; grid-column: 1 / -1; margin-top: 20px;">لا توجد بيانات للموظفين في هذه الفترة.</p>';
-            } else {
-                r.champions.forEach(champ => {
-                    html += `
+      // 2. كروت المشاريع والموظفين (حجم أصغر وأشيك)
+      if (r.champions.length === 0) {
+        html +=
+          '<p style="text-align: center; color: #666; grid-column: 1 / -1; margin-top: 20px;">لا توجد بيانات للموظفين في هذه الفترة.</p>';
+      } else {
+        r.champions.forEach((champ) => {
+          html += `
                         <div style="background: linear-gradient(145deg, #ffffff, #f9f9f9); border-radius: 10px; border: 1px solid #e0e0e0; padding: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); position: relative; overflow: hidden; transition: transform 0.2s;">
 
                             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, #28a745, #20c997);"></div>
@@ -13608,64 +13570,1495 @@ window.loadSafetyChampions = async function () {
                             </div>
                         </div>
                     `;
-                });
-            }
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = `<p class="error-message" style="grid-column: 1 / -1;">${r.message}</p>`;
-        }
-    } catch (e) {
-        container.innerHTML = `<p class="error-message" style="grid-column: 1 / -1;">حدث خطأ: ${e.message}</p>`;
+        });
+      }
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = `<p class="error-message" style="grid-column: 1 / -1;">${r.message}</p>`;
     }
+  } catch (e) {
+    container.innerHTML = `<p class="error-message" style="grid-column: 1 / -1;">حدث خطأ: ${e.message}</p>`;
+  }
 };
 
 // 2. شاشة إدارة التكريمات (لوحة التحكم)
 window.initAwardsManagementPage = function () {
   const projSelect = document.getElementById("override-project");
   if (projSelect && projSelect.options.length <= 1) {
-      if (initialData && initialData.projects) {
-          fillSelect(projSelect, initialData.projects);
-      } else if (typeof ppeLocations !== "undefined") {
-          fillSelect(projSelect, ppeLocations);
-      }
+    if (initialData && initialData.projects) {
+      fillSelect(projSelect, initialData.projects);
+    } else if (typeof ppeLocations !== "undefined") {
+      fillSelect(projSelect, ppeLocations);
+    }
   }
   document.getElementById("awards-override-form").reset();
 };
 
 const overrideForm = document.getElementById("awards-override-form");
 if (overrideForm) {
-    overrideForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById("override-save-btn");
-        const msg = document.getElementById("override-save-msg");
+  overrideForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("override-save-btn");
+    const msg = document.getElementById("override-save-msg");
 
-        const payload = {
-            fromMonth: document.getElementById("over-from-month").value,
-            toMonth: document.getElementById("over-to-month").value,
-            project: document.getElementById("override-project").value,
-            isHidden: document.getElementById("override-hide-project").checked,
-            manualPM: document.getElementById("override-pm-name").value,
-            manualEmp: document.getElementById("override-emp-name").value,
-            userInfo: currentUser // تعريف هوية المستخدم لكي يقبله السيرفر
-        };
+    const payload = {
+      fromMonth: document.getElementById("over-from-month").value,
+      toMonth: document.getElementById("over-to-month").value,
+      project: document.getElementById("override-project").value,
+      isHidden: document.getElementById("override-hide-project").checked,
+      manualPM: document.getElementById("override-pm-name").value,
+      manualEmp: document.getElementById("override-emp-name").value,
+      userInfo: currentUser, // تعريف هوية المستخدم لكي يقبله السيرفر
+    };
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
-        showMessage(msg, "", true);
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+    showMessage(msg, "", true);
+
+    try {
+      const r = await callApi("saveAwardsOverride", payload);
+      showMessage(msg, r.message, true);
+
+      // تحديث شاشة العرض لو كانت مفتوحة في الخلفية
+      if (
+        document.getElementById("champ-from-month") &&
+        document.getElementById("champ-from-month").value === payload.fromMonth
+      ) {
+        window.loadSafetyChampions();
+      }
+    } catch (err) {
+      showMessage(msg, err.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> حفظ قرارات الإدارة';
+    }
+  });
+}
+// =================================================================
+// --- وحدة الجولات المجمعة (Walkdown/Tour) وقارئ الـ Internal Audit ---
+// =================================================================
+window.currentTourObservations = [];
+window.customObsActionsCart = [];
+window.parsedAuditPayload = null;
+window.isSubmittingObs = false; // قفل أمان لمنع الحفظ مرتين
+
+// 1. تبديل وضع الشاشة حسب نوع التفتيش المختار
+window.handleObsSourceModeChange = function () {
+  const source = document.getElementById("obs-source")?.value || "";
+  const auditModeDiv = document.getElementById("obs-audit-upload-mode");
+  const manualModeDiv = document.getElementById("obs-manual-entry-mode");
+  const tourBanner = document.getElementById("obs-tour-banner");
+  const addToTourBtn = document.getElementById("obs-add-to-tour-btn");
+  const tourBasketContainer = document.getElementById(
+    "obs-tour-basket-container",
+  );
+  const saveBtn = document.getElementById("obs-save-btn");
+
+  const isTourMode =
+    source === "Weekly Walk Down" || source === "Monthly Site Tour";
+  const isAuditMode = source === "Internal Audit";
+
+  // التحكم في Required للحقول اليدوية حتى لا تعطل رفع الأوديت أو حفظ السلة
+  const manualRequiredIds = [
+    "obs-location-detail",
+    "obs-type",
+    "obs-hazard",
+    "obs-desc",
+  ];
+
+  if (isAuditMode) {
+    if (auditModeDiv) auditModeDiv.style.display = "block";
+    if (manualModeDiv) manualModeDiv.style.display = "none";
+    manualRequiredIds.forEach((id) =>
+      document.getElementById(id)?.removeAttribute("required"),
+    );
+  } else {
+    if (auditModeDiv) auditModeDiv.style.display = "none";
+    if (manualModeDiv) manualModeDiv.style.display = "block";
+
+    if (isTourMode) {
+      if (tourBanner) tourBanner.style.display = "block";
+      if (addToTourBtn) addToTourBtn.style.display = "block";
+      if (tourBasketContainer) tourBasketContainer.style.display = "block";
+      if (saveBtn) {
+        saveBtn.innerHTML = `<i class="fas fa-check-double"></i> حفظ واعتماد الجولة بالكامل (${window.currentTourObservations.length} ملاحظات)`;
+        saveBtn.style.backgroundColor = "#28a745";
+      }
+      manualRequiredIds.forEach((id) =>
+        document.getElementById(id)?.removeAttribute("required"),
+      );
+    } else {
+      if (tourBanner) tourBanner.style.display = "none";
+      if (addToTourBtn) addToTourBtn.style.display = "none";
+      if (tourBasketContainer) tourBasketContainer.style.display = "none";
+      window.currentTourObservations = [];
+      if (saveBtn) {
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الملاحظة';
+        saveBtn.style.backgroundColor = "";
+      }
+      manualRequiredIds.forEach((id) =>
+        document.getElementById(id)?.setAttribute("required", "required"),
+      );
+    }
+  }
+};
+
+window.renderTourBasketUI = function () {
+  const listEl = document.getElementById("obs-tour-basket-list");
+  const countEl = document.getElementById("tour-obs-count");
+  const saveBtn = document.getElementById("obs-save-btn");
+
+  if (countEl) countEl.textContent = window.currentTourObservations.length;
+  if (saveBtn) {
+    saveBtn.innerHTML = `<i class="fas fa-check-double"></i> حفظ واعتماد الجولة بالكامل (${window.currentTourObservations.length} ملاحظات)`;
+  }
+
+  if (!listEl) return;
+  if (window.currentTourObservations.length === 0) {
+    listEl.innerHTML =
+      '<p style="color:#777; text-align:center; margin:0;">لم يتم إضافة ملاحظات للجولة بعد...</p>';
+    return;
+  }
+
+  listEl.innerHTML = window.currentTourObservations
+    .map(
+      (item, idx) => `
+        <div class="ppe-cart-item" style="margin-bottom: 8px; background: #fff;">
+            <div style="text-align: right;">
+                <span class="badge" style="background:#007bff; color:#fff; margin-left:5px;">#${String(idx + 1).padStart(2, "0")}</span>
+                <strong>${item.type}</strong> - <small style="color:#0056b3;">[${item.locationDetail}]</small>
+                <div style="font-size: 0.85rem; color: #444; margin-top: 4px;">${item.description}</div>
+                <small style="color: #666;">المسؤولية: ${item.companyName} | الإجراءات: ${item.actions.length}</small>
+            </div>
+            <button type="button" class="btn-small btn-danger" onclick="window.removeTourBasketItem(${idx})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `,
+    )
+    .join("");
+};
+
+window.removeTourBasketItem = function (idx) {
+  window.currentTourObservations.splice(idx, 1);
+  window.renderTourBasketUI();
+};
+
+// 3. قراءة وتحليل ملف إكسيل الـ Internal Audit أوتوماتيكياً
+window.parseInternalAuditExcel = function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const selectedProject = document.getElementById("obs-project")?.value;
+  if (!selectedProject) {
+    alert(
+      "الرجاء اختيار المشروع من القائمة العلوية أولاً ليتم ربط الأوديت به.",
+    );
+    event.target.value = "";
+    return;
+  }
+
+  window.showLoader("جاري قراءة وتحليل شيتات الـ Internal Audit...");
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array", cellDates: true });
+
+      // أ) استخراج بيانات الغلاف (Cover Page)
+      let excelProjectName = selectedProject;
+      let auditDateStr = new Date().toISOString().slice(0, 10);
+
+      if (workbook.Sheets["Cover Page"]) {
+        const coverRows = XLSX.utils.sheet_to_json(
+          workbook.Sheets["Cover Page"],
+          { header: 1, defval: "" },
+        );
+        for (let r = 0; r < Math.min(10, coverRows.length); r++) {
+          const row = coverRows[r];
+          for (let c = 0; c < row.length; c++) {
+            const cellVal = String(row[c]).trim();
+            if (cellVal.toLowerCase().includes("project name") && row[c + 2]) {
+              excelProjectName = String(row[c + 2]).trim();
+            }
+            if (cellVal.toLowerCase().includes("audit date") && row[c + 1]) {
+              const rawD = row[c + 1];
+              if (rawD instanceof Date) {
+                auditDateStr = rawD.toISOString().slice(0, 10);
+              } else {
+                const parts = String(rawD)
+                  .trim()
+                  .split(/[\/\-]/);
+                if (parts.length === 3) {
+                  const d = parts[0].padStart(2, "0");
+                  const m = parts[1].padStart(2, "0");
+                  const y = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+                  auditDateStr = `${y}-${m}-${d}`;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // ب) استخراج الاسكور النهائي من شيت (Checklist)
+      let auditScoreDecimal = 0;
+      if (workbook.Sheets["Checklist"]) {
+        const chkRows = XLSX.utils.sheet_to_json(workbook.Sheets["Checklist"], {
+          header: 1,
+          defval: "",
+        });
+        for (let r = 0; r < chkRows.length; r++) {
+          const firstCol = String(chkRows[r][0] || "")
+            .trim()
+            .toLowerCase();
+          if (firstCol === "audit score") {
+            const rawScore = parseFloat(chkRows[r][3]);
+            if (!isNaN(rawScore)) {
+              auditScoreDecimal = rawScore > 2 ? rawScore / 100 : rawScore;
+            }
+            break;
+          }
+        }
+      }
+
+      // ج) استخراج الملاحظات والإجراءات من شيت (Report & Action Plan)
+      let extractedFindings = [];
+      const reportSheetName = workbook.SheetNames.find(
+        (n) =>
+          n.toLowerCase().includes("report") ||
+          n.toLowerCase().includes("action"),
+      );
+      if (reportSheetName) {
+        const repRows = XLSX.utils.sheet_to_json(
+          workbook.Sheets[reportSheetName],
+          { header: 1, defval: "" },
+        );
+        // البداية من بعد صف الهيدر (عادة الصف 2)
+        for (let r = 2; r < repRows.length; r++) {
+          const row = repRows[r];
+          const itemQuestion = String(row[0] || "").trim();
+          const categoryRaw = String(row[1] || "").trim();
+          const desc = String(row[2] || "").trim();
+          const riskLevel = String(row[3] || "").trim();
+          const reqAction = String(row[4] || "").trim();
+          const rawDueDate = row[6];
+          const statusRaw = String(row[7] || "").trim();
+
+          // تجاهل الصفوف الفارغة التي لا تحتوي على وصف ملاحظة
+          if (!desc) continue;
+
+          let isGoodPractice = categoryRaw
+            .toLowerCase()
+            .includes("good practice");
+          let obsType = isGoodPractice ? "Positive" : "Unsafe Condition";
+          let finalStatus = isGoodPractice
+            ? "Closed"
+            : statusRaw.toLowerCase() === "closed"
+              ? "Closed"
+              : "Open";
+
+          let formattedDueDate = auditDateStr;
+          if (rawDueDate instanceof Date && !isNaN(rawDueDate.getTime())) {
+            formattedDueDate = rawDueDate.toISOString().slice(0, 10);
+          } else if (rawDueDate && String(rawDueDate).includes("-")) {
+            formattedDueDate = String(rawDueDate).substring(0, 10);
+          }
+
+          extractedFindings.push({
+            question: itemQuestion || "فحص ميداني عام (Audit Finding)",
+            category: isGoodPractice
+              ? "Good Practice"
+              : categoryRaw || "Observation",
+            obsType: obsType,
+            description: desc,
+            risk: riskLevel || (isGoodPractice ? "N/A" : "Medium"),
+            actionText: reqAction,
+            dueDate: formattedDueDate,
+            status: finalStatus,
+          });
+        }
+      }
+
+      window.parsedAuditPayload = {
+        project: selectedProject,
+        excelProjectName: excelProjectName,
+        auditDate: auditDateStr,
+        scoreDecimal: auditScoreDecimal,
+        findings: extractedFindings,
+      };
+
+      // عرض النتيجة في لوحة المعاينة
+      document.getElementById("aud-prev-proj").textContent =
+        `${selectedProject} (${excelProjectName})`;
+      document.getElementById("aud-prev-date").textContent = auditDateStr;
+      document.getElementById("aud-prev-score").textContent =
+        (auditScoreDecimal * 100).toFixed(2) + "%";
+      document.getElementById("aud-prev-count").textContent =
+        `${extractedFindings.length} بند`;
+
+      const listContainer = document.getElementById(
+        "audit-findings-preview-list",
+      );
+      listContainer.innerHTML = extractedFindings
+        .map((f, i) => {
+          const badgeBg = f.obsType === "Positive" ? "#28a745" : "#dc3545";
+          const statusBadge =
+            f.status === "Closed"
+              ? '<span class="badge bg-success">Closed</span>'
+              : '<span class="badge bg-danger">Open</span>';
+          return `
+                    <div style="border-bottom: 1px solid #eee; padding: 10px 5px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <div style="flex: 1; text-align: right;">
+                            <span class="badge" style="background:${badgeBg}; color:#fff;">#${String(i + 1).padStart(2, "0")} - ${f.category}</span>
+                            ${statusBadge}
+                            <div style="font-weight: bold; color: #2c2a29; margin-top: 5px; font-size: 0.9rem;">${f.description}</div>
+                            ${f.actionText ? `<div style="font-size: 0.8rem; color: #0056b3; margin-top: 4px;"><i class="fas fa-wrench"></i> <b>الإجراء:</b> ${f.actionText} (قبل: ${f.dueDate})</div>` : ""}
+                        </div>
+                    </div>
+                `;
+        })
+        .join("");
+
+      document.getElementById("audit-preview-box").style.display = "block";
+    } catch (err) {
+      alert("حدث خطأ أثناء قراءة ملف الإكسيل: " + err.message);
+    } finally {
+      window.hideLoader();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+// 4. إرسال الأوديت المستخرج بالكامل للسيرفر
+window.submitParsedInternalAudit = async function () {
+  if (
+    !window.parsedAuditPayload ||
+    window.parsedAuditPayload.findings.length === 0
+  ) {
+    alert("لا توجد بيانات صالحة للحفظ.");
+    return;
+  }
+
+  const currentProject = document.getElementById("obs-project")?.value;
+  if (!currentProject) {
+    alert("الرجاء التأكد من اختيار المشروع.");
+    return;
+  }
+  window.parsedAuditPayload.project = currentProject;
+
+  if (
+    !confirm(
+      `هل أنت متأكد من اعتماد نتيجة الأوديت (${(window.parsedAuditPayload.scoreDecimal * 100).toFixed(2)}%) وتسجيل (${window.parsedAuditPayload.findings.length}) ملاحظة لمشروع [${currentProject}]؟`,
+    )
+  ) {
+    return;
+  }
+
+  const btn = document.getElementById("audit-confirm-save-btn");
+  btn.disabled = true;
+  btn.innerHTML =
+    '<i class="fas fa-spinner fa-spin"></i> جاري تسجيل الأوديت والملاحظات...';
+
+  try {
+    const res = await window.callApi("saveInternalAuditBatch", {
+      auditData: window.parsedAuditPayload,
+      userInfo: currentUser,
+    });
+
+    alert("✅ " + res.message);
+    document.getElementById("audit-preview-box").style.display = "none";
+    document.getElementById("audit-excel-file").value = "";
+    window.parsedAuditPayload = null;
+  } catch (e) {
+    alert("❌ خطأ أثناء الحفظ: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML =
+      '<i class="fas fa-check-double"></i> اعتماد وحفظ الأوديت والملاحظات في النظام';
+  }
+};
+
+// 5. ربط زر حفظ الفورم لدعم (الملاحظة الفردية) أو (الجولة المجمعة ذات السريال الفرعي)
+document.addEventListener("DOMContentLoaded", function () {
+  const obsFormEl = document.getElementById("obs-form");
+  if (obsFormEl) {
+    // استبدال المستمع القديم لمنع الازدواجية
+    const newObsForm = obsFormEl.cloneNode(true);
+    obsFormEl.parentNode.replaceChild(newObsForm, obsFormEl);
+
+    // إعادة ربط الأحداث الداخلية للفورم بعد الـ Clone
+    const projEl = document.getElementById("obs-project");
+    const respRadios = document.getElementsByName("obs-resp");
+    const addActBtn = document.getElementById("obs-add-action-btn");
+
+    if (projEl)
+      projEl.addEventListener("change", () => {
+        if (typeof toggleObsContractor === "function") toggleObsContractor();
+      });
+    if (respRadios)
+      respRadios.forEach((r) =>
+        r.addEventListener("change", () => {
+          if (typeof toggleObsContractor === "function") toggleObsContractor();
+        }),
+      );
+    if (addActBtn)
+      addActBtn.addEventListener("click", () => {
+        const txt = document.getElementById("obs-action-text").value;
+        const date = document.getElementById("obs-action-date").value;
+        if (!txt || !date) {
+          alert("أدخل الإجراء والتاريخ");
+          return;
+        }
+        obsActionsCart.push({ text: txt, targetDate: date });
+        if (typeof renderObsActions === "function") renderObsActions();
+        document.getElementById("obs-action-text").value = "";
+        document.getElementById("obs-action-date").value = "";
+      });
+
+    newObsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const source = document.getElementById("obs-source").value;
+      const project = document.getElementById("obs-project").value;
+      const saveBtn = document.getElementById("obs-save-btn");
+      const saveMsg = document.getElementById("obs-save-msg");
+
+      if (source === "Internal Audit") return; // يتم حفظه من زر الأوديت المخصص
+
+      const isTourMode =
+        source === "Weekly Walk Down" || source === "Monthly Site Tour";
+
+      // [حالة 1]: حفظ جولة مجمعة (Walkdown / Tour)
+      if (isTourMode) {
+        if (window.currentTourObservations.length === 0) {
+          alert(
+            "سلة الجولة فارغة! اضغط على زر (إضافة هذه الملاحظة لقائمة الجولة الحالية) أولاً.",
+          );
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> جاري حفظ الجولة...';
 
         try {
-            const r = await callApi("saveAwardsOverride", payload);
-            showMessage(msg, r.message, true);
-
-            // تحديث شاشة العرض لو كانت مفتوحة في الخلفية
-            if(document.getElementById("champ-from-month") && document.getElementById("champ-from-month").value === payload.fromMonth) {
-                window.loadSafetyChampions();
-            }
+          const r = await window.callApi("saveBatchTourObservations", {
+            tourData: {
+              project: project,
+              source: source,
+              items: window.currentTourObservations,
+            },
+            userInfo: currentUser,
+          });
+          window.showMessage(saveMsg, r.message, true);
+          window.currentTourObservations = [];
+          window.renderTourBasketUI();
+          newObsForm.reset();
+          window.handleObsSourceModeChange();
         } catch (err) {
-            showMessage(msg, err.message, false);
+          alert("خطأ: " + err.message);
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> حفظ قرارات الإدارة';
+          saveBtn.disabled = false;
+          window.handleObsSourceModeChange();
         }
+        return;
+      }
+
+      // [حالة 2]: حفظ ملاحظة فردية عادية
+      const data = {
+        project: project,
+        locationDetail: document.getElementById("obs-location-detail").value,
+        source: source,
+        type: document.getElementById("obs-type").value,
+        hazard: document.getElementById("obs-hazard").value,
+        description: document.getElementById("obs-desc").value,
+        responsibility: document.querySelector('input[name="obs-resp"]:checked')
+          .value,
+        actions: obsActionsCart,
+      };
+
+      if (data.responsibility === "مقاول") {
+        data.companyName = document.getElementById(
+          "obs-contractor-select",
+        ).value;
+        if (!data.companyName) {
+          alert("اختر المقاول");
+          return;
+        }
+      } else {
+        data.companyName = "السويدي";
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML =
+        '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+      try {
+        const r = await window.callApi("saveObservationFull", {
+          obsData: data,
+          userInfo: currentUser,
+        });
+        window.showMessage(saveMsg, r.message, true);
+        newObsForm.reset();
+        obsActionsCart = [];
+        if (typeof renderObsActions === "function") renderObsActions();
+      } catch (err) {
+        alert("خطأ: " + err.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الملاحظة';
+      }
     });
-}
+  }
+});
+
+// =================================================================
+// --- وحدة الملاحظات المطورة (إصلاح التاريخ، المخاطر، المقاولين، الجولات، والأوديت) ---
+// =================================================================
+
+window.currentTourObservations = [];
+window.customObsActionsCart = [];
+window.parsedAuditPayload = null;
+
+// 1. تهيئة صفحة الملاحظات (تملأ التاريخ، الوقت، المشاريع، وقائمة المخاطر بضمان 100%)
+window.initObservationPageFixed = async function () {
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const timeStr = now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const dateEl = document.getElementById("obs-view-date");
+  const timeEl = document.getElementById("obs-view-time");
+  if (dateEl) dateEl.value = dateStr;
+  if (timeEl) timeEl.value = timeStr;
+
+  // فصل المستمع القديم عن زر (+) نهائياً لمنع رسالة "أدخل الإجراء والتاريخ" الكاذبة
+  const oldAddBtn = document.getElementById("obs-add-action-btn");
+  if (oldAddBtn && !oldAddBtn.dataset.cleaned) {
+    const cleanBtn = oldAddBtn.cloneNode(true);
+    cleanBtn.dataset.cleaned = "true";
+    cleanBtn.onclick = function (ev) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      window.addCustomObsAction();
+    };
+    oldAddBtn.parentNode.replaceChild(cleanBtn, oldAddBtn);
+  }
+
+  // أ) تعبئة المشاريع
+  const projEl = document.getElementById("obs-project");
+  if (projEl && projEl.options.length <= 1) {
+    let locs =
+      typeof ppeLocations !== "undefined" && ppeLocations.length > 0
+        ? ppeLocations
+        : initialData && initialData.projects
+          ? initialData.projects
+          : [];
+    if (locs.length === 0) {
+      try {
+        const r = await window.callApi("getInventoryInitData", {
+          userInfo: currentUser,
+        });
+        if (r.status === "success") locs = r.locations || [];
+      } catch (e) {}
+    }
+    const userProj = (currentUser?.projects || "").toString();
+    const accProj =
+      userProj === "ALL" ? locs : locs.filter((p) => userProj.includes(p));
+    window.fillSelect(projEl, accProj);
+  }
+
+  // ب) تعبئة قائمة المخاطر (Hazards)
+  const hazEl = document.getElementById("obs-hazard");
+  if (hazEl && hazEl.options.length <= 1) {
+    hazEl.innerHTML = '<option value="">جاري التحميل...</option>';
+    try {
+      const r = await window.callApi("getHazardsList", {});
+      if (r.status === "success" && r.hazards) {
+        window.fillSelect(hazEl, r.hazards);
+      } else {
+        hazEl.innerHTML = '<option value="">فشل التحميل</option>';
+      }
+    } catch (e) {
+      hazEl.innerHTML = '<option value="">خطأ اتصال</option>';
+    }
+  }
+
+  // ج) تصفير السلات
+  window.customObsActionsCart = [];
+  window.renderCustomObsActions();
+  const sewedyRadio = document.getElementById("resp-elsewedy");
+  if (sewedyRadio) sewedyRadio.checked = true;
+  window.toggleObsContractorUI();
+  window.handleObsSourceModeChange();
+};
+
+window.collectPendingActionIfAny = function () {
+  const txtEl = document.getElementById("obs-action-text");
+  const dateEl = document.getElementById("obs-action-date");
+  const txt = txtEl ? txtEl.value.trim() : "";
+  const date = dateEl ? dateEl.value : "";
+
+  // لو كتب نص إجراء وتاريخ ولم يضغط (+)، نضمهم تلقائياً!
+  if (txt && date) {
+    window.customObsActionsCart.push({ text: txt, targetDate: date });
+    txtEl.value = "";
+    dateEl.value = "";
+    window.renderCustomObsActions();
+    return true;
+  }
+  // لو كتب نص إجراء ونسي يختار تاريخ التنفيذ، ننبهه
+  if (txt && !date) {
+    alert("لقد كتبت إجراءً تصحيحياً ولكن نسيت تحديد (تاريخ التنفيذ) الخاص به!");
+    return false;
+  }
+  return true;
+};
+// 2. إظهار وجلب المقاولين فور الضغط على "مقاول" أو تغيير المشروع
+window.toggleObsContractorUI = async function () {
+  const checkedRadio = document.querySelector('input[name="obs-resp"]:checked');
+  const isCont = checkedRadio && checkedRadio.value === "مقاول";
+  const contDiv = document.getElementById("obs-contractor-div");
+  const contSelect = document.getElementById("obs-contractor-select");
+  const currentProj = document.getElementById("obs-project")?.value;
+
+  if (!contDiv || !contSelect) return;
+
+  if (isCont) {
+    contDiv.style.display = "block";
+    if (!currentProj) {
+      contSelect.innerHTML =
+        '<option value="">-- اختر المشروع من الأعلى أولاً --</option>';
+      contSelect.disabled = true;
+      return;
+    }
+    contSelect.innerHTML = '<option value="">جاري تحميل المقاولين...</option>';
+    contSelect.disabled = true;
+    try {
+      const r = await window.callApi("getContractorsForProject", {
+        projectName: currentProj,
+      });
+      if (r.contractors && r.contractors.length > 0) {
+        window.fillSelect(contSelect, r.contractors);
+        contSelect.disabled = false;
+      } else {
+        contSelect.innerHTML =
+          '<option value="">لا يوجد مقاولين لهذا المشروع</option>';
+      }
+    } catch (e) {
+      contSelect.innerHTML = '<option value="">خطأ في جلب المقاولين</option>';
+    }
+  } else {
+    contDiv.style.display = "none";
+    contSelect.innerHTML = '<option value="">-- اختر --</option>';
+    contSelect.value = "";
+  }
+};
+
+window.addCustomObsAction = function () {
+  const txtEl = document.getElementById("obs-action-text");
+  const dateEl = document.getElementById("obs-action-date");
+  const txt = txtEl ? txtEl.value.trim() : "";
+  const date = dateEl ? dateEl.value : "";
+
+  if (!txt || !date) {
+    alert("الرجاء كتابة الإجراء وتحديد تاريخ التنفيذ لإضافته.");
+    return;
+  }
+
+  window.customObsActionsCart.push({ text: txt, targetDate: date });
+  window.renderCustomObsActions();
+  txtEl.value = "";
+  dateEl.value = "";
+};
+
+window.renderCustomObsActions = function () {
+  const listEl = document.getElementById("obs-actions-list");
+  if (!listEl) return;
+  if (window.customObsActionsCart.length === 0) {
+    listEl.innerHTML =
+      '<small style="color:#777; display:block;">💡 يمكنك كتابة الإجراء والتاريخ والضغط على حفظ مباشرة، أو الضغط على (+) إذا أردت إضافة أكثر من إجراء لنفس الملاحظة.</small>';
+    return;
+  }
+  listEl.innerHTML = window.customObsActionsCart
+    .map(
+      (act, i) => `
+        <div class="ppe-cart-item" style="margin-bottom:5px; background:#fff;">
+            <span><i class="fas fa-check-circle" style="color:#28a745;"></i> ${act.text} <small style="color:#0056b3;">(${act.targetDate})</small></span>
+            <button type="button" class="btn-small btn-danger" onclick="window.removeCustomObsAction(${i})">X</button>
+        </div>
+    `,
+    )
+    .join("");
+};
+
+window.removeCustomObsAction = function (i) {
+  window.customObsActionsCart.splice(i, 1);
+  window.renderCustomObsActions();
+};
+
+// 4. تبديل وضع الشاشة (فردي / جولة مجمعة / أوديت إكسيل)
+window.handleObsSourceModeChange = function () {
+  const source = document.getElementById("obs-source")?.value || "";
+  const auditModeDiv = document.getElementById("obs-audit-upload-mode");
+  const manualModeDiv = document.getElementById("obs-manual-entry-mode");
+  const tourBanner = document.getElementById("obs-tour-banner");
+  const addToTourBtn = document.getElementById("obs-add-to-tour-btn");
+  const tourBasketContainer = document.getElementById(
+    "obs-tour-basket-container",
+  );
+  const saveBtn = document.getElementById("obs-save-btn");
+
+  const isTourMode =
+    source === "Weekly Walk Down" || source === "Monthly Site Tour";
+  const isAuditMode = source === "Internal Audit";
+
+  const manualRequiredIds = [
+    "obs-location-detail",
+    "obs-type",
+    "obs-hazard",
+    "obs-desc",
+  ];
+
+  if (isAuditMode) {
+    if (auditModeDiv) auditModeDiv.style.display = "block";
+    if (manualModeDiv) manualModeDiv.style.display = "none";
+    manualRequiredIds.forEach((id) =>
+      document.getElementById(id)?.removeAttribute("required"),
+    );
+  } else {
+    if (auditModeDiv) auditModeDiv.style.display = "none";
+    if (manualModeDiv) manualModeDiv.style.display = "block";
+
+    if (isTourMode) {
+      if (tourBanner) tourBanner.style.display = "block";
+      if (addToTourBtn) addToTourBtn.style.display = "block";
+      if (tourBasketContainer) tourBasketContainer.style.display = "block";
+      if (saveBtn) {
+        saveBtn.innerHTML = `<i class="fas fa-check-double"></i> حفظ واعتماد الجولة بالكامل (${window.currentTourObservations.length} ملاحظات)`;
+        saveBtn.style.backgroundColor = "#28a745";
+      }
+      manualRequiredIds.forEach((id) =>
+        document.getElementById(id)?.removeAttribute("required"),
+      );
+    } else {
+      if (tourBanner) tourBanner.style.display = "none";
+      if (addToTourBtn) addToTourBtn.style.display = "none";
+      if (tourBasketContainer) tourBasketContainer.style.display = "none";
+      window.currentTourObservations = [];
+      if (saveBtn) {
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الملاحظة';
+        saveBtn.style.backgroundColor = "";
+      }
+      manualRequiredIds.forEach((id) =>
+        document.getElementById(id)?.setAttribute("required", "required"),
+      );
+    }
+  }
+};
+
+window.addObservationToTourBasket = function () {
+  const project = document.getElementById("obs-project")?.value;
+  const source = document.getElementById("obs-source")?.value;
+  const locationDetail = document
+    .getElementById("obs-location-detail")
+    ?.value.trim();
+  const type = document.getElementById("obs-type")?.value;
+  const hazard = document.getElementById("obs-hazard")?.value;
+  const description = document.getElementById("obs-desc")?.value.trim();
+  const respRadio = document.querySelector('input[name="obs-resp"]:checked');
+  const responsibility = respRadio ? respRadio.value : "السويدي";
+  const contractorSelect = document.getElementById("obs-contractor-select");
+
+  if (!project || !source) {
+    alert("الرجاء اختيار المشروع ونوع الجولة أولاً.");
+    return;
+  }
+  if (!locationDetail || !type || !hazard || !description) {
+    alert(
+      "الرجاء إكمال بيانات الملاحظة (المكان، النوع، الخطر، الوصف) قبل إضافتها للجولة.",
+    );
+    return;
+  }
+
+  let companyName = "السويدي";
+  if (responsibility === "مقاول") {
+    companyName = contractorSelect ? contractorSelect.value : "";
+    if (!companyName) {
+      alert("الرجاء اختيار اسم المقاول.");
+      return;
+    }
+  }
+
+  // سحب الإجراء المكتوب في الخانة تلقائياً لو المستخدم لم يضغط على (+)
+  if (!window.collectPendingActionIfAny()) return;
+
+  window.currentTourObservations.push({
+    locationDetail: locationDetail,
+    type: type,
+    hazard: hazard,
+    description: description,
+    responsibility: responsibility,
+    companyName: companyName,
+    actions: [...window.customObsActionsCart],
+  });
+
+  // تفريغ الحقول لإدخال الملاحظة التالية في الجولة
+  document.getElementById("obs-location-detail").value = "";
+  document.getElementById("obs-type").value = "";
+  document.getElementById("obs-desc").value = "";
+  window.customObsActionsCart = [];
+  window.renderCustomObsActions();
+  window.renderTourBasketUI();
+};
+
+window.renderTourBasketUI = function () {
+  const listEl = document.getElementById("obs-tour-basket-list");
+  const countEl = document.getElementById("tour-obs-count");
+  const saveBtn = document.getElementById("obs-save-btn");
+
+  if (countEl) countEl.textContent = window.currentTourObservations.length;
+  if (saveBtn) {
+    saveBtn.innerHTML = `<i class="fas fa-check-double"></i> حفظ واعتماد الجولة بالكامل (${window.currentTourObservations.length} ملاحظات)`;
+  }
+
+  if (!listEl) return;
+  if (window.currentTourObservations.length === 0) {
+    listEl.innerHTML =
+      '<p style="color:#777; text-align:center; margin:0;">لم يتم إضافة ملاحظات للجولة بعد...</p>';
+    return;
+  }
+
+  listEl.innerHTML = window.currentTourObservations
+    .map(
+      (item, idx) => `
+        <div class="ppe-cart-item" style="margin-bottom: 8px; background: #fff;">
+            <div style="text-align: right;">
+                <span class="badge" style="background:#007bff; color:#fff; margin-left:5px;">#${String(idx + 1).padStart(2, "0")}</span>
+                <strong>${item.type}</strong> - <small style="color:#0056b3;">[${item.locationDetail}]</small>
+                <div style="font-size: 0.85rem; color: #444; margin-top: 4px;">${item.description}</div>
+                <small style="color: #666;">المسؤولية: ${item.companyName} | الإجراءات: ${item.actions.length}</small>
+            </div>
+            <button type="button" class="btn-small btn-danger" onclick="window.removeTourBasketItem(${idx})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `,
+    )
+    .join("");
+};
+
+window.removeTourBasketItem = function (idx) {
+  window.currentTourObservations.splice(idx, 1);
+  window.renderTourBasketUI();
+};
+
+// 5. حفظ الملاحظة الفردية أو الجولة المجمعة (مع منع الحفظ المزدوج نهائياً)
+window.handleCustomObsSubmit = async function (e) {
+  if (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation(); // يمنع الكود القديم في app.js من الاشتغال والحفظ مرة ثانية!
+  }
+
+  if (window.isSubmittingObs) return; // حماية إضافية ضد الضغط المزدوج
+
+  const source = document.getElementById("obs-source").value;
+  const project = document.getElementById("obs-project").value;
+  const saveBtn = document.getElementById("obs-save-btn");
+  const saveMsg = document.getElementById("obs-save-msg");
+
+  if (source === "Internal Audit") return;
+
+  const isTourMode =
+    source === "Weekly Walk Down" || source === "Monthly Site Tour";
+
+  // [حالة 1]: حفظ جولة مجمعة
+  if (isTourMode) {
+    // لو المستخدم كتب ملاحظة في الخانات وضغط "حفظ الجولة" مباشرة دون أن يضغط الزر الأزرق، نضمها له تلقائياً!
+    const locVal = document.getElementById("obs-location-detail")?.value.trim();
+    const descVal = document.getElementById("obs-desc")?.value.trim();
+    if (locVal && descVal) {
+      window.addObservationToTourBasket();
+    }
+
+    if (window.currentTourObservations.length === 0) {
+      alert("سلة الجولة فارغة! أضف ملاحظة واحدة على الأقل.");
+      return;
+    }
+
+    window.isSubmittingObs = true;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML =
+      '<i class="fas fa-spinner fa-spin"></i> جاري حفظ الجولة...';
+
+    try {
+      const r = await window.callApi("saveBatchTourObservations", {
+        tourData: {
+          project: project,
+          source: source,
+          items: window.currentTourObservations,
+        },
+        userInfo: currentUser,
+      });
+      window.showMessage(saveMsg, r.message, true);
+      window.currentTourObservations = [];
+      window.renderTourBasketUI();
+      document.getElementById("obs-form").reset();
+      window.initObservationPageFixed();
+    } catch (err) {
+      alert("خطأ: " + err.message);
+    } finally {
+      window.isSubmittingObs = false;
+      saveBtn.disabled = false;
+      window.handleObsSourceModeChange();
+    }
+    return;
+  }
+
+  // [حالة 2]: حفظ ملاحظة فردية عادية
+  if (!window.collectPendingActionIfAny()) return;
+
+  const data = {
+    project: project,
+    locationDetail: document.getElementById("obs-location-detail").value,
+    source: source,
+    type: document.getElementById("obs-type").value,
+    hazard: document.getElementById("obs-hazard").value,
+    description: document.getElementById("obs-desc").value,
+    responsibility: document.querySelector('input[name="obs-resp"]:checked')
+      .value,
+    actions: window.customObsActionsCart,
+  };
+
+  if (data.responsibility === "مقاول") {
+    data.companyName = document.getElementById("obs-contractor-select").value;
+    if (!data.companyName) {
+      alert("اختر المقاول");
+      return;
+    }
+  } else {
+    data.companyName = "السويدي";
+  }
+
+  if (data.actions.length === 0) {
+    if (!confirm("لم تضف أي إجراءات تصحيحية. هل تريد الحفظ بدون إجراءات؟"))
+      return;
+  }
+
+  window.isSubmittingObs = true;
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+  try {
+    const r = await window.callApi("saveObservationFull", {
+      obsData: data,
+      userInfo: currentUser,
+    });
+    window.showMessage(saveMsg, r.message, true);
+    document.getElementById("obs-form").reset();
+    window.initObservationPageFixed();
+  } catch (err) {
+    alert("خطأ: " + err.message);
+  } finally {
+    window.isSubmittingObs = false;
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الملاحظة';
+  }
+};
+// =================================================================
+// --- محرك حساب الجولات والأوديت التلقائي (يعمل مع البحث تلقائياً) ---
+// =================================================================
+
+window.updateToursAndAuditsStats = function (observationsData) {
+  const wwdEl = document.getElementById("stat-wwd-count");
+  const mstEl = document.getElementById("stat-mst-count");
+  const auditEl = document.getElementById("stat-audit-count");
+
+  if (
+    !observationsData ||
+    !Array.isArray(observationsData) ||
+    observationsData.length === 0
+  ) {
+    if (wwdEl) wwdEl.textContent = "0";
+    if (mstEl) mstEl.textContent = "0";
+    if (auditEl) auditEl.textContent = "0";
+    return;
+  }
+
+  let wwdSessions = new Set();
+  let mstSessions = new Set();
+  let auditSessions = new Set();
+
+  observationsData.forEach((row) => {
+    // قراءة المصدر وتحويله لحروف صغيرة لتفادي أي اختلاف في المسافات أو الحروف
+    let rawSource = String(row.source || "")
+      .trim()
+      .toLowerCase();
+    let sId = String(row.sessionId || "").trim();
+    let idStr = String(row.id || "").trim();
+    let proj = String(row.project || "").trim();
+    let dateStr = String(row.date || "")
+      .trim()
+      .split(" ")[0];
+
+    // تحديد كود الجلسة الفريد (لو موجود في الشيت نأخذه، ولو داتا قديمة نجمعه بالمشروع والتاريخ تلقائياً!)
+    let uniqueTourKey = sId;
+    if (!uniqueTourKey || uniqueTourKey === "-") {
+      if (
+        idStr.startsWith("WWD-") ||
+        idStr.startsWith("MST-") ||
+        idStr.startsWith("AUD-")
+      ) {
+        uniqueTourKey = idStr.split("-").slice(0, 3).join("-");
+      } else {
+        // للداتا القديمة: كل ملاحظات نفس المشروع في نفس اليوم لنفس النوع تعتبر جولة واحدة
+        uniqueTourKey = `${proj}_${dateStr}`;
+      }
+    }
+
+    // 1. فحص الجولات الأسبوعية (Weekly Walk Down)
+    if (
+      rawSource.includes("weekly") ||
+      rawSource.includes("walk") ||
+      rawSource.includes("أسبوع") ||
+      idStr.startsWith("WWD-")
+    ) {
+      wwdSessions.add(uniqueTourKey);
+    }
+    // 2. فحص الجولات الشهرية (Monthly Site Tour)
+    else if (
+      rawSource.includes("monthly") ||
+      rawSource.includes("tour") ||
+      rawSource.includes("شهر") ||
+      idStr.startsWith("MST-")
+    ) {
+      mstSessions.add(uniqueTourKey);
+    }
+    // 3. فحص الأوديت الداخلي (Internal Audit)
+    else if (
+      rawSource.includes("audit") ||
+      rawSource.includes("أوديت") ||
+      rawSource.includes("مراجعة") ||
+      idStr.startsWith("AUD-")
+    ) {
+      auditSessions.add(uniqueTourKey);
+    }
+  });
+
+  if (wwdEl) wwdEl.textContent = wwdSessions.size;
+  if (mstEl) mstEl.textContent = mstSessions.size;
+  if (auditEl) auditEl.textContent = auditSessions.size;
+};
+
+// تحديث دالة رسم جدول البحث لتقوم بتشغيل العدادات تلقائياً في كل عملية بحث!
+window.renderMonitorTable = function (data, container) {
+  // 1. تشغيل حساب كروت الجولات والأوديت فوراً مع كل بحث
+  window.updateToursAndAuditsStats(data);
+
+  if (!container) return;
+  if (!data || data.length === 0) {
+    container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
+    return;
+  }
+
+  let html = `<table class="results-table">
+          <thead>
+              <tr>
+                  <th>سريال الملاحظة</th>
+                  <th>كود الجولة / الأوديت</th>
+                  <th>التاريخ</th>
+                  <th>المسجل</th>
+                  <th>المشروع</th>
+                  <th>مصدر الملاحظة</th>
+                  <th>الوصف</th>
+                  <th>الحالة</th>
+              </tr>
+          </thead>
+          <tbody>`;
+
+  data.forEach((row) => {
+    let dateDisplay = row.date;
+    try {
+      const d = new Date(row.date);
+      if (!isNaN(d.getTime())) {
+        dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+    } catch (e) {}
+
+    let sessionCode = row.sessionId || "-";
+    const idStr = String(row.id || "");
+    if (
+      (sessionCode === "-" || !sessionCode) &&
+      (idStr.startsWith("WWD-") ||
+        idStr.startsWith("MST-") ||
+        idStr.startsWith("AUD-"))
+    ) {
+      sessionCode = idStr.split("-").slice(0, 3).join("-");
+    }
+
+    html += `<tr>
+              <td style="white-space:nowrap;"><strong>${row.id}</strong></td>
+              <td style="white-space:nowrap;"><span class="badge" style="background:#e9ecef; color:#0056b3; font-weight:bold;">${sessionCode}</span></td>
+              <td style="white-space:nowrap;">${dateDisplay}</td>
+              <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
+              <td>${row.project}</td>
+              <td style="font-weight:bold;">${row.source || "-"}</td>
+              <td class="desc-cell">${row.desc}</td>
+              <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
+          </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+};
+
+// =================================================================
+// --- حل جذري لمشكلة تعليق تحميل المشاريع في سجل الملاحظات (Race Condition Fix) ---
+// =================================================================
+
+window.ensureMonitorProjectsLoaded = async function () {
+  // كل القوائم المنسدلة المحتملة للمشاريع في شاشات البحث والمتابعة
+  const targetSelectIds = [
+    "monitor-obs-project",
+    "obs-monitor-project",
+    "search-obs-project",
+    "my-obs-project",
+    "haz-monitor-project",
+  ];
+
+  // 1. التأكد من توافر قائمة المشاريع في الذاكرة، وإذا لم تكن قد وصلت من السيرفر نجلبها فوراً
+  let locs = [];
+  if (
+    typeof ppeLocations !== "undefined" &&
+    Array.isArray(ppeLocations) &&
+    ppeLocations.length > 0
+  ) {
+    locs = ppeLocations;
+  } else if (
+    typeof initialData !== "undefined" &&
+    initialData &&
+    Array.isArray(initialData.projects) &&
+    initialData.projects.length > 0
+  ) {
+    locs = initialData.projects;
+  }
+
+  if (locs.length === 0) {
+    try {
+      const r = await window.callApi("getInventoryInitData", {
+        userInfo: currentUser,
+      });
+      if (r && r.status === "success" && Array.isArray(r.locations)) {
+        locs = r.locations;
+        // حفظها في المتغير العام لكي تستفيد منها باقي الشاشات فوراً
+        if (typeof ppeLocations !== "undefined") ppeLocations = locs;
+      }
+    } catch (e) {
+      console.warn("Retrying project load failed:", e);
+    }
+  }
+
+  if (locs.length === 0) return;
+
+  // 2. فلترة المشاريع حسب صلاحية المستخدم الحالي
+  const userProj = (currentUser?.projects || "ALL").toString();
+  const accProj =
+    userProj === "ALL" || userProj === ""
+      ? locs
+      : locs.filter((p) => userProj.includes(p));
+
+  // 3. فحص قوائم المشاريع في شاشة السجل؛ لو فاضية أو معلقة على "جاري التحميل" نملأها فوراً
+  targetSelectIds.forEach((id) => {
+    const selectEl = document.getElementById(id);
+    if (!selectEl) return;
+
+    // إذا كانت القائمة تحتوي على خيار واحد فقط (مثل "جاري التحميل..." أو فاضية)
+    const firstText = selectEl.options[0]
+      ? selectEl.options[0].textContent
+      : "";
+    const needsPopulate =
+      selectEl.options.length <= 1 || firstText.includes("جاري");
+
+    if (needsPopulate) {
+      const currentVal = selectEl.value;
+      selectEl.innerHTML = '<option value="ALL_ACCESSIBLE">الكل</option>';
+      accProj.forEach((projName) => {
+        const opt = document.createElement("option");
+        opt.value = projName;
+        opt.textContent = projName;
+        selectEl.appendChild(opt);
+      });
+      if (currentVal && currentVal !== "") {
+        selectEl.value = currentVal;
+      }
+    }
+  });
+};
+
+// ربط الفحص الذكي تلقائياً عند الضغط على أي زر في القائمة الجانبية أو فتح سجل الملاحظات
+document.addEventListener("click", function (e) {
+  const navItem = e.target.closest(
+    "[onclick*='showSection'], .nav-link, .sidebar-menu a, .sidebar-menu li",
+  );
+  if (navItem) {
+    // تشغيل الفحص بعد جزء من الثانية من فتح القسم، وإعادة التأكيد بعد ثانية لو النت بطيء
+    setTimeout(window.ensureMonitorProjectsLoaded, 150);
+    setTimeout(window.ensureMonitorProjectsLoaded, 1200);
+  }
+});
+
+// تشغيل الفحص أيضاً بمجرد لمس القائمة المنسدلة للمشروع لو كانت فاضية
+document.addEventListener("mousedown", function (e) {
+  const selectEl = e.target.closest("select");
+  if (selectEl && selectEl.options.length <= 1) {
+    window.ensureMonitorProjectsLoaded();
+  }
+});
+
+// =================================================================
+// --- نظام الخصوصية الدقيق للوحة شرف المشاريع وفرسان السلامة ---
+// (يُظهر اسم المشروع + اسكور الأوديت فقط | ويخفي التراكمي والترتيب والفريمات لغير ALL)
+// =================================================================
+
+// 1. هل المستخدم يملك صلاحية رؤية كل المشاريع (ALL)؟
+window.hasAllProjectsAccess = function () {
+  if (!currentUser) return false;
+  const role = String(currentUser.role || "").toLowerCase();
+  const userProjsRaw = String(
+    currentUser.projects || currentUser.accessibleProjects || "",
+  )
+    .trim()
+    .toUpperCase();
+  return role.includes("admin") || userProjsRaw === "ALL";
+};
+
+// 2. هل المستخدم يملك صلاحية رؤية هذا المشروع المحدد؟
+window.canUserSeeProjectInAwards = function (projectName) {
+  if (window.hasAllProjectsAccess()) return true;
+  if (!currentUser) return false;
+  const userProjsRaw = String(
+    currentUser.projects || currentUser.accessibleProjects || "",
+  ).trim();
+  const allowedList = userProjsRaw.split(",").map((p) => p.trim());
+  return allowedList.includes(String(projectName).trim());
+};
+
+// 3. دالة تنظيف الكروت بدقة جراحية (تحمي اسم المشروع وتخفي التراكمي والترتيب فقط)
+window.sanitizeLeaderboardUIForRestrictedUser = function () {
+  if (window.hasAllProjectsAccess()) return; // لو معاه ALL يشوف كل حاجة طبيعي
+
+  const containers = document.querySelectorAll(
+    "#leaderboard-container, #projects-leaderboard-container, #ProjectsLeaderboard, #ProjectHonorRoll, .leaderboard-grid, .honor-roll-container",
+  );
+
+  containers.forEach((container) => {
+    // أ) إزالة الفريمات الذهبية والفضية والبرونزية وتوحيد شكل الكارت الخارجي فقط
+    const cards = container.querySelectorAll(
+      "div, .card, .leaderboard-card, .project-card",
+    );
+    cards.forEach((el) => {
+      const styleAttr = (el.getAttribute("style") || "").toLowerCase();
+      const classAttr = (el.getAttribute("class") || "").toLowerCase();
+
+      if (
+        classAttr.includes("gold") ||
+        classAttr.includes("silver") ||
+        classAttr.includes("bronze") ||
+        classAttr.includes("rank-")
+      ) {
+        el.classList.remove(
+          "gold",
+          "silver",
+          "bronze",
+          "rank-1",
+          "rank-2",
+          "rank-3",
+          "first-place",
+          "second-place",
+          "third-place",
+        );
+      }
+
+      if (
+        styleAttr.includes("#ffd700") ||
+        styleAttr.includes("#ffc107") ||
+        styleAttr.includes("gold") ||
+        styleAttr.includes("#c0c0c0") ||
+        styleAttr.includes("silver") ||
+        styleAttr.includes("#cd7f32") ||
+        styleAttr.includes("bronze") ||
+        styleAttr.includes("255, 215, 0") ||
+        styleAttr.includes("255, 193, 7")
+      ) {
+        if (
+          el.tagName === "DIV" &&
+          (styleAttr.includes("border") || styleAttr.includes("box-shadow"))
+        ) {
+          el.style.border = "1px solid #e0e0e0";
+          el.style.background = "#ffffff";
+          el.style.boxShadow = "0 4px 8px rgba(0,0,0,0.05)";
+        }
+      }
+    });
+
+    // ب) إخفاء أيقونات التيجان والميداليات والكؤوس فقط (مع ترك أيقونة المبنى fa-building الخاصة باسم المشروع!)
+    const icons = container.querySelectorAll(
+      ".fa-crown, .fa-trophy, .fa-medal, .fa-award, .rank-badge, .rank-number",
+    );
+    icons.forEach((ic) => {
+      ic.style.display = "none";
+    });
+
+    // ج) إخفاء السطر/العنصر المباشر الخاص بـ "التراكمي" أو "المركز" دون المساس باسم المشروع (h2, h3, h4)
+    const allElements = container.querySelectorAll(
+      "span, small, p, div, td, strong, b",
+    );
+    allElements.forEach((el) => {
+      // حماية تامة: لا نخفي أبداً أي عنصر يحتوي بداخله على عنوان المشروع (h1, h2, h3, h4, .fa-building)
+      if (el.querySelector("h1, h2, h3, h4, .fa-building")) return;
+
+      const txt = (el.textContent || "").trim();
+      const lowerTxt = txt.toLowerCase();
+
+      // 1. إخفاء النص المباشر الذي يحمل علامة HIDE_CUMULATIVE أو كلمة تراكمي أو undefined
+      const isCumulativeItem =
+        lowerTxt.includes("hide_cumulative") ||
+        lowerTxt.includes("undefined") ||
+        lowerTxt.includes("تراكمي") ||
+        lowerTxt.includes("تراكمى") ||
+        lowerTxt.includes("التراكمي") ||
+        lowerTxt.includes("التراكمى") ||
+        lowerTxt.includes("cumulative");
+      const hasAuditWord =
+        lowerTxt.includes("audit") ||
+        lowerTxt.includes("أوديت") ||
+        lowerTxt.includes("اوديت");
+
+      if (isCumulativeItem && !hasAuditWord) {
+        // نخفي فقط العنصر الصغير نفسه أو الصندوق الصغير المباشر له (بشرط ألا يكون هو الكارت الرئيسي)
+        if (el.children.length === 0) {
+          el.style.display = "none";
+          // لو الأب المباشر هو مجرد سطر صغير (فيه عنوان التراكمي والرقم فقط وليس فيه اسم المشروع أو الأوديت) نخفي الأب المباشر
+          const parent = el.parentElement;
+          if (
+            parent &&
+            parent !== container &&
+            !parent.querySelector("h1, h2, h3, h4, .fa-building")
+          ) {
+            const parentTxt = (parent.textContent || "").toLowerCase();
+            if (
+              !parentTxt.includes("audit") &&
+              !parentTxt.includes("أوديت") &&
+              !parentTxt.includes("اوديت")
+            ) {
+              parent.style.display = "none";
+            }
+          }
+        } else if (el.children.length <= 2 && !hasAuditWord) {
+          el.style.display = "none";
+        }
+      }
+
+      // 2. إخفاء شارات المراكز فقط (#1, المركز الأول, المركز 1...)
+      if (el.children.length === 0) {
+        if (
+          /^(#\d+|المركز\s*\d+|مركز\s*\d+|المركز\s*الأول|المركز\s*الثاني|المركز\s*الثالث|rank\s*#?\d+|\d+\s*(st|nd|rd|th))$/i.test(
+            txt,
+          )
+        ) {
+          el.style.display = "none";
+        }
+      }
+    });
+  });
+};
+
+// 4. اعتراض البيانات القادمة من السيرفر لفلترة المشاريع مع حماية اسم المشروع واسكور الأوديت
+(function () {
+  const originalCallApi = window.callApi;
+  if (
+    typeof originalCallApi === "function" &&
+    !window._strictAwardsPrivacyV3Hooked
+  ) {
+    window._strictAwardsPrivacyV3Hooked = true;
+
+    window.callApi = async function (action, payload) {
+      const response = await originalCallApi(action, payload);
+
+      try {
+        const isFullAccess = window.hasAllProjectsAccess();
+
+        if (response && response.status === "success" && !isFullAccess) {
+          const listKey = Array.isArray(response.data)
+            ? "data"
+            : Array.isArray(response.leaderboard)
+              ? "leaderboard"
+              : Array.isArray(response.projects)
+                ? "projects"
+                : Array.isArray(response.scores)
+                  ? "scores"
+                  : null;
+
+          if (
+            listKey &&
+            response[listKey].length > 0 &&
+            (response[listKey][0].score !== undefined ||
+              response[listKey][0].totalScore !== undefined ||
+              response[listKey][0].finalScore !== undefined ||
+              response[listKey][0].auditScore !== undefined ||
+              action.toLowerCase().includes("leader") ||
+              action.toLowerCase().includes("honor") ||
+              action.toLowerCase().includes("rank"))
+          ) {
+            // 1) الإبقاء على مشاريع المستخدم فقط
+            response[listKey] = response[listKey].filter((item) => {
+              const pName = item.project || item.projectName || item.name || "";
+              return window.canUserSeeProjectInAwards(pName);
+            });
+
+            // 2) الإبقاء على اسم المشروع (project / projectName / name) واسكور الأوديت (auditScore) كما هما تماماً!
+            response[listKey] = response[listKey].map((item) => {
+              let cleanItem = { ...item };
+              // تأمين اسم المشروع في كل المسميات المحتملة حتى يظهر دائماً
+              const ensuredName =
+                item.project || item.projectName || item.name || "";
+              cleanItem.project = ensuredName;
+              cleanItem.projectName = ensuredName;
+              cleanItem.name = ensuredName;
+
+              // وضع علامة الحذف على التراكمي فقط
+              cleanItem.totalScore = "HIDE_CUMULATIVE";
+              cleanItem.finalScore = "HIDE_CUMULATIVE";
+              cleanItem.kpiScore = "HIDE_CUMULATIVE";
+              if (cleanItem.auditScore !== undefined) {
+                cleanItem.score = "HIDE_CUMULATIVE";
+              }
+              return cleanItem;
+            });
+
+            // 3) تشغيل المنظف الجراحي بعد رسم الكروت
+            setTimeout(window.sanitizeLeaderboardUIForRestrictedUser, 30);
+            setTimeout(window.sanitizeLeaderboardUIForRestrictedUser, 200);
+            setTimeout(window.sanitizeLeaderboardUIForRestrictedUser, 500);
+          }
+
+          // فلترة فرسان السلامة لمشاريع المستخدم فقط
+          if (
+            action === "getSafetyChampions" &&
+            Array.isArray(response.champions)
+          ) {
+            response.champions = response.champions.filter((champ) => {
+              return window.canUserSeeProjectInAwards(champ.project);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Strict Awards Privacy Warning:", err);
+      }
+
+      return response;
+    };
+  }
+})();

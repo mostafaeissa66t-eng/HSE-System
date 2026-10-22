@@ -549,7 +549,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (loginError) loginError.style.display = "none";
 
       const deviceInfo = getSimpleDeviceInfo();
-      showLoader("جاري تحديد الموقع الدقيق...");
+      showLoader("جاري التحميل");
 
       if (!navigator.geolocation) {
         hideLoader();
@@ -4204,7 +4204,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (document.getElementById("ncr-issuer") && currentUser)
       document.getElementById("ncr-issuer").value = currentUser.username;
 
-    // 3. التأكد من جلب ينات الموظفين وتخزينها في window لكي يراها المودال
+    // 3. التأد من جلب ينات الموظفين وتخزينها في window لكي يراها المودال
     if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
       try {
         const r = await callApi("getInventoryInitData", {
@@ -15061,4 +15061,321 @@ window.sanitizeLeaderboardUIForRestrictedUser = function () {
       return response;
     };
   }
+})();
+// =================================================================
+// --- نظام الدخول الموحد (تعيين الباسورد لأول مرة + حفظ الجلسة + استثناء الـ GPS بالعمود) ---
+// =================================================================
+
+document.addEventListener("DOMContentLoaded", function () {
+  // السماح بترك خانة الباسورد فارغة في الشاشة لمن يدخل لأول مرة
+  const passInput = document.querySelector(
+    "#password, #login-password, input[type='password']",
+  );
+  if (passInput) {
+    passInput.removeAttribute("required");
+    passInput.placeholder = "كلمة المرور (أو اتركها فارغة في دخولك الأول)";
+  }
+
+  // استرجاع الجلسة والتوكن من localStorage ليبقى المستخدم مسجلاً دخوله على الجهاز
+  const savedToken = localStorage.getItem("hse_persistent_token");
+  const savedUser = localStorage.getItem("hse_persistent_user");
+
+  if (
+    savedToken &&
+    !sessionStorage.getItem("sessionToken") &&
+    !localStorage.getItem("sessionToken")
+  ) {
+    sessionStorage.setItem("sessionToken", savedToken);
+    localStorage.setItem("sessionToken", savedToken);
+  }
+  if (savedUser) {
+    try {
+      const parsed = JSON.parse(savedUser);
+      if (!sessionStorage.getItem("currentUser"))
+        sessionStorage.setItem("currentUser", savedUser);
+      window.applyGpsExemptionIfMarked(parsed);
+    } catch (e) {}
+  }
+});
+
+// 1. دالة تطبيق استثناء الـ GPS حصرياً لمن أمامه TRUE في عمود Exempt_GPS بشيت Users
+window.applyGpsExemptionIfMarked = function (userObj) {
+  if (!userObj) return;
+  const isExempt =
+    userObj.exemptGps === true ||
+    String(userObj.exemptGps || "").toUpperCase() === "TRUE" ||
+    String(userObj.Exempt_GPS || "").toUpperCase() === "TRUE";
+
+  if (isExempt && navigator.geolocation) {
+    const dummyPos = {
+      coords: { latitude: 0, longitude: 0, accuracy: 0 },
+      timestamp: Date.now(),
+    };
+    navigator.geolocation.getCurrentPosition = function (successCallback) {
+      if (typeof successCallback === "function") successCallback(dummyPos);
+    };
+    navigator.geolocation.watchPosition = function (successCallback) {
+      if (typeof successCallback === "function") successCallback(dummyPos);
+      return 1;
+    };
+  }
+};
+
+// 2. نافذة تعيين كلمة المرور الشخصية عند الدخول الأول (Modal)
+window.showFirstTimePasswordModal = function (username, displayName) {
+  let existingModal = document.getElementById("first-login-setup-modal");
+  if (existingModal) existingModal.remove();
+
+  const modalHtml = `
+        <div id="first-login-setup-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; display:flex; align-items:center; justify-content:center; padding:15px; direction:rtl;">
+            <div style="background:#fff; width:100%; max-width:420px; border-radius:14px; padding:25px; box-shadow:0 10px 30px rgba(0,0,0,0.3); border-top:6px solid #c8102e; text-align:right; font-family:inherit;">
+                <div style="text-align:center; margin-bottom:15px;">
+                    <i class="fas fa-user-lock fa-3x" style="color:#c8102e; margin-bottom:10px;"></i>
+                    <h3 style="margin:0; color:#2c2a29; font-size:1.25rem;">مرحباً بك / ${displayName}</h3>
+                    <p style="color:#666; font-size:0.9rem; margin:8px 0 0 0; line-height:1.5;">
+                        نظراً لأن هذا هو <b>دخولك الأول للنظام</b>، يرجى تعيين كلمة المرور الخاصة بك وتأكيدها لتتمكن من الدخول بها في كل مرة:
+                    </p>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#333;">كلمة المرور الجديدة:</label>
+                    <input type="password" id="ft-new-pass" placeholder="أدخل كلمة المرور الجديدة (4 رموز فأكثر)..." style="width:100%; padding:10px 12px; border:1px solid #ccc; border-radius:8px; font-size:1rem; box-sizing:border-box;" />
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#333;">تأكيد كلمة المرور:</label>
+                    <input type="password" id="ft-confirm-pass" placeholder="أعد كتابة كلمة المرور للتأكيد..." style="width:100%; padding:10px 12px; border:1px solid #ccc; border-radius:8px; font-size:1rem; box-sizing:border-box;" />
+                </div>
+
+                <p id="ft-error-msg" style="color:#dc3545; font-size:0.85rem; font-weight:bold; display:none; margin:0 0 12px 0; text-align:center;"></p>
+
+                <button type="button" id="ft-submit-btn" onclick="window.submitFirstTimePassword('${username}')" style="width:100%; background:#c8102e; color:#fff; border:none; padding:12px; border-radius:8px; font-size:1.05rem; font-weight:bold; cursor:pointer;">
+                    <i class="fas fa-check-circle"></i> حفظ كلمة المرور والدخول للنظام
+                </button>
+            </div>
+        </div>
+    `;
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+  setTimeout(() => document.getElementById("ft-new-pass")?.focus(), 100);
+};
+
+// 3. حفظ الباسورد الجديد في الشيت ثم إتمام الدخول تلقائياً
+window.submitFirstTimePassword = async function (username) {
+  const p1 = document.getElementById("ft-new-pass")?.value.trim() || "";
+  const p2 = document.getElementById("ft-confirm-pass")?.value.trim() || "";
+  const errEl = document.getElementById("ft-error-msg");
+  const btn = document.getElementById("ft-submit-btn");
+
+  if (p1.length < 4) {
+    errEl.textContent = "⚠️ يجب ألا تقل كلمة المرور عن 4 حروف أو أرقام.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (p1.toUpperCase() === "NEW" || p1 === "123456") {
+    errEl.textContent =
+      "⚠️ يرجى اختيار كلمة مرور خاصة بك غير الكلمة الافتراضية.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (p1 !== p2) {
+    errEl.textContent = "⚠️ كلمتا المرور غير متطابقتين!";
+    errEl.style.display = "block";
+    return;
+  }
+
+  errEl.style.display = "none";
+  btn.disabled = true;
+  btn.innerHTML =
+    '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ والدخول...';
+
+  try {
+    const res = await window.callApi("completeFirstLoginSetup", {
+      username: username,
+      newPassword: p1,
+    });
+
+    if (res && res.status === "success") {
+      document.getElementById("first-login-setup-modal")?.remove();
+
+      // وضع اليوزر والباسورد الجديد في شاشة الدخول وتشغيل الدخول الرسمي فوراً
+      const userInp = document.querySelector(
+        "#username, #login-username, input[type='text']",
+      );
+      const passInp = document.querySelector(
+        "#password, #login-password, input[type='password']",
+      );
+      if (userInp) userInp.value = res.username || username;
+      if (passInp) passInp.value = p1;
+
+      const loginForm = document.querySelector("#login-form, form");
+      if (loginForm) {
+        loginForm.dispatchEvent(
+          new Event("submit", { cancelable: true, bubbles: true }),
+        );
+      }
+    } else {
+      errEl.textContent = "❌ " + (res.message || "حدث خطأ أثناء الحفظ.");
+      errEl.style.display = "block";
+      btn.disabled = false;
+      btn.innerHTML =
+        '<i class="fas fa-check-circle"></i> حفظ كلمة المرور والدخول للنظام';
+    }
+  } catch (e) {
+    errEl.textContent = "❌ " + e.message;
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.innerHTML =
+      '<i class="fas fa-check-circle"></i> حفظ كلمة المرور والدخول للنظام';
+  }
+};
+
+// 4. ربط سلس مع دالة checkLogin الأصلية بدون أي تحميل مزدوج
+(function () {
+  const prevCallApi = window.callApi;
+  if (typeof prevCallApi === "function" && !window._unifiedLoginHooked) {
+    window._unifiedLoginHooked = true;
+
+    window.callApi = async function (action, payload) {
+      const response = await prevCallApi(action, payload);
+
+      if (
+        action === "checkLogin" &&
+        response &&
+        response.status === "success"
+      ) {
+        // أ) إذا كان الحساب يدخل لأول مرة (NEW أو فارغ في الشيت): نفتح نافذة تعيين الباسورد ونمنع الدخول المباشر!
+        if (response.firstLoginRequired) {
+          window.showFirstTimePasswordModal(
+            response.username,
+            response.displayName,
+          );
+          // نوقف استكمال دالة الدخول الأصلية بهدوء ريثما يكتب المستخدم باسورده الجديد
+          throw new Error(
+            "يرجى تعيين كلمة المرور الجديدة أولاً من النافذة الظاهرة أمامك.",
+          );
+        }
+
+        // ب) إذا كان دخولاً عادياً ناجحاً: نحفظ التوكن واليوزر في localStorage ونطبق استثناء الـ GPS
+        if (response.token && response.userInfo) {
+          localStorage.setItem("hse_persistent_token", response.token);
+          localStorage.setItem(
+            "hse_persistent_user",
+            JSON.stringify(response.userInfo),
+          );
+          window.applyGpsExemptionIfMarked(response.userInfo);
+        }
+      }
+
+      if (
+        action === "verifySession" &&
+        response &&
+        response.status === "success" &&
+        response.userInfo
+      ) {
+        window.applyGpsExemptionIfMarked(response.userInfo);
+      }
+
+      return response;
+    };
+  }
+})();
+
+// 5. مسح الجلسة المحفوظة عند الضغط على زر تسجيل الخروج
+document.addEventListener("click", function (e) {
+  const logoutBtn = e.target.closest(
+    "#logout-btn, [onclick*='logout'], .logout-btn",
+  );
+  if (logoutBtn) {
+    localStorage.removeItem("hse_persistent_token");
+    localStorage.removeItem("hse_persistent_user");
+  }
+});
+// =================================================================
+// --- الحل الجذري لفحص الـ GPS عند تسجيل الدخول (قرار السماح أو المنع من الشيت مباشرة) ---
+// =================================================================
+(function () {
+  if (!navigator.geolocation || window._smartGpsLoginPatched) return;
+  window._smartGpsLoginPatched = true;
+
+  const nativeGetCurrentPosition =
+    navigator.geolocation.getCurrentPosition.bind(navigator.geolocation);
+  const nativeWatchPosition = navigator.geolocation.watchPosition.bind(
+    navigator.geolocation,
+  );
+
+  // تغليف دالة الـ GPS في المتصفح:
+  // تحاول جلب الـ GPS الحقيقي، ولكن لو المستخدم قافل الـ GPS أثناء الدخول لا توقف الفورم، بل تبعث علامة للسيرفر ليقرر حسب عمود Exempt_GPS!
+  navigator.geolocation.getCurrentPosition = function (
+    successCallback,
+    errorCallback,
+    options,
+  ) {
+    // لو المستخدم سجل دخول بالفعل وهو مستثنى، نرجع إحداثيات صفرية فوراً بدون إزعاج
+    const savedUserStr =
+      sessionStorage.getItem("currentUser") ||
+      localStorage.getItem("hse_persistent_user");
+    if (savedUserStr) {
+      try {
+        const u = JSON.parse(savedUserStr);
+        if (
+          u &&
+          (u.exemptGps === true || String(u.exemptGps).toUpperCase() === "TRUE")
+        ) {
+          if (typeof successCallback === "function") {
+            successCallback({
+              coords: {
+                latitude: 0,
+                longitude: 0,
+                accuracy: 0,
+                gpsBlocked: true,
+              },
+              timestamp: Date.now(),
+            });
+          }
+          return;
+        }
+      } catch (e) {}
+    }
+
+    // محاولة جلب الـ GPS الحقيقي بمهلة سريعة (4 ثوانٍ)
+    nativeGetCurrentPosition(
+      function (pos) {
+        if (typeof successCallback === "function") successCallback(pos);
+      },
+      function (err) {
+        // إذا كان الـ GPS مغلقاً أو مرفوضاً:
+        // نمرر إحداثيات (0, 0) حتى يصل طلب checkLogin إلى السيرفر، والسيرفر هو من يفحص عمود Exempt_GPS في الشيت!
+        if (typeof successCallback === "function") {
+          successCallback({
+            coords: {
+              latitude: 0,
+              longitude: 0,
+              accuracy: 0,
+              gpsBlocked: true,
+            },
+            timestamp: Date.now(),
+          });
+        } else if (typeof errorCallback === "function") {
+          errorCallback(err);
+        }
+      },
+      options || { timeout: 4000, maximumAge: 60000 },
+    );
+  };
+
+  navigator.geolocation.watchPosition = function (
+    successCallback,
+    errorCallback,
+    options,
+  ) {
+    return nativeWatchPosition(
+      function (pos) {
+        if (typeof successCallback === "function") successCallback(pos);
+      },
+      function () {
+        // صامت في حال الإغلاق لمنع الرسائل المزعجة للمستثنيين
+      },
+      options,
+    );
+  };
 })();

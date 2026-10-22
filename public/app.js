@@ -15379,3 +15379,5 @@ document.addEventListener("click", function (e) {
     );
   };
 })();
+        // صامت في حال الإغلاق لمنع الرسائل المزعجة للمستثنيين
+

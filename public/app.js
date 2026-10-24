@@ -370,7 +370,7 @@ document.addEventListener("DOMContentLoaded", function () {
     NewEquipment: "تسجيل معدة",
     EquipmentInspection: "فحص المعدات",
     ManageEquipment: "إدارة ومتابعة المعدات",
-    ProjectsLeaderboard: "لوحة شرف المشاريع", // الاسم
+    ProjectsLeaderboard: "تقييم المشروعات", // الاسم
     NewScaffold: "تسجيل سقالة جديدة",
     ActiveScaffolds: "السقالات الحالية بالموقع",
     MonitorScaffolds: "السجل الشامل للسقالات",
@@ -477,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function () {
     },
     {
       type: "group",
-      title: "التكريمات والجوائز",
+      title: "تقيمات المشروعات",
       icon: "fas fa-trophy",
       children: ["ProjectsLeaderboard", "SafetyChampions", "AwardsManagement"],
     },

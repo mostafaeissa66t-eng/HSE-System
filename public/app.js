@@ -7654,7 +7654,7 @@ window.initDailyHseReportPage = async function () {
     window.handleDailyReportChange();
   }
 
-  // 7. استدعاء التنبيهات للمشرف إذا كان لديه تقارير مرفوضة
+  // 7. استدعاء التنبيهات للمشرف إذا ان لديه تقارير مرفوضة
   if (typeof loadRejectedReportsAlert === "function") {
     loadRejectedReportsAlert();
   }
@@ -15379,5 +15379,141 @@ document.addEventListener("click", function (e) {
     );
   };
 })();
-        // صامت في حال الإغلاق لمنع الرسائل المزعجة للمستثنيين
+// صامت في حال الإغلاق لمنع الرسائل المزعجة للمستثنيين
+// =================================================================
+// --- حماية التقرير اليومي من تداخل تواريخ السحب الآلي (Today vs Yesterday Fix) ---
+// =================================================================
 
+(function () {
+    let latestLiveStatsRequestId = 0;
+
+    // 1. دالة العثور على عناصر التقرير اليومي في الشاشة بمرونة
+    function getDailyReportElements() {
+        const projEl = document.querySelector("#daily-project, #dr-project, #daily-report-project, [id*='daily'][id*='proj']");
+        const dateEl = document.querySelector("#daily-date, #dr-date, #daily-report-date, [id*='daily'][id*='date']");
+        // البحث عن زر حفظ التقرير اليومي
+        let submitBtn = null;
+        if (projEl) {
+            const container = projEl.closest("form, .section, .card, [id*='Daily'], [id*='daily']");
+            if (container) {
+                submitBtn = container.querySelector("button[type='submit'], button[onclick*='saveDaily'], .btn-submit-daily, button.btn-primary, button.btn-danger");
+            }
+        }
+        return { projEl, dateEl, submitBtn };
+    }
+
+    // 2. عند فتح قسم التقرير اليومي: نفرغ التاريخ ونربط اختيار المشروع بالتاريخ بالترتيب
+    window.resetDailyReportDateFlow = function () {
+        const { projEl, dateEl } = getDailyReportElements();
+        if (!projEl || !dateEl) return;
+
+        // إذا لم يكن المشرف قد اختار مشروعاً بعد، نفرغ التاريخ ونقفله مؤقتاً
+        if (!projEl.value || projEl.value === "") {
+            dateEl.value = "";
+            dateEl.disabled = true;
+            dateEl.title = "يرجى اختيار المشروع أولاً ثم تحديد تاريخ التقرير";
+        }
+    };
+
+    // مراقبة الضغط في القائمة الجانبية لتجهيز شاشة التقرير اليومي فور فتحها
+    document.addEventListener("click", function (e) {
+        const navItem = e.target.closest("[onclick*='showSection'], .nav-link, .sidebar-menu a, .sidebar-menu li");
+        if (navItem) {
+            setTimeout(window.resetDailyReportDateFlow, 100);
+        }
+    });
+
+    // 3. التحكم الصارم عند تغيير المشروع أو التاريخ في التقرير اليومي
+    document.addEventListener("change", function (e) {
+        const { projEl, dateEl } = getDailyReportElements();
+        if (!projEl || !dateEl) return;
+
+        // أ) عندما يختار المشرف "المشروع":
+        // نفرغ خانة التاريخ ونفتحها له ليختار التاريخ بنفسه، ونمنع السحب التلقائي اللحظي قبل تحديد التاريخ!
+        if (e.target === projEl) {
+            dateEl.disabled = false;
+            if (dateEl.value !== "") {
+                dateEl.value = ""; // تفريغ التاريخ لإجباره على اختيار اليوم الصحيح (اليوم أو أمس)
+            }
+            dateEl.focus();
+            dateEl.style.border = "2px solid #c8102e";
+            dateEl.style.backgroundColor = "#fff8f8";
+
+            // إيقاف أي مستمع قديم كان يسحب الداتا بمجرد اختيار المشروع والتاريخ فاضي
+            e.stopImmediatePropagation();
+            return;
+        }
+
+        // ب) عندما يختار المشرف "التاريخ" (بعد اختيار المشروع):
+        if (e.target === dateEl) {
+            dateEl.style.border = "";
+            dateEl.style.backgroundColor = "";
+
+            if (!projEl.value) {
+                alert("⚠️ يرجى اختيار المشروع أولاً!");
+                dateEl.value = "";
+                e.stopImmediatePropagation();
+                return;
+            }
+        }
+    }, true); // true = يعمل في مرحلة الالتقاط المبكر (Capture Phase) قبل الأكواد القديمة!
+
+    // 4. اعتراض طلب السحب الآلي (getDailyLiveStats) لمنع تداخل الـ 10 ثواني وقفل زر الحفظ مؤقتاً
+    const prevCallApiForDaily = window.callApi;
+    if (typeof prevCallApiForDaily === "function" && !window._dailyStatsRaceGuardHooked) {
+        window._dailyStatsRaceGuardHooked = true;
+
+        window.callApi = async function (action, payload) {
+            if (action === "getDailyLiveStats") {
+                const { projEl, dateEl, submitBtn } = getDailyReportElements();
+
+                // لو التاريخ لسه متحددش، نمنع إرسال الطلب للسيرفر أصلاً
+                if (!payload || !payload.projectName || !payload.reportDate) {
+                    return {
+                        status: "success",
+                        data: {
+                            global: { ptw: 0, hazards: 0, totalObs: 0 },
+                            sewedy: { train: { regular: 0, induction: 0 }, obs: { ua: 0, uc: 0, env: 0, pos: 0 }, acc: {} },
+                            contractors: { train: {}, obs: {}, acc: {} }
+                        }
+                    };
+                }
+
+                // زيادة رقم الطلب الحالي لإلغاء أي طلب قديم كان شغال في الخلفية!
+                const currentReqId = ++latestLiveStatsRequestId;
+
+                // قفل زر الحفظ مؤقتاً أثناء الـ 10 ثواني حتى لا يحفظ المشرف أرقام اليوم الخاطئ
+                let origBtnText = "";
+                if (submitBtn) {
+                    origBtnText = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري سحب إحصائيات يوم (${payload.reportDate})...`;
+                }
+
+                try {
+                    const res = await prevCallApiForDaily(action, payload);
+
+                    // إذا قام المشرف بتغيير التاريخ أثناء التحميل، نتجاهل نتيجة الطلب القديم تماماً!
+                    if (currentReqId !== latestLiveStatsRequestId) {
+                        console.log("Ignored outdated getDailyLiveStats response for:", payload.reportDate);
+                        return new Promise(() => {}); // إيقاف صامت للطلب القديم الملغي
+                    }
+
+                    return res;
+                } finally {
+                    // إعادة فتح زر الحفظ فقط إذا كان هذا هو آخر طلب فعلي
+                    if (currentReqId === latestLiveStatsRequestId && submitBtn) {
+                        submitBtn.disabled = false;
+                        if (origBtnText && !origBtnText.includes("جاري سحب")) {
+                            submitBtn.innerHTML = origBtnText;
+                        } else {
+                            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال التقرير اليومي';
+                        }
+                    }
+                }
+            }
+
+            return prevCallApiForDaily(action, payload);
+        };
+    }
+})();

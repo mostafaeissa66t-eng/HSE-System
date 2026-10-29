@@ -7654,7 +7654,7 @@ window.initDailyHseReportPage = async function () {
     window.handleDailyReportChange();
   }
 
-  // 7. استدعاء التنبيهات للمشرف إذا ان لديه تقارير مرفوضة
+  // 7. استدعاء التنبيهات للمشرف إذا  لديه تقارير مرفوضة
   if (typeof loadRejectedReportsAlert === "function") {
     loadRejectedReportsAlert();
   }
@@ -15385,135 +15385,321 @@ document.addEventListener("click", function (e) {
 // =================================================================
 
 (function () {
-    let latestLiveStatsRequestId = 0;
+  let latestLiveStatsRequestId = 0;
 
-    // 1. دالة العثور على عناصر التقرير اليومي في الشاشة بمرونة
-    function getDailyReportElements() {
-        const projEl = document.querySelector("#daily-project, #dr-project, #daily-report-project, [id*='daily'][id*='proj']");
-        const dateEl = document.querySelector("#daily-date, #dr-date, #daily-report-date, [id*='daily'][id*='date']");
-        // البحث عن زر حفظ التقرير اليومي
-        let submitBtn = null;
-        if (projEl) {
-            const container = projEl.closest("form, .section, .card, [id*='Daily'], [id*='daily']");
-            if (container) {
-                submitBtn = container.querySelector("button[type='submit'], button[onclick*='saveDaily'], .btn-submit-daily, button.btn-primary, button.btn-danger");
-            }
-        }
-        return { projEl, dateEl, submitBtn };
+  // 1. دالة العثور على عناصر التقرير اليومي في الشاشة بمرونة
+  function getDailyReportElements() {
+    const projEl = document.querySelector(
+      "#daily-project, #dr-project, #daily-report-project, [id*='daily'][id*='proj']",
+    );
+    const dateEl = document.querySelector(
+      "#daily-date, #dr-date, #daily-report-date, [id*='daily'][id*='date']",
+    );
+    // البحث عن زر حفظ التقرير اليومي
+    let submitBtn = null;
+    if (projEl) {
+      const container = projEl.closest(
+        "form, .section, .card, [id*='Daily'], [id*='daily']",
+      );
+      if (container) {
+        submitBtn = container.querySelector(
+          "button[type='submit'], button[onclick*='saveDaily'], .btn-submit-daily, button.btn-primary, button.btn-danger",
+        );
+      }
     }
+    return { projEl, dateEl, submitBtn };
+  }
 
-    // 2. عند فتح قسم التقرير اليومي: نفرغ التاريخ ونربط اختيار المشروع بالتاريخ بالترتيب
-    window.resetDailyReportDateFlow = function () {
-        const { projEl, dateEl } = getDailyReportElements();
-        if (!projEl || !dateEl) return;
+  // 2. عند فتح قسم التقرير اليومي: نفرغ التاريخ ونربط اختيار المشروع بالتاريخ بالترتيب
+  window.resetDailyReportDateFlow = function () {
+    const { projEl, dateEl } = getDailyReportElements();
+    if (!projEl || !dateEl) return;
 
-        // إذا لم يكن المشرف قد اختار مشروعاً بعد، نفرغ التاريخ ونقفله مؤقتاً
-        if (!projEl.value || projEl.value === "") {
-            dateEl.value = "";
-            dateEl.disabled = true;
-            dateEl.title = "يرجى اختيار المشروع أولاً ثم تحديد تاريخ التقرير";
+    // إذا لم يكن المشرف قد اختار مشروعاً بعد، نفرغ التاريخ ونقفله مؤقتاً
+    if (!projEl.value || projEl.value === "") {
+      dateEl.value = "";
+      dateEl.disabled = true;
+      dateEl.title = "يرجى اختيار المشروع أولاً ثم تحديد تاريخ التقرير";
+    }
+  };
+
+  // مراقبة الضغط في القائمة الجانبية لتجهيز شاشة التقرير اليومي فور فتحها
+  document.addEventListener("click", function (e) {
+    const navItem = e.target.closest(
+      "[onclick*='showSection'], .nav-link, .sidebar-menu a, .sidebar-menu li",
+    );
+    if (navItem) {
+      setTimeout(window.resetDailyReportDateFlow, 100);
+    }
+  });
+
+  // 3. التحكم الصارم عند تغيير المشروع أو التاريخ في التقرير اليومي
+  document.addEventListener(
+    "change",
+    function (e) {
+      const { projEl, dateEl } = getDailyReportElements();
+      if (!projEl || !dateEl) return;
+
+      // أ) عندما يختار المشرف "المشروع":
+      // نفرغ خانة التاريخ ونفتحها له ليختار التاريخ بنفسه، ونمنع السحب التلقائي اللحظي قبل تحديد التاريخ!
+      if (e.target === projEl) {
+        dateEl.disabled = false;
+        if (dateEl.value !== "") {
+          dateEl.value = ""; // تفريغ التاريخ لإجباره على اختيار اليوم الصحيح (اليوم أو أمس)
         }
+        dateEl.focus();
+        dateEl.style.border = "2px solid #c8102e";
+        dateEl.style.backgroundColor = "#fff8f8";
+
+        // إيقاف أي مستمع قديم كان يسحب الداتا بمجرد اختيار المشروع والتاريخ فاضي
+        e.stopImmediatePropagation();
+        return;
+      }
+
+      // ب) عندما يختار المشرف "التاريخ" (بعد اختيار المشروع):
+      if (e.target === dateEl) {
+        dateEl.style.border = "";
+        dateEl.style.backgroundColor = "";
+
+        if (!projEl.value) {
+          alert("⚠️ يرجى اختيار المشروع أولاً!");
+          dateEl.value = "";
+          e.stopImmediatePropagation();
+          return;
+        }
+      }
+    },
+    true,
+  ); // true = يعمل في مرحلة الالتقاط المبكر (Capture Phase) قبل الأكواد القديمة!
+
+  // 4. اعتراض طلب السحب الآلي (getDailyLiveStats) لمنع تداخل الـ 10 ثواني وقفل زر الحفظ مؤقتاً
+  const prevCallApiForDaily = window.callApi;
+  if (
+    typeof prevCallApiForDaily === "function" &&
+    !window._dailyStatsRaceGuardHooked
+  ) {
+    window._dailyStatsRaceGuardHooked = true;
+
+    window.callApi = async function (action, payload) {
+      if (action === "getDailyLiveStats") {
+        const { projEl, dateEl, submitBtn } = getDailyReportElements();
+
+        // لو التاريخ لسه متحددش، نمنع إرسال الطلب للسيرفر أصلاً
+        if (!payload || !payload.projectName || !payload.reportDate) {
+          return {
+            status: "success",
+            data: {
+              global: { ptw: 0, hazards: 0, totalObs: 0 },
+              sewedy: {
+                train: { regular: 0, induction: 0 },
+                obs: { ua: 0, uc: 0, env: 0, pos: 0 },
+                acc: {},
+              },
+              contractors: { train: {}, obs: {}, acc: {} },
+            },
+          };
+        }
+
+        // زيادة رقم الطلب الحالي لإلغاء أي طلب قديم كان شغال في الخلفية!
+        const currentReqId = ++latestLiveStatsRequestId;
+
+        // قفل زر الحفظ مؤقتاً أثناء الـ 10 ثواني حتى لا يحفظ المشرف أرقام اليوم الخاطئ
+        let origBtnText = "";
+        if (submitBtn) {
+          origBtnText = submitBtn.innerHTML;
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري سحب إحصائيات يوم (${payload.reportDate})...`;
+        }
+
+        try {
+          const res = await prevCallApiForDaily(action, payload);
+
+          // إذا قام المشرف بتغيير التاريخ أثناء التحميل، نتجاهل نتيجة الطلب القديم تماماً!
+          if (currentReqId !== latestLiveStatsRequestId) {
+            console.log(
+              "Ignored outdated getDailyLiveStats response for:",
+              payload.reportDate,
+            );
+            return new Promise(() => {}); // إيقاف صامت للطلب القديم الملغي
+          }
+
+          return res;
+        } finally {
+          // إعادة فتح زر الحفظ فقط إذا كان هذا هو آخر طلب فعلي
+          if (currentReqId === latestLiveStatsRequestId && submitBtn) {
+            submitBtn.disabled = false;
+            if (origBtnText && !origBtnText.includes("جاري سحب")) {
+              submitBtn.innerHTML = origBtnText;
+            } else {
+              submitBtn.innerHTML =
+                '<i class="fas fa-paper-plane"></i> إرسال التقرير اليومي';
+            }
+          }
+        }
+      }
+
+      return prevCallApiForDaily(action, payload);
     };
+  }
+})();
+// =================================================================
+// --- الحل المباشر لفلتر "الجهة الطالبة" في سجل التصاريح ---
+// =================================================================
 
-    // مراقبة الضغط في القائمة الجانبية لتجهيز شاشة التقرير اليومي فور فتحها
-    document.addEventListener("click", function (e) {
-        const navItem = e.target.closest("[onclick*='showSection'], .nav-link, .sidebar-menu a, .sidebar-menu li");
-        if (navItem) {
-            setTimeout(window.resetDailyReportDateFlow, 100);
+(function () {
+  // 1. الإمساك المباشر بقائمة "الجهة الطالبة" وقائمة "المشروع" التي تسبقها مباشرة في الصفحة
+  function getExactPermitFilterSelects() {
+    const allSelects = Array.from(document.querySelectorAll("select"));
+
+    for (let i = 0; i < allSelects.length; i++) {
+      const sel = allSelects[i];
+
+      // لو كنا عدلناها قبل كده، نعرفها من العلامة الخاصة بيها
+      if (sel.dataset.isSmartRequesterFilter === "true") {
+        return { projSel: allSelects[i - 1] || null, reqSel: sel };
+      }
+
+      // التعرف عليها من الخيارات الظاهرة في صورتك بالظبط ("الكل" + "المقاول" + "قسم الجودة")
+      const optsText = Array.from(sel.options)
+        .map((o) => o.textContent.trim())
+        .join("|");
+      if (
+        optsText.includes("الكل") &&
+        (optsText.includes("المقاول") ||
+          optsText.includes("قسم الجودة") ||
+          optsText.includes("قسم المخازن"))
+      ) {
+        // نتأكد إنها قائمة الفلتر (اللي أول خيار فيها هو "الكل") ومش فورم إضافة تصريح جديد
+        if (
+          sel.options[0] &&
+          sel.options[0].textContent.trim().includes("الكل")
+        ) {
+          sel.dataset.isSmartRequesterFilter = "true";
+          const projSel = allSelects[i - 1] || null; // قائمة المشروع هي الـ select اللي قبلها مباشرةً!
+          return { projSel, reqSel: sel };
         }
-    });
-
-    // 3. التحكم الصارم عند تغيير المشروع أو التاريخ في التقرير اليومي
-    document.addEventListener("change", function (e) {
-        const { projEl, dateEl } = getDailyReportElements();
-        if (!projEl || !dateEl) return;
-
-        // أ) عندما يختار المشرف "المشروع":
-        // نفرغ خانة التاريخ ونفتحها له ليختار التاريخ بنفسه، ونمنع السحب التلقائي اللحظي قبل تحديد التاريخ!
-        if (e.target === projEl) {
-            dateEl.disabled = false;
-            if (dateEl.value !== "") {
-                dateEl.value = ""; // تفريغ التاريخ لإجباره على اختيار اليوم الصحيح (اليوم أو أمس)
-            }
-            dateEl.focus();
-            dateEl.style.border = "2px solid #c8102e";
-            dateEl.style.backgroundColor = "#fff8f8";
-
-            // إيقاف أي مستمع قديم كان يسحب الداتا بمجرد اختيار المشروع والتاريخ فاضي
-            e.stopImmediatePropagation();
-            return;
-        }
-
-        // ب) عندما يختار المشرف "التاريخ" (بعد اختيار المشروع):
-        if (e.target === dateEl) {
-            dateEl.style.border = "";
-            dateEl.style.backgroundColor = "";
-
-            if (!projEl.value) {
-                alert("⚠️ يرجى اختيار المشروع أولاً!");
-                dateEl.value = "";
-                e.stopImmediatePropagation();
-                return;
-            }
-        }
-    }, true); // true = يعمل في مرحلة الالتقاط المبكر (Capture Phase) قبل الأكواد القديمة!
-
-    // 4. اعتراض طلب السحب الآلي (getDailyLiveStats) لمنع تداخل الـ 10 ثواني وقفل زر الحفظ مؤقتاً
-    const prevCallApiForDaily = window.callApi;
-    if (typeof prevCallApiForDaily === "function" && !window._dailyStatsRaceGuardHooked) {
-        window._dailyStatsRaceGuardHooked = true;
-
-        window.callApi = async function (action, payload) {
-            if (action === "getDailyLiveStats") {
-                const { projEl, dateEl, submitBtn } = getDailyReportElements();
-
-                // لو التاريخ لسه متحددش، نمنع إرسال الطلب للسيرفر أصلاً
-                if (!payload || !payload.projectName || !payload.reportDate) {
-                    return {
-                        status: "success",
-                        data: {
-                            global: { ptw: 0, hazards: 0, totalObs: 0 },
-                            sewedy: { train: { regular: 0, induction: 0 }, obs: { ua: 0, uc: 0, env: 0, pos: 0 }, acc: {} },
-                            contractors: { train: {}, obs: {}, acc: {} }
-                        }
-                    };
-                }
-
-                // زيادة رقم الطلب الحالي لإلغاء أي طلب قديم كان شغال في الخلفية!
-                const currentReqId = ++latestLiveStatsRequestId;
-
-                // قفل زر الحفظ مؤقتاً أثناء الـ 10 ثواني حتى لا يحفظ المشرف أرقام اليوم الخاطئ
-                let origBtnText = "";
-                if (submitBtn) {
-                    origBtnText = submitBtn.innerHTML;
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري سحب إحصائيات يوم (${payload.reportDate})...`;
-                }
-
-                try {
-                    const res = await prevCallApiForDaily(action, payload);
-
-                    // إذا قام المشرف بتغيير التاريخ أثناء التحميل، نتجاهل نتيجة الطلب القديم تماماً!
-                    if (currentReqId !== latestLiveStatsRequestId) {
-                        console.log("Ignored outdated getDailyLiveStats response for:", payload.reportDate);
-                        return new Promise(() => {}); // إيقاف صامت للطلب القديم الملغي
-                    }
-
-                    return res;
-                } finally {
-                    // إعادة فتح زر الحفظ فقط إذا كان هذا هو آخر طلب فعلي
-                    if (currentReqId === latestLiveStatsRequestId && submitBtn) {
-                        submitBtn.disabled = false;
-                        if (origBtnText && !origBtnText.includes("جاري سحب")) {
-                            submitBtn.innerHTML = origBtnText;
-                        } else {
-                            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال التقرير اليومي';
-                        }
-                    }
-                }
-            }
-
-            return prevCallApiForDaily(action, payload);
-        };
+      }
     }
+    return { projSel: null, reqSel: null };
+  }
+
+  // 2. دالة التحديث الفوري لقائمة الجهة الطالبة
+  window.forceUpdatePermitRequesterFilter = async function (force = false) {
+    const { projSel, reqSel } = getExactPermitFilterSelects();
+    if (!reqSel) return;
+
+    const selectedProj = projSel ? projSel.value.trim() : "ALL_ACCESSIBLE";
+    if (
+      !force &&
+      reqSel.dataset.loadedForProj === selectedProj &&
+      reqSel.querySelector("optgroup")
+    ) {
+      return;
+    }
+
+    const prevValue = reqSel.value;
+
+    // حفظ أقسام السويدي الموجودة في القائمة الأصلية قبل مسحها
+    if (!window._savedSewedyDepts) {
+      window._savedSewedyDepts = Array.from(reqSel.options)
+        .map((o) => o.textContent.trim())
+        .filter(
+          (t) =>
+            t &&
+            t !== "الكل" &&
+            t !== "المقاول" &&
+            !t.includes("تصاريح السويدي") &&
+            !t.includes("جميع المقاولين") &&
+            !t.includes("مقاول:"),
+        );
+    }
+
+    reqSel.dataset.loadedForProj = selectedProj;
+
+    // جلب المقاولين: أولاً من initialData، ولو مش موجودة نجيبها بـ callApi الرسمي بتاعك
+    let contractors = [];
+    const isAllProj =
+      !selectedProj ||
+      selectedProj === "ALL_ACCESSIBLE" ||
+      selectedProj === "ALL" ||
+      selectedProj === "الكل";
+
+    if (
+      typeof initialData !== "undefined" &&
+      initialData &&
+      initialData.contractorsByProject
+    ) {
+      if (isAllProj) {
+        contractors = initialData.allContractors || [];
+      } else {
+        contractors = initialData.contractorsByProject[selectedProj] || [];
+      }
+    } else {
+      // لو الكود الجديد بتاع getInitialData لسه متعملوش Deploy، نسحبهم مباشرة من getContractorsForProject
+      try {
+        const qProj = isAllProj ? "ALL_ACCESSIBLE" : selectedProj;
+        const res = await window.callApi("getContractorsForProject", {
+          projectName: qProj,
+        });
+        if (res && res.status === "success" && Array.isArray(res.contractors)) {
+          contractors = res.contractors;
+        }
+      } catch (e) {
+        console.warn("Error fetching contractors:", e);
+      }
+    }
+
+    // رسم القائمة الجديدة
+    let html = `
+            <option value="">الكل (السويدي والمقاولين)</option>
+            <optgroup label="📌 فلترة مجمعة">
+                <option value="ALL_ELSEWEDY">🏢 تصاريح السويدي (كل الأقسام)</option>
+                <option value="ALL_CONTRACTORS">👷 جميع المقاولين (الكل)</option>
+            </optgroup>
+        `;
+
+    const pTitle = isAllProj ? "كل المشاريع" : selectedProj;
+    if (contractors.length > 0) {
+      html += `<optgroup label="🏗️ مقاولين (${pTitle})">`;
+      contractors.forEach((c) => {
+        html += `<option value="SUB:${c}">👷 مقاول: ${c}</option>`;
+      });
+      html += `</optgroup>`;
+    }
+
+    if (window._savedSewedyDepts && window._savedSewedyDepts.length > 0) {
+      html += `<optgroup label="🏢 أقسام السويدي (منفردة)">`;
+      window._savedSewedyDepts.forEach((d) => {
+        html += `<option value="REQ:${d}">🔹 ${d}</option>`;
+      });
+      html += `</optgroup>`;
+    }
+
+    reqSel.innerHTML = html;
+
+    if (
+      prevValue &&
+      Array.from(reqSel.options).some((o) => o.value === prevValue)
+    ) {
+      reqSel.value = prevValue;
+    } else {
+      reqSel.value = "";
+    }
+
+    // ربط قائمة المشروع عشان كل ما تغير "أبو كبير" لمشروع تاني يحدث المقاولين فوراً
+    if (projSel && !projSel.dataset.boundToReqFilter) {
+      projSel.dataset.boundToReqFilter = "true";
+      projSel.addEventListener("change", function () {
+        window.forceUpdatePermitRequesterFilter(true);
+      });
+    }
+  };
+
+  // فحص مستمر كل نصف ثانية يلقط القائمة أول ما تظهر فيها "الكل | المقاول | قسم الجودة" ويحولها فوراً
+  setInterval(function () {
+    const { reqSel } = getExactPermitFilterSelects();
+    if (reqSel && !reqSel.querySelector("optgroup")) {
+      window.forceUpdatePermitRequesterFilter(true);
+    }
+  }, 400);
 })();

@@ -15703,3 +15703,311 @@ document.addEventListener("click", function (e) {
     }
   }, 400);
 })();
+
+// =================================================================
+// --- اختيار "مُلقي المحاضرة / المدرب" بنفس نافذة وتصميم "اختيار الموظف" الأصلية للموبايل ---
+// =================================================================
+
+(function () {
+  window._selectedCustomTrainer = ""; // يحفظ المدرب المختار بصيغة: "ID - Name"
+
+  // 1. حقن حقل "مُلقي المحاضرة / المدرب" بنفس ستايل حقول اختيار الموظفين في السيستم
+  window.injectTrainerSelectorField = function () {
+    const topicEl = document.querySelector(
+      "#training-topic, #trn-topic, select[id*='topic'], input[id*='topic']",
+    );
+    if (!topicEl) return;
+
+    const formContainer = topicEl.closest(
+      "form, .card, .section, div[id*='training'], div[id*='Training']",
+    );
+    if (!formContainer) return;
+
+    if (document.getElementById("custom-trainer-wrapper")) return;
+
+    const currentUsername =
+      typeof currentUser !== "undefined" && currentUser?.username
+        ? currentUser.username
+        : "مشرف السلامة الحالي";
+
+    const wrapper = document.createElement("div");
+    wrapper.id = "custom-trainer-wrapper";
+    wrapper.className = "form-group";
+    wrapper.style.cssText = "margin-top: 12px; margin-bottom: 15px;";
+
+    wrapper.innerHTML = `
+            <label style="display:block; font-weight:bold; color:#2c2a29; margin-bottom:6px; font-size:0.95rem;">
+                <i class="fas fa-chalkboard-teacher" style="color:#c8102e; margin-left:5px;"></i> مُلقي المحاضرة / المدرب:
+            </label>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div id="custom-trainer-display" onclick="window.openTrainerEmployeePopup()" 
+                     style="flex:1; background:#fff; padding:10px 14px; border:1px solid #ced4da; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.2s;">
+                    <span id="custom-trainer-text" style="font-weight:bold; color:#2c2a29; font-size:0.92rem;">
+                        <i class="fas fa-user-check" style="color:#28a745; margin-left:6px;"></i> أنا (${currentUsername}) - افتراضي
+                    </span>
+                    <span style="color:#c8102e; font-size:0.85rem; font-weight:bold;">
+                        <i class="fas fa-exchange-alt"></i> تغيير
+                    </span>
+                </div>
+                <button type="button" id="reset-trainer-btn" onclick="window.resetCustomTrainer()" 
+                        style="display:none; background:#f8f9fa; color:#c8102e; border:1px solid #c8102e; padding:10px 12px; border-radius:8px; font-weight:bold; cursor:pointer;" 
+                        title="إرجاع للمدرب الافتراضي">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+    const topicGroup = topicEl.closest(".form-group, div") || topicEl;
+    topicGroup.parentNode.insertBefore(wrapper, topicGroup.nextSibling);
+  };
+
+  // 2. إعادة المدرب للوضع الافتراضي (مشرف السلامة الحالي)
+  window.resetCustomTrainer = function () {
+    window._selectedCustomTrainer = "";
+    const currentUsername =
+      typeof currentUser !== "undefined" && currentUser?.username
+        ? currentUser.username
+        : "مشرف السلامة الحالي";
+    const textEl = document.getElementById("custom-trainer-text");
+    const displayEl = document.getElementById("custom-trainer-display");
+    const resetBtn = document.getElementById("reset-trainer-btn");
+
+    if (textEl) {
+      textEl.innerHTML = `<i class="fas fa-user-check" style="color:#28a745; margin-left:6px;"></i> أنا (${currentUsername}) - افتراضي`;
+    }
+    if (displayEl) {
+      displayEl.style.borderColor = "#ced4da";
+      displayEl.style.backgroundColor = "#fff";
+    }
+    if (resetBtn) resetBtn.style.display = "none";
+  };
+
+  // 3. عند الضغط على الموظف داخل الـ Popup
+  window.selectEmployeeAsTrainer = function (empId, empName, empProj) {
+    window._selectedCustomTrainer = `${empId} - ${empName}`;
+
+    const textEl = document.getElementById("custom-trainer-text");
+    const displayEl = document.getElementById("custom-trainer-display");
+    const resetBtn = document.getElementById("reset-trainer-btn");
+
+    if (textEl) {
+      textEl.innerHTML = `<i class="fas fa-user-tie" style="color:#c8102e; margin-left:6px;"></i> ${empName} <small style="color:#666; font-weight:normal;">(ID: ${empId} | ${empProj || "-"})</small>`;
+    }
+    if (displayEl) {
+      displayEl.style.borderColor = "#c8102e";
+      displayEl.style.backgroundColor = "#fff8f8";
+    }
+    if (resetBtn) resetBtn.style.display = "inline-block";
+
+    const modal = document.getElementById("trainer-emp-picker-modal");
+    if (modal) modal.style.display = "none";
+  };
+
+  // 4. جلب قائمة الموظفين المحملة في النظام
+  async function getSystemEmployeesList() {
+    if (
+      typeof allEmployeesList !== "undefined" &&
+      Array.isArray(allEmployeesList) &&
+      allEmployeesList.length > 0
+    )
+      return allEmployeesList;
+    if (
+      typeof trainingEmployees !== "undefined" &&
+      Array.isArray(trainingEmployees) &&
+      trainingEmployees.length > 0
+    )
+      return trainingEmployees;
+    if (
+      typeof ppeEmployees !== "undefined" &&
+      Array.isArray(ppeEmployees) &&
+      ppeEmployees.length > 0
+    )
+      return ppeEmployees;
+    if (window._cachedTrainerEmps && window._cachedTrainerEmps.length > 0)
+      return window._cachedTrainerEmps;
+
+    try {
+      const res = await window.callApi("getTrainingInitData", {});
+      if (res && res.status === "success" && Array.isArray(res.employees)) {
+        window._cachedTrainerEmps = res.employees;
+        return res.employees;
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  // 5. فتح الـ Popup المطابقة 100% لنافذة "اختيار الموظف" الأصلية والمتجاوبة مع الموبايل
+  window.openTrainerEmployeePopup = async function () {
+    // إزالة أي نسخة قديمة
+    let oldModal = document.getElementById("trainer-emp-picker-modal");
+    if (oldModal) oldModal.remove();
+
+    const modalHtml = `
+            <div id="trainer-emp-picker-modal" onclick="if(event.target===this) this.style.display='none'" 
+                 style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:99999; align-items:center; justify-content:center; padding:12px; box-sizing:border-box; direction:rtl;">
+
+                <div style="background:#fff; width:100%; max-width:460px; border-radius:16px; padding:18px 16px; box-shadow:0 10px 35px rgba(0,0,0,0.25); position:relative; display:flex; flex-direction:column; max-height:86vh; box-sizing:border-box;">
+
+                    <!-- زر الإغلاق × في أعلى اليمين مثل النافذة الأصلية -->
+                    <span onclick="document.getElementById('trainer-emp-picker-modal').style.display='none'" 
+                          style="position:absolute; top:14px; right:18px; color:#c8102e; font-size:1.5rem; font-weight:bold; cursor:pointer; line-height:1; user-select:none;">
+                        &times;
+                    </span>
+
+                    <!-- العنوان في المنتصف باللون الأحمر مع الأيقونة -->
+                    <div style="text-align:center; color:#c8102e; font-weight:bold; font-size:1.15rem; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #f0f0f0;">
+                        <i class="fas fa-user-check" style="margin-left:6px;"></i> اختيار المدرب (مُلقي المحاضرة)
+                    </div>
+
+                    <!-- حقل البحث البيضاوي مطابق للأصلي -->
+                    <div style="margin-bottom:12px;">
+                        <input type="text" id="trainer-popup-search" placeholder="ابحث بالاسم أو الكود..." 
+                               style="width:100%; padding:10px 16px; border:1px solid #e0e0e0; border-radius:25px; font-size:0.95rem; outline:none; box-sizing:border-box; font-family:inherit; text-align:right;" />
+                    </div>
+
+                    <!-- قائمة الموظفين (الكروت البيضاء البسيطة مع السهم على اليسار) -->
+                    <div id="trainer-popup-list" style="overflow-y:auto; flex:1; padding:2px 4px; max-height:60vh;">
+                        <div style="text-align:center; padding:30px; color:#888;">
+                            <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+    const searchInp = document.getElementById("trainer-popup-search");
+    if (searchInp) {
+      searchInp.addEventListener("input", window.renderTrainerPopupList);
+      setTimeout(() => searchInp.focus(), 80);
+    }
+
+    await window.renderTrainerPopupList();
+  };
+
+  // 6. رسم الكروت بنفس تصميم الكارت الأصلي (الاسم + ID: الكود | المشروع + سهم على اليسار)
+  window.renderTrainerPopupList = async function () {
+    const listContainer = document.getElementById("trainer-popup-list");
+    if (!listContainer) return;
+
+    const emps = await getSystemEmployeesList();
+    const searchText = (
+      document.getElementById("trainer-popup-search")?.value || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    // معرفة المشروع المختار حالياً في شاشة التدريب لترتيب موظفيه أولاً تلقائياً
+    const projEl = document.querySelector(
+      "#training-project, #trn-project, select[id*='training'][id*='proj'], select[id*='trn'][id*='proj']",
+    );
+    const selectedProj = projEl ? projEl.value.trim() : "";
+
+    let filtered = emps.filter((e) => {
+      if (!e.id && !e.name) return false;
+      if (!searchText) return true;
+      return (
+        String(e.name || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        String(e.id || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        String(e.project || "")
+          .toLowerCase()
+          .includes(searchText)
+      );
+    });
+
+    // ترتيب موظفي المشروع المختار في الأعلى تلقائياً
+    if (selectedProj) {
+      filtered.sort((a, b) => {
+        const aMatch = String(a.project || "").trim() === selectedProj ? 0 : 1;
+        const bMatch = String(b.project || "").trim() === selectedProj ? 0 : 1;
+        return aMatch - bMatch;
+      });
+    }
+
+    if (filtered.length === 0) {
+      listContainer.innerHTML = `<div style="text-align:center; padding:25px; color:#888; font-size:0.9rem;">لا توجد نتائج مطابقة</div>`;
+      return;
+    }
+
+    let html = "";
+    filtered.slice(0, 100).forEach((emp) => {
+      const safeName = String(emp.name || "").replace(/'/g, "\\'");
+      const safeId = String(emp.id || "").replace(/'/g, "\\'");
+      const safeProj = String(emp.project || "غير محدد").replace(/'/g, "\\'");
+
+      html += `
+                <div onclick="window.selectEmployeeAsTrainer('${safeId}', '${safeName}', '${safeProj}')" 
+                     style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; margin-bottom:10px; background:#fff; border:1px solid #eaeaea; border-radius:12px; cursor:pointer; transition:all 0.15s ease;"
+                     onmouseover="this.style.borderColor='#c8102e'; this.style.backgroundColor='#fffcfc';" 
+                     onmouseout="this.style.borderColor='#eaeaea'; this.style.backgroundColor='#fff';">
+
+                    <div style="text-align:right;">
+                        <div style="font-weight:bold; color:#111; font-size:0.98rem; margin-bottom:4px;">
+                            ${emp.name}
+                        </div>
+                        <div style="font-size:0.82rem; color:#666;">
+                            ID: ${emp.id} | ${emp.project || "-"}
+                        </div>
+                    </div>
+
+                    <div style="color:#aaa; font-size:0.95rem; padding-right:8px;">
+                        <i class="fas fa-chevron-left"></i>
+                    </div>
+                </div>
+            `;
+    });
+
+    listContainer.innerHTML = html;
+  };
+
+  // 7. إرسال المدرب المختار تلقائياً مع حفظ جلسة التدريب
+  const origCallApiForTrainer = window.callApi;
+  if (
+    typeof origCallApiForTrainer === "function" &&
+    !window._trainerPopupHooked
+  ) {
+    window._trainerPopupHooked = true;
+
+    window.callApi = async function (action, payload) {
+      if (action === "saveTrainingSession" && payload && payload.sessionData) {
+        if (window._selectedCustomTrainer) {
+          payload.sessionData.customTrainer = window._selectedCustomTrainer;
+        }
+      }
+      const res = await origCallApiForTrainer(action, payload);
+
+      if (action === "saveTrainingSession" && res && res.status === "success") {
+        window.resetCustomTrainer();
+      }
+
+      if (
+        (action === "getTrainingInitData" ||
+          action === "getInventoryInitData") &&
+        res &&
+        res.status === "success" &&
+        Array.isArray(res.employees)
+      ) {
+        window._cachedTrainerEmps = res.employees;
+      }
+
+      return res;
+    };
+  }
+
+  // إظهار حقل المدرب تلقائياً عند فتح شاشة التدريب
+  setInterval(function () {
+    const topicEl = document.querySelector(
+      "#training-topic, #trn-topic, select[id*='topic']",
+    );
+    if (topicEl && (topicEl.offsetWidth || topicEl.offsetHeight)) {
+      if (!document.getElementById("custom-trainer-wrapper")) {
+        window.injectTrainerSelectorField();
+      }
+    }
+  }, 500);
+})();

@@ -16011,3 +16011,457 @@ document.addEventListener("click", function (e) {
     }
   }, 500);
 })();
+
+// =================================================================
+// --- تحويل "مهندس الموقع" وإضافة "المشرف المتابع للتصريح" بالـ Popup الذكية (مضبوط على savePermit) ---
+// =================================================================
+
+(function () {
+  window._permitSelectedEngineer = "";
+  window._permitSelectedSupervisor = "";
+  window._permitPopupMode = "ENGINEER"; // "ENGINEER" أو "SUPERVISOR"
+
+  // 1. فلترة المسميات الوظيفية الخاصة بـ (مهندس موقع / مدير موقع / مدير مشروع)
+  function isEngineerOrManagerRole(jobTitle) {
+    const j = String(jobTitle || "")
+      .toLowerCase()
+      .trim();
+    if (!j) return false;
+    const keywords = [
+      "engineer",
+      "manager",
+      "head",
+      "director",
+      "section",
+      "lead",
+      "chief",
+      "مهندس",
+      "مدير",
+      "رئيس",
+      "قائد",
+      "استشاري",
+      "site eng",
+      "project",
+    ];
+    const exclude = [
+      "driver",
+      "سائق",
+      "عامل",
+      "worker",
+      "store",
+      "مخزن",
+      "فني",
+      "technician",
+      "electrician",
+      "كهربائي",
+    ];
+    if (exclude.some((ex) => j.includes(ex))) return false;
+    return keywords.some((k) => j.includes(k));
+  }
+
+  // 2. العثور على حقل "مهندس الموقع" في شاشة إصدار التصريح
+  function findSiteEngineerInput() {
+    // أ) البحث المباشر بالـ IDs الشائعة
+    let inp = document.querySelector(
+      "#site-engineer, #siteEngineer, #permit-site-engineer, #eng-name, input[name='siteEngineer']",
+    );
+    if (inp) return inp;
+
+    // ب) البحث عن طريق الـ Label الذي يحتوي على كلمة "مهندس الموقع"
+    const labels = Array.from(document.querySelectorAll("label"));
+    for (let lbl of labels) {
+      if ((lbl.textContent || "").includes("مهندس الموقع")) {
+        const group = lbl.closest(".form-group, div");
+        if (group) {
+          const foundInp =
+            group.querySelector("input:not([type='hidden'])") ||
+            group.querySelector("input");
+          if (foundInp) return foundInp;
+        }
+      }
+    }
+    return null;
+  }
+
+  // 3. حقن وتجهيز خانتي "مهندس الموقع" و "المشرف المتابع للتصريح"
+  window.setupPermitEngineerAndSupervisorFields = function () {
+    const siteEngInput = findSiteEngineerInput();
+    if (!siteEngInput) return;
+
+    if (siteEngInput.dataset.popupUpgraded === "true") return;
+    siteEngInput.dataset.popupUpgraded = "true";
+
+    // إخفاء حقل الكتابة اليدوية الأصلي مع إبقائه ليأخذ القيمة تلقائياً
+    siteEngInput.style.display = "none";
+
+    const engGroup =
+      siteEngInput.closest(".form-group, div") || siteEngInput.parentElement;
+
+    // أ) واجهة اختيار "مهندس الموقع" بالـ Popup
+    const engPickerUI = document.createElement("div");
+    engPickerUI.id = "permit-eng-picker-ui";
+    engPickerUI.style.cssText =
+      "display:flex; align-items:center; gap:8px; margin-top:4px;";
+    engPickerUI.innerHTML = `
+            <div id="permit-eng-display" onclick="window.openPermitStaffPopup('ENGINEER')" 
+                 style="flex:1; background:#fff; padding:10px 14px; border:1px solid #ced4da; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.2s;">
+                <span id="permit-eng-text" style="color:#777; font-size:0.92rem;">
+                    <i class="fas fa-hard-hat" style="color:#c8102e; margin-left:6px;"></i> اضغط لاختيار مهندس الموقع / مدير المشروع...
+                </span>
+                <span style="color:#c8102e; font-size:0.85rem; font-weight:bold;">
+                    <i class="fas fa-search"></i> اختيار
+                </span>
+            </div>
+            <button type="button" id="clear-permit-eng-btn" onclick="window.clearPermitStaffSelection('ENGINEER')" 
+                    style="display:none; background:#f8f9fa; color:#c8102e; border:1px solid #c8102e; padding:10px 12px; border-radius:8px; cursor:pointer;" title="مسح">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+    engGroup.appendChild(engPickerUI);
+
+    // ب) إضافة خانة "المشرف المتابع للتصريح" تحتها مباشرةً
+    if (!document.getElementById("permit-supervisor-group")) {
+      const supGroup = document.createElement("div");
+      supGroup.id = "permit-supervisor-group";
+      supGroup.className = engGroup.className || "form-group";
+      supGroup.style.cssText = "margin-top:12px; margin-bottom:12px;";
+
+      supGroup.innerHTML = `
+                <label style="display:block; font-weight:bold; color:#2c2a29; margin-bottom:6px; font-size:0.95rem;">
+                    المشرف المتابع للتصريح (مسؤول التنفيذ ومحاضرة الـ TBT):
+                </label>
+                <input type="hidden" id="permitSupervisorInput" value="" />
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div id="permit-sup-display" onclick="window.openPermitStaffPopup('SUPERVISOR')" 
+                         style="flex:1; background:#fff; padding:10px 14px; border:1px solid #ced4da; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.2s;">
+                        <span id="permit-sup-text" style="color:#777; font-size:0.92rem;">
+                            <i class="fas fa-user-shield" style="color:#c8102e; margin-left:6px;"></i> اضغط لاختيار المشرف المتابع للتصريح...
+                        </span>
+                        <span style="color:#c8102e; font-size:0.85rem; font-weight:bold;">
+                            <i class="fas fa-search"></i> اختيار
+                        </span>
+                    </div>
+                    <button type="button" id="clear-permit-sup-btn" onclick="window.clearPermitStaffSelection('SUPERVISOR')" 
+                            style="display:none; background:#f8f9fa; color:#c8102e; border:1px solid #c8102e; padding:10px 12px; border-radius:8px; cursor:pointer;" title="مسح">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+
+      engGroup.parentNode.insertBefore(supGroup, engGroup.nextSibling);
+    }
+  };
+
+  // 4. مسح الاختيار
+  window.clearPermitStaffSelection = function (mode) {
+    if (mode === "ENGINEER") {
+      window._permitSelectedEngineer = "";
+      const origInput = findSiteEngineerInput();
+      if (origInput) origInput.value = "";
+      const txt = document.getElementById("permit-eng-text");
+      const disp = document.getElementById("permit-eng-display");
+      const btn = document.getElementById("clear-permit-eng-btn");
+      if (txt) {
+        txt.innerHTML = `<i class="fas fa-hard-hat" style="color:#c8102e; margin-left:6px;"></i> اضغط لاختيار مهندس الموقع / مدير المشروع...`;
+        txt.style.color = "#777";
+        txt.style.fontWeight = "normal";
+      }
+      if (disp) {
+        disp.style.borderColor = "#ced4da";
+        disp.style.backgroundColor = "#fff";
+      }
+      if (btn) btn.style.display = "none";
+    } else {
+      window._permitSelectedSupervisor = "";
+      const supInp = document.getElementById("permitSupervisorInput");
+      if (supInp) supInp.value = "";
+      const txt = document.getElementById("permit-sup-text");
+      const disp = document.getElementById("permit-sup-display");
+      const btn = document.getElementById("clear-permit-sup-btn");
+      if (txt) {
+        txt.innerHTML = `<i class="fas fa-user-shield" style="color:#c8102e; margin-left:6px;"></i> اضغط لاختيار المشرف المتابع للتصريح...`;
+        txt.style.color = "#777";
+        txt.style.fontWeight = "normal";
+      }
+      if (disp) {
+        disp.style.borderColor = "#ced4da";
+        disp.style.backgroundColor = "#fff";
+      }
+      if (btn) btn.style.display = "none";
+    }
+  };
+
+  // 5. اختيار الموظف من داخل الـ Popup
+  window.selectPermitStaffMember = function (empId, empName, empProj, empJob) {
+    const formattedValue = `${empId} - ${empName}`;
+
+    if (window._permitPopupMode === "ENGINEER") {
+      window._permitSelectedEngineer = formattedValue;
+      const origInput = findSiteEngineerInput();
+      if (origInput) {
+        origInput.value = formattedValue;
+        origInput.dispatchEvent(new Event("input", { bubbles: true }));
+        origInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      const txt = document.getElementById("permit-eng-text");
+      const disp = document.getElementById("permit-eng-display");
+      const btn = document.getElementById("clear-permit-eng-btn");
+
+      if (txt) {
+        txt.innerHTML = `<i class="fas fa-user-tie" style="color:#c8102e; margin-left:6px;"></i> ${empName} <small style="color:#666; font-weight:normal;">(ID: ${empId} | ${empJob || "مهندس"})</small>`;
+        txt.style.color = "#111";
+        txt.style.fontWeight = "bold";
+      }
+      if (disp) {
+        disp.style.borderColor = "#c8102e";
+        disp.style.backgroundColor = "#fff8f8";
+      }
+      if (btn) btn.style.display = "inline-block";
+    } else {
+      window._permitSelectedSupervisor = formattedValue;
+      const supInp = document.getElementById("permitSupervisorInput");
+      if (supInp) supInp.value = formattedValue;
+
+      const txt = document.getElementById("permit-sup-text");
+      const disp = document.getElementById("permit-sup-display");
+      const btn = document.getElementById("clear-permit-sup-btn");
+
+      if (txt) {
+        txt.innerHTML = `<i class="fas fa-user-check" style="color:#c8102e; margin-left:6px;"></i> ${empName} <small style="color:#666; font-weight:normal;">(ID: ${empId} | ${empProj || "-"})</small>`;
+        txt.style.color = "#111";
+        txt.style.fontWeight = "bold";
+      }
+      if (disp) {
+        disp.style.borderColor = "#c8102e";
+        disp.style.backgroundColor = "#fff8f8";
+      }
+      if (btn) btn.style.display = "inline-block";
+    }
+
+    const modal = document.getElementById("permit-staff-picker-modal");
+    if (modal) modal.style.display = "none";
+  };
+
+  // 6. جلب الموظفين (من الذاكرة أو من السيرفر مرة واحدة)
+  async function getEmployeesForPermitPopup() {
+    if (
+      typeof allEmployeesList !== "undefined" &&
+      Array.isArray(allEmployeesList) &&
+      allEmployeesList.length > 0
+    )
+      return allEmployeesList;
+    if (
+      typeof trainingEmployees !== "undefined" &&
+      Array.isArray(trainingEmployees) &&
+      trainingEmployees.length > 0
+    )
+      return trainingEmployees;
+    if (
+      typeof ppeEmployees !== "undefined" &&
+      Array.isArray(ppeEmployees) &&
+      ppeEmployees.length > 0
+    )
+      return ppeEmployees;
+    if (window._cachedTrainerEmps && window._cachedTrainerEmps.length > 0)
+      return window._cachedTrainerEmps;
+
+    try {
+      const res = await window.callApi("getInventoryInitData", {});
+      if (res && res.status === "success" && Array.isArray(res.employees)) {
+        window._cachedTrainerEmps = res.employees;
+        return res.employees;
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  // 7. فتح الـ Popup المطابقة لتصميم الموبايل
+  window.openPermitStaffPopup = async function (mode) {
+    window._permitPopupMode = mode || "ENGINEER";
+
+    let oldModal = document.getElementById("permit-staff-picker-modal");
+    if (oldModal) oldModal.remove();
+
+    const titleText =
+      window._permitPopupMode === "ENGINEER"
+        ? "اختيار مهندس الموقع / مدير المشروع"
+        : "اختيار المشرف المتابع للتصريح";
+
+    const modalHtml = `
+            <div id="permit-staff-picker-modal" onclick="if(event.target===this) this.style.display='none'" 
+                 style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:99999; align-items:center; justify-content:center; padding:12px; box-sizing:border-box; direction:rtl;">
+
+                <div style="background:#fff; width:100%; max-width:460px; border-radius:16px; padding:18px 16px; box-shadow:0 10px 35px rgba(0,0,0,0.25); position:relative; display:flex; flex-direction:column; max-height:86vh; box-sizing:border-box;">
+
+                    <span onclick="document.getElementById('permit-staff-picker-modal').style.display='none'" 
+                          style="position:absolute; top:14px; right:18px; color:#c8102e; font-size:1.5rem; font-weight:bold; cursor:pointer; line-height:1; user-select:none;">
+                        &times;
+                    </span>
+
+                    <div style="text-align:center; color:#c8102e; font-weight:bold; font-size:1.12rem; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #f0f0f0;">
+                        <i class="fas fa-user-check" style="margin-left:6px;"></i> ${titleText}
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <input type="text" id="permit-staff-search" placeholder="ابحث بالاسم أو الكود أو المشروع..." 
+                               style="width:100%; padding:10px 16px; border:1px solid #e0e0e0; border-radius:25px; font-size:0.95rem; outline:none; box-sizing:border-box; font-family:inherit; text-align:right;" />
+                    </div>
+
+                    <div id="permit-staff-list" style="overflow-y:auto; flex:1; padding:2px 4px; max-height:60vh;">
+                        <div style="text-align:center; padding:30px; color:#888;">
+                            <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+    const searchInp = document.getElementById("permit-staff-search");
+    if (searchInp) {
+      searchInp.addEventListener("input", window.renderPermitStaffPopupList);
+      setTimeout(() => searchInp.focus(), 80);
+    }
+
+    await window.renderPermitStaffPopupList();
+  };
+
+  // 8. رسم القائمة داخل الـ Popup مع ترتيب المشروع المختار في الأعلى
+  window.renderPermitStaffPopupList = async function () {
+    const listContainer = document.getElementById("permit-staff-list");
+    if (!listContainer) return;
+
+    const emps = await getEmployeesForPermitPopup();
+    const searchText = (
+      document.getElementById("permit-staff-search")?.value || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    // معرفة المشروع المختار حالياً في فورم التصريح الجديد
+    const siteEngInput = findSiteEngineerInput();
+    const formBox = siteEngInput
+      ? siteEngInput.closest("form, .card, .section, div")
+      : document;
+    const projEl =
+      formBox.querySelector(
+        "select[id*='proj'], select[name*='proj'], #project-name, #projectName",
+      ) || document.querySelector("#project-name, #projectName");
+    const selectedProj = projEl ? projEl.value.trim() : "";
+
+    let filtered = emps.filter((e) => {
+      if (!e.id && !e.name) return false;
+
+      if (window._permitPopupMode === "ENGINEER") {
+        if (!isEngineerOrManagerRole(e.jobTitle)) return false;
+      }
+
+      if (!searchText) return true;
+      return (
+        String(e.name || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        String(e.id || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        String(e.project || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        String(e.jobTitle || "")
+          .toLowerCase()
+          .includes(searchText)
+      );
+    });
+
+    if (
+      filtered.length === 0 &&
+      window._permitPopupMode === "ENGINEER" &&
+      !searchText
+    ) {
+      filtered = emps.filter((e) => e.id || e.name);
+    }
+
+    // وضع موظفي المشروع المختار في الأعلى، وتحتهم باقي المشروعات
+    if (selectedProj) {
+      filtered.sort((a, b) => {
+        const aMatch = String(a.project || "").trim() === selectedProj ? 0 : 1;
+        const bMatch = String(b.project || "").trim() === selectedProj ? 0 : 1;
+        return aMatch - bMatch;
+      });
+    }
+
+    if (filtered.length === 0) {
+      listContainer.innerHTML = `<div style="text-align:center; padding:25px; color:#888; font-size:0.9rem;">لا توجد نتائج مطابقة</div>`;
+      return;
+    }
+
+    let html = "";
+    filtered.slice(0, 120).forEach((emp) => {
+      const safeName = String(emp.name || "").replace(/'/g, "\\'");
+      const safeId = String(emp.id || "").replace(/'/g, "\\'");
+      const safeProj = String(emp.project || "غير محدد").replace(/'/g, "\\'");
+      const safeJob = String(emp.jobTitle || "").replace(/'/g, "\\'");
+      const isCurrentProj = selectedProj && safeProj === selectedProj;
+
+      html += `
+                <div onclick="window.selectPermitStaffMember('${safeId}', '${safeName}', '${safeProj}', '${safeJob}')" 
+                     style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; margin-bottom:10px; background:${isCurrentProj ? "#fffdfd" : "#fff"}; border:1px solid ${isCurrentProj ? "#f5c2c7" : "#eaeaea"}; border-radius:12px; cursor:pointer; transition:all 0.15s ease;"
+                     onmouseover="this.style.borderColor='#c8102e'; this.style.backgroundColor='#fffcfc';" 
+                     onmouseout="this.style.borderColor='${isCurrentProj ? "#f5c2c7" : "#eaeaea"}'; this.style.backgroundColor='${isCurrentProj ? "#fffdfd" : "#fff"}';">
+
+                    <div style="text-align:right;">
+                        <div style="font-weight:bold; color:#111; font-size:0.98rem; margin-bottom:4px;">
+                            ${emp.name}
+                        </div>
+                        <div style="font-size:0.82rem; color:#666;">
+                            ID: ${emp.id} | ${emp.project || "-"} ${emp.jobTitle ? `(${emp.jobTitle})` : ""}
+                        </div>
+                    </div>
+
+                    <div style="color:#aaa; font-size:0.95rem; padding-right:8px;">
+                        <i class="fas fa-chevron-left"></i>
+                    </div>
+                </div>
+            `;
+    });
+
+    listContainer.innerHTML = html;
+  };
+
+  // 9. اعتراض إرسال savePermit لإرفاق مهندس الموقع والمشرف المتابع داخل payload.permitObject
+  const origCallApiForPermit = window.callApi;
+  if (typeof origCallApiForPermit === "function" && !window._permitSaveHooked) {
+    window._permitSaveHooked = true;
+
+    window.callApi = async function (action, payload) {
+      if (action === "savePermit" && payload && payload.permitObject) {
+        if (window._permitSelectedEngineer) {
+          payload.permitObject.siteEngineer = window._permitSelectedEngineer;
+        }
+        if (window._permitSelectedSupervisor) {
+          payload.permitObject.permitSupervisor =
+            window._permitSelectedSupervisor;
+        }
+      }
+
+      const res = await origCallApiForPermit(action, payload);
+
+      if (action === "savePermit" && res && res.status === "success") {
+        window.clearPermitStaffSelection("ENGINEER");
+        window.clearPermitStaffSelection("SUPERVISOR");
+      }
+
+      return res;
+    };
+  }
+
+  // مراقب خفيف يجهز الحقول فور فتح شاشة "تصريح جديد"
+  setInterval(function () {
+    const siteEngInput = findSiteEngineerInput();
+    if (siteEngInput && siteEngInput.dataset.popupUpgraded !== "true") {
+      window.setupPermitEngineerAndSupervisorFields();
+    }
+  }, 500);
+})();

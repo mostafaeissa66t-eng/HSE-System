@@ -330,6 +330,9 @@ document.addEventListener("DOMContentLoaded", function () {
     StoreApprovals: "fas fa-clipboard-check",
     SafetyChampions: "fas fa-medal",
     AwardsManagement: "fas fa-crown",
+    NewMeeting: "fas fa-plus-circle",
+    FollowupMeetings: "fas fa-tasks",
+    MeetingsLog: "fas fa-clipboard-list",
   };
   const sectionNames = {
     Dashboard: "لوحة التحكم",
@@ -377,6 +380,9 @@ document.addEventListener("DOMContentLoaded", function () {
     StoreApprovals: "اعتمادات الهندسية",
     SafetyChampions: "فرسان السلامة",
     AwardsManagement: "إدارة التكريمات",
+    NewMeeting: "تسجيل اجتماع جديد",
+    FollowupMeetings: "متابعة البنود المفتوحة",
+    MeetingsLog: "سجل الاجتماعات",
   };
 
   // (معدل) هيكل القائمة الجانبية (روابط مباشرة للفردي، وقوائم للمجموعات)
@@ -423,7 +429,12 @@ document.addEventListener("DOMContentLoaded", function () {
       icon: "fas fa-chalkboard-teacher",
       children: ["NewTraining", "TrainingLog"], // <--- (تم دمج القسمين هنا)
     },
-
+    {
+      type: "group",
+      title: "اجتماعات السلامة",
+      icon: "fas fa-handshake",
+      children: ["NewMeeting", "FollowupMeetings", "MeetingsLog"],
+    },
     // 7. تقييم الموظفين (رابط مباشر - لأنه حاجة واحدة)
     {
       type: "group",
@@ -810,7 +821,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const ulSub = document.createElement("ul");
     ulSub.className = "submenu";
 
-    // إضافة الأبناء
+    // ضافة الأبناء
     childrenIds.forEach((childId) => {
       createSingleLink(childId, ulSub);
     });
@@ -861,6 +872,9 @@ document.addEventListener("DOMContentLoaded", function () {
         window.initObservationPageFixed();
       }
       if (sectionId === "SafetyChampions") window.initSafetyChampionsPage();
+      if (sectionId === "NewMeeting") window.initNewMeetingPage();
+      if (sectionId === "FollowupMeetings") window.loadOpenMeetingActions();
+      if (sectionId === "MeetingsLog") window.initMeetingsLogPage();
       if (sectionId === "AwardsManagement") window.initAwardsManagementPage();
       if (sectionId === "StoreApprovals") window.loadStoreRequests();
       if (sectionId === "MyObservations") loadMyOpenObservations();
@@ -2455,7 +2469,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
-   * (جديد) دالة مساعدة للتحقق من المدخلات قبل الإرسال
+   * (جديد) دالة مساعدة للق من ffدخلات قبل الإرسال
    */
   function validateTransaction(data) {
     if (data.items.length === 0) {
@@ -6831,7 +6845,7 @@ window.selectEmployee = function (id, name, company) {
       const isInduction = session.topic.toLowerCase().includes("induction");
 
       session.attendees.forEach((att) => {
-        // التحقق هل الشخص موظف سويدي أم مقاول
+        // التحقق هل ٧لشخص موظف سويدي أم مقاول
         // نعتمد على النوع (موظف) أو اسم الشركة (السويدي)
         const isSewedy = att.type === "موظف" || att.company === "السويدي";
 
@@ -7650,7 +7664,7 @@ window.initDailyHseReportPage = async function () {
     drDateInput &&
     drDateInput.value
   ) {
-    // (التعديل هنا) تشغيل السحب الموحد عند فتح الصفحة
+    // (التعدل هنا) تشغيل السحب الموحد عند فتح الصفحة
     window.handleDailyReportChange();
   }
 
@@ -9123,7 +9137,7 @@ window.generateConsolidatedDailyReport = function () {
 
   let totalProjectsSet = new Set();
 
-  // (*** الجديد ***): كائن لتخزين إحصائيات العمالة لكل مشروع بشكل منفصل
+  // (*** الجديد ***): كائن لتخزيصائيات العمالة لكل مشروع بشكل منفصل
   let projectManpowerStats = {};
 
   // 2. عملية التجميع الدقيقة
@@ -16067,7 +16081,7 @@ document.addEventListener("click", function (e) {
     );
     if (inp) return inp;
 
-    // ب) البحث عن طريق الـ Label الذي يحتوي على كلمة "مهندس الموقع"
+    // ب) البحث عن طريق الـ Label الذي يdوm على كلمة "مهندس  لموقع"
     const labels = Array.from(document.querySelectorAll("label"));
     for (let lbl of labels) {
       if ((lbl.textContent || "").includes("مهندس الموقع")) {
@@ -16464,4 +16478,1017 @@ document.addEventListener("click", function (e) {
       window.setupPermitEngineerAndSupervisorFields();
     }
   }, 500);
+})();
+// =================================================================
+// --- وحدة اجتماعات السلامة (HSE Meetings Module - Native HTML Version) ---
+// =================================================================
+
+(function () {
+  let mtgAttendeesCart = [];
+  let mtgItemsCart = [];
+  let mtgContractorWorkers = [];
+  let mtgEmpModalMode = "ATTENDEE"; // "ATTENDEE" أو "ASSIGNEE"
+  let loadedMeetingsList = [];
+
+  // 1. تهيئة صفحة تسجيل اجتماع جديد
+  window.initNewMeetingPage = async function () {
+    const now = new Date();
+    const dateEl = document.getElementById("mtg-date");
+    const timeEl = document.getElementById("mtg-time");
+    const issuerEl = document.getElementById("mtg-issuer");
+
+    if (dateEl) dateEl.value = now.toLocaleDateString("en-CA");
+    if (timeEl) {
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      timeEl.value = `${hh}:${mm}`;
+    }
+    if (issuerEl && typeof currentUser !== "undefined" && currentUser) {
+      issuerEl.value = currentUser.username;
+    }
+
+    try {
+      const r = await window.callApi("getTrainingInitData", {
+        userInfo: currentUser,
+      });
+      if (r && r.status === "success") {
+        window.ppeEmployees = r.employees || [];
+        const userProj = String(currentUser?.projects || "").trim();
+        const accProj =
+          userProj === "ALL"
+            ? r.projects
+            : (r.projects || []).filter((p) => userProj.includes(p));
+
+        window.fillSelect(document.getElementById("mtg-project"), accProj);
+        const contComp = document.getElementById("mtg-cont-company");
+        if (contComp) {
+          contComp.innerHTML =
+            '<option value="">-- اختر المشروع أولاً --</option>';
+        }
+      }
+    } catch (e) {
+      console.error("Error initNewMeetingPage:", e);
+    }
+
+    mtgAttendeesCart = [];
+    mtgItemsCart = [];
+    window.renderMtgAttendeesCart();
+    window.renderMtgItemsCart();
+    window.toggleMtgAttendeeType();
+    window.toggleMtgItemTypeFields();
+  };
+
+  // 2. عند تغيير المشروع -> جلب مقاولي المشروع وتصفير حقول الاختيار
+  window.handleMtgProjectChange = async function () {
+    const proj = document.getElementById("mtg-project")?.value || "";
+    const contSelect = document.getElementById("mtg-cont-company");
+
+    if (document.getElementById("mtg-emp-name-display"))
+      document.getElementById("mtg-emp-name-display").value = "";
+    if (document.getElementById("mtg-emp-id-hidden"))
+      document.getElementById("mtg-emp-id-hidden").value = "";
+    if (document.getElementById("mtg-cont-name"))
+      document.getElementById("mtg-cont-name").value = "";
+    if (document.getElementById("mtg-cont-nid"))
+      document.getElementById("mtg-cont-nid").value = "";
+
+    if (!proj || !contSelect) {
+      if (contSelect)
+        contSelect.innerHTML =
+          '<option value="">-- اختر المشروع أولاً --</option>';
+      return;
+    }
+
+    contSelect.innerHTML = "<option>جاري تحميل مقاولي المشروع...</option>";
+    try {
+      const r = await window.callApi("getContractorsForProject", {
+        projectName: proj,
+      });
+      if (r && r.status === "success") {
+        window.fillSelect(contSelect, r.contractors);
+      } else {
+        contSelect.innerHTML = '<option value="">لا يوجد مقاولين</option>';
+      }
+    } catch (e) {
+      contSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+    }
+  };
+
+  // 3. التبديل بين موظف السويدي ومقاول
+  window.toggleMtgAttendeeType = function () {
+    const type = document.getElementById("mtg-attendee-type")?.value || "موظف";
+    const isEmp = type === "موظف";
+    const empGrp = document.getElementById("mtg-emp-group");
+    const contGrp = document.getElementById("mtg-cont-group");
+    if (empGrp) empGrp.style.display = isEmp ? "block" : "none";
+    if (contGrp) contGrp.style.display = isEmp ? "none" : "block";
+  };
+
+  // 4. بوب أب اختيار موظف السويدي (للحضور أو كمسؤول عن تنفيذ بند)
+  window.openMtgEmpSelector = function (mode = "ATTENDEE") {
+    mtgEmpModalMode = mode;
+    const proj = document.getElementById("mtg-project")?.value || "";
+    const showAll =
+      mode === "ASSIGNEE" ||
+      document.getElementById("mtg-show-all-emp")?.checked;
+
+    if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+      alert("جاري تحميل بيانات الموظفين، يرجى الانتظار ثانية...");
+      return;
+    }
+
+    if (!proj && !showAll) {
+      alert(
+        "الرجاء اختيار المشروع أولاً أو تفعيل خيار 'عرض موظفي باقي المشاريع'",
+      );
+      return;
+    }
+
+    const titleEl = document.getElementById("mtg-emp-modal-title");
+    if (titleEl) {
+      titleEl.innerHTML =
+        mode === "ASSIGNEE"
+          ? '<i class="fas fa-user-tag"></i> اختيار المسؤول عن تنفيذ البند'
+          : '<i class="fas fa-user-check"></i> اختيار الموظف الحاضر';
+    }
+
+    document.getElementById("mtg-emp-modal").style.display = "flex";
+    document.getElementById("mtg-emp-search-box").value = "";
+
+    let list = showAll
+      ? [...window.ppeEmployees]
+      : window.ppeEmployees.filter((e) => e.project === proj);
+
+    // ترتيب موظفي المشروع المختار أولاً في حالة عرض الكل
+    if (proj && showAll) {
+      list.sort((a, b) =>
+        a.project === proj ? -1 : b.project === proj ? 1 : 0,
+      );
+    }
+
+    renderMtgEmployeesInModal(list);
+  };
+
+  window.closeMtgEmpSelector = function () {
+    document.getElementById("mtg-emp-modal").style.display = "none";
+  };
+
+  function renderMtgEmployeesInModal(list) {
+    const container = document.getElementById("mtg-emp-list-container");
+    if (!container) return;
+    if (!list || list.length === 0) {
+      container.innerHTML =
+        '<p style="text-align:center; padding:20px; color:#999;">لا يوجد موظفين مطابقين للبحث</p>';
+      return;
+    }
+
+    container.innerHTML = list
+      .map((e) => {
+        const safeName = String(e.name || "").replace(/'/g, "\\'");
+        const safeId = String(e.id || "").replace(/'/g, "\\'");
+        const safeJob = String(e.jobTitle || "موظف").replace(/'/g, "\\'");
+        return `
+          <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:8px;" onclick="window.selectMtgEmployee('${safeId}', '${safeName}', '${safeJob}')">
+            <div style="text-align:right;">
+              <span style="display:block; font-weight:700;">${e.name}</span>
+              <small style="color:#666;">ID: ${e.id} | ${e.project || "-"} (${e.jobTitle || "موظف"})</small>
+            </div>
+            <i class="fas fa-chevron-left" style="color:#ccc;"></i>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  window.filterMtgEmpList = function () {
+    const query = (
+      document.getElementById("mtg-emp-search-box")?.value || ""
+    ).toLowerCase();
+    const proj = document.getElementById("mtg-project")?.value || "";
+    const showAll =
+      mtgEmpModalMode === "ASSIGNEE" ||
+      document.getElementById("mtg-show-all-emp")?.checked;
+
+    const baseList = showAll
+      ? window.ppeEmployees || []
+      : (window.ppeEmployees || []).filter((e) => e.project === proj);
+
+    const filtered = baseList.filter(
+      (e) =>
+        String(e.name || "")
+          .toLowerCase()
+          .includes(query) || String(e.id || "").includes(query),
+    );
+    renderMtgEmployeesInModal(filtered);
+  };
+
+  window.selectMtgEmployee = function (id, name, jobTitle) {
+    if (mtgEmpModalMode === "ASSIGNEE") {
+      const assignInp = document.getElementById("mtg-item-assign");
+      if (assignInp) assignInp.value = name;
+    } else {
+      document.getElementById("mtg-emp-name-display").value = name;
+      document.getElementById("mtg-emp-id-hidden").value = id;
+      document.getElementById("mtg-emp-job-hidden").value = jobTitle || "موظف";
+    }
+    window.closeMtgEmpSelector();
+  };
+
+  // 5. بوب أب اختيار عمال المقاول في الاجتماع (مطابق للتدريب)
+  window.loadMtgContractorWorkers = async function () {
+    const contractorName = document.getElementById("mtg-cont-company")?.value;
+    document.getElementById("mtg-cont-name").value = "";
+    document.getElementById("mtg-cont-nid").value = "";
+    if (!contractorName) {
+      mtgContractorWorkers = [];
+      return;
+    }
+    try {
+      const res = await window.callApi("getContractorWorkers", {
+        contractorName,
+      });
+      if (res && res.status === "success") {
+        mtgContractorWorkers = res.workers || [];
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  window.openMtgWorkerSelector = function () {
+    const contractorName = document.getElementById("mtg-cont-company")?.value;
+    if (!contractorName) {
+      alert("الرجاء اختيار شركة المقاول أولاً");
+      return;
+    }
+    document.getElementById("mtg-worker-modal").style.display = "flex";
+    document.getElementById("mtg-worker-search-box").value = "";
+    document.getElementById("mtg-worker-search-box").focus();
+    renderMtgWorkersInModal(mtgContractorWorkers);
+  };
+
+  window.closeMtgWorkerSelector = function () {
+    document.getElementById("mtg-worker-modal").style.display = "none";
+  };
+
+  function renderMtgWorkersInModal(workers) {
+    const container = document.getElementById("mtg-worker-list-container");
+    if (!container) return;
+    if (!workers || workers.length === 0) {
+      container.innerHTML =
+        '<p style="text-align:center; padding:20px; color:#999;">لا يوجد أفراد مسجلون لهذه الشركة، اضغط الزر بالأسفل لإضافة اسم جديد</p>';
+      return;
+    }
+    container.innerHTML = workers
+      .map((w) => {
+        const safeName = String(w.name || "").replace(/'/g, "\\'");
+        const safeId = String(w.id || "").replace(/'/g, "\\'");
+        return `
+          <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:5px;" onclick="window.selectMtgWorker('${safeId}', '${safeName}')">
+            <div style="text-align:right;">
+              <span style="display:block; font-weight:700;">${w.name}</span>
+              <small style="color:#666;">ID: ${w.id}</small>
+            </div>
+            <i class="fas fa-chevron-left" style="color:#ccc;"></i>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  window.filterMtgWorkerList = function () {
+    const query = (
+      document.getElementById("mtg-worker-search-box")?.value || ""
+    ).toLowerCase();
+    const filtered = mtgContractorWorkers.filter(
+      (w) =>
+        String(w.name || "")
+          .toLowerCase()
+          .includes(query) || String(w.id || "").includes(query),
+    );
+    renderMtgWorkersInModal(filtered);
+  };
+
+  window.selectMtgWorker = function (id, name) {
+    const nameInp = document.getElementById("mtg-cont-name");
+    const nidInp = document.getElementById("mtg-cont-nid");
+    if (nameInp) {
+      nameInp.value = name;
+      nameInp.readOnly = true;
+    }
+    if (nidInp) {
+      nidInp.value = id;
+      nidInp.readOnly = true;
+      nidInp.style.backgroundColor = "#f0f0f0";
+    }
+    window.closeMtgWorkerSelector();
+  };
+
+  window.addNewMtgWorkerManually = function () {
+    const query = document.getElementById("mtg-worker-search-box")?.value || "";
+    const nameInp = document.getElementById("mtg-cont-name");
+    const nidInp = document.getElementById("mtg-cont-nid");
+    if (nameInp) {
+      nameInp.value = query;
+      nameInp.readOnly = false;
+      nameInp.placeholder = "اكتب اسم ممثل المقاول رباعي...";
+    }
+    if (nidInp) {
+      nidInp.value = "";
+      nidInp.readOnly = false;
+      nidInp.style.backgroundColor = "#fff";
+      nidInp.focus();
+    }
+    window.closeMtgWorkerSelector();
+  };
+
+  // 6. إضافة حاضر لقائمة الحضور
+  window.addMtgParticipant = async function () {
+    const type = document.getElementById("mtg-attendee-type")?.value || "موظف";
+    const msgEl = document.getElementById("mtg-att-msg");
+    const btn = document.getElementById("mtg-add-att-btn");
+    let att = { type };
+
+    if (type === "موظف") {
+      const empName = document.getElementById("mtg-emp-name-display")?.value;
+      const empId = document.getElementById("mtg-emp-id-hidden")?.value;
+      const empJob = document.getElementById("mtg-emp-job-hidden")?.value;
+      if (!empName || !empId) {
+        alert("الرجاء اختيار الموظف من القائمة أولاً");
+        return;
+      }
+      att.id = empId;
+      att.name = empName;
+      att.company = "السويدي";
+      att.title = empJob || "موظف";
+    } else {
+      const nid = (document.getElementById("mtg-cont-nid")?.value || "").trim();
+      const name = (
+        document.getElementById("mtg-cont-name")?.value || ""
+      ).trim();
+      const comp = document.getElementById("mtg-cont-company")?.value || "";
+      const title = (
+        document.getElementById("mtg-cont-title")?.value || "ممثل المقاول"
+      ).trim();
+
+      if (!nid || !name || !comp) {
+        window.showMessage(
+          msgEl,
+          "يرجى استكمال بيانات المقاول (الشركة، الرقم القومي، والاسم)",
+          false,
+        );
+        return;
+      }
+
+      att.id = nid;
+      att.name = name;
+      att.company = comp;
+      att.title = title;
+      att.isNew = true;
+    }
+
+    if (mtgAttendeesCart.some((x) => String(x.id) === String(att.id))) {
+      window.showMessage(
+        msgEl,
+        "هذا المشارك مضاف بالفعل في قائمة الحضور!",
+        false,
+      );
+      return;
+    }
+
+    mtgAttendeesCart.push(att);
+    window.renderMtgAttendeesCart();
+
+    if (type === "موظف") {
+      document.getElementById("mtg-emp-name-display").value = "";
+      document.getElementById("mtg-emp-id-hidden").value = "";
+    } else {
+      document.getElementById("mtg-cont-nid").value = "";
+      document.getElementById("mtg-cont-name").value = "";
+      document.getElementById("mtg-cont-name").readOnly = true;
+    }
+  };
+
+  window.renderMtgAttendeesCart = function () {
+    const countEl = document.getElementById("mtg-att-count");
+    const container = document.getElementById("mtg-att-list-container");
+    if (countEl) countEl.textContent = mtgAttendeesCart.length;
+    if (!container) return;
+
+    if (mtgAttendeesCart.length === 0) {
+      container.innerHTML =
+        '<p style="text-align: center; color: #777">لم يتم إضافة حضور...</p>';
+      return;
+    }
+
+    container.innerHTML = mtgAttendeesCart
+      .map(
+        (att, idx) => `
+          <div class="ppe-cart-item">
+            <span><small>[${att.company} - ${att.title}]</small> <strong>${att.name}</strong> (ID: ${att.id})</span>
+            <button type="button" class="btn-small btn-danger" onclick="window.removeMtgAttendee(${idx})">X</button>
+          </div>
+        `,
+      )
+      .join("");
+  };
+
+  window.removeMtgAttendee = function (idx) {
+    mtgAttendeesCart.splice(idx, 1);
+    window.renderMtgAttendeesCart();
+  };
+
+  // 7. بنود الاجتماع (Action Required vs Info)
+  window.toggleMtgItemTypeFields = function () {
+    const type = document.getElementById("mtg-item-type")?.value || "Action";
+    const fieldsBox = document.getElementById("mtg-item-action-fields");
+    if (fieldsBox) {
+      fieldsBox.style.display = type === "Info" ? "none" : "block";
+    }
+  };
+
+  window.addMtgActionItem = function () {
+    const desc = (document.getElementById("mtg-item-desc")?.value || "").trim();
+    const type = document.getElementById("mtg-item-type")?.value || "Action";
+    const isInfo = type === "Info";
+    const actionReq = (
+      document.getElementById("mtg-item-action")?.value || ""
+    ).trim();
+    const assign = (
+      document.getElementById("mtg-item-assign")?.value || ""
+    ).trim();
+    const deadline = document.getElementById("mtg-item-deadline")?.value || "";
+
+    if (!desc) {
+      alert("يرجى كتابة وصف البند الذي تمت مناقشته.");
+      return;
+    }
+
+    if (!isInfo && (!actionReq || !assign || !deadline)) {
+      alert(
+        "يرجى إدخال الإجراء المطلوب والمسؤول وتاريخ التنفيذ (أو اختر نوع البند: معلومة عامة Info).",
+      );
+      return;
+    }
+
+    mtgItemsCart.push({
+      description: desc,
+      type: isInfo ? "Info" : "Action",
+      isInfo: isInfo,
+      actionRequired: isInfo ? "للعلم والإحاطة (Info)" : actionReq,
+      assignment: isInfo ? "-" : assign,
+      deadline: isInfo ? "-" : deadline,
+    });
+
+    document.getElementById("mtg-item-desc").value = "";
+    document.getElementById("mtg-item-action").value = "";
+    document.getElementById("mtg-item-assign").value = "";
+    document.getElementById("mtg-item-deadline").value = "";
+
+    window.renderMtgItemsCart();
+  };
+
+  window.renderMtgItemsCart = function () {
+    const countEl = document.getElementById("mtg-items-count");
+    const container = document.getElementById("mtg-items-list-container");
+    if (countEl) countEl.textContent = mtgItemsCart.length;
+    if (!container) return;
+
+    if (mtgItemsCart.length === 0) {
+      container.innerHTML =
+        '<p style="text-align: center; color: #777">لم يتم إضافة بنود للاجتماع...</p>';
+      return;
+    }
+
+    container.innerHTML = mtgItemsCart
+      .map(
+        (it, idx) => `
+          <div class="ppe-cart-item" style="flex-wrap:wrap; gap:6px;">
+            <div>
+              <strong>${idx + 1}. ${it.description}</strong><br>
+              <small style="color:${it.isInfo ? "#0056b3" : "#c8102e"};">
+                ${
+                  it.isInfo
+                    ? "ℹ️ معلومة عامة (Info)"
+                    : `⚡ الإجراء: ${it.actionRequired} | المسؤول: ${it.assignment} | الموعد: ${it.deadline}`
+                }
+              </small>
+            </div>
+            <button type="button" class="btn-small btn-danger" onclick="window.removeMtgItem(${idx})">X</button>
+          </div>
+        `,
+      )
+      .join("");
+  };
+
+  window.removeMtgItem = function (idx) {
+    mtgItemsCart.splice(idx, 1);
+    window.renderMtgItemsCart();
+  };
+
+  // 8. حفظ الاجتماع بالكامل
+  document.addEventListener("DOMContentLoaded", function () {
+    const mtgForm = document.getElementById("meeting-form");
+    if (mtgForm) {
+      mtgForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const saveMsg = document.getElementById("mtg-save-msg");
+        const saveBtn = document.getElementById("mtg-save-btn");
+
+        if (mtgAttendeesCart.length === 0) {
+          alert("الرجاء إضافة الحاضرين في الاجتماع أولاً.");
+          return;
+        }
+        if (mtgItemsCart.length === 0) {
+          alert("الرجاء إضافة بند واحد على الأقل من بنود الاجتماع.");
+          return;
+        }
+
+        const meetingData = {
+          project: document.getElementById("mtg-project")?.value,
+          location: document.getElementById("mtg-location")?.value,
+          date: document.getElementById("mtg-date")?.value,
+          time: document.getElementById("mtg-time")?.value,
+          period: document.getElementById("mtg-period")?.value,
+          topic: document.getElementById("mtg-topic")?.value,
+          participants: mtgAttendeesCart,
+          items: mtgItemsCart,
+        };
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "جاري الحفظ...";
+
+        try {
+          const r = await window.callApi("saveHseMeeting", {
+            meetingData: meetingData,
+          });
+          window.showMessage(saveMsg, r.message, true);
+          mtgForm.reset();
+          window.initNewMeetingPage();
+        } catch (err) {
+          window.showMessage(saveMsg, err.message, false);
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الاجتماع';
+        }
+      });
+    }
+  });
+
+  // 9. شاشة متابعة وإغلاق البنود المفتوحة (FollowupMeetings)
+  window.loadOpenMeetingActions = async function () {
+    const listContainer = document.getElementById("mtg-open-actions-list");
+    if (!listContainer) return;
+    listContainer.innerHTML =
+      '<div class="loader-small">جاري البحث عن بنود الاجتماعات المفتوحة...</div>';
+
+    try {
+      const r = await window.callApi("getOpenMeetingActions", {});
+      const actions = r.actions || [];
+      if (actions.length === 0) {
+        listContainer.innerHTML =
+          '<p style="text-align:center; padding:20px;">🎉 لا توجد بنود اجتماعات مفتوحة حالياً في مشاريعك!</p>';
+        return;
+      }
+
+      let html = `
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>كود الاجتماع</th>
+              <th>التاريخ</th>
+              <th>المشروع</th>
+              <th>البند والإجراء المطلوب</th>
+              <th>المسؤول</th>
+              <th>موعد التنفيذ</th>
+              <th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      actions.forEach((a) => {
+        html += `
+          <tr>
+            <td style="font-weight:bold;">${a.meetingId}<br><small style="color:#666;">${a.meetingTopic}</small></td>
+            <td style="white-space:nowrap;">${a.date}</td>
+            <td>${a.project}</td>
+            <td style="text-align:right;">
+              <strong>البند:</strong> ${a.description}<br>
+              <small style="color:#0056b3;"><strong>الإجراء:</strong> ${a.actionRequired}</small>
+            </td>
+            <td style="font-weight:bold; color:#c8102e;">${a.assignment}</td>
+            <td style="white-space:nowrap;">${a.deadline}</td>
+            <td>
+              <button class="btn-small btn-danger" onclick="window.handleCloseMtgAction('${a.actionId}')">
+                إغلاق
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      listContainer.innerHTML = html;
+    } catch (e) {
+      listContainer.innerHTML = `<p class="error-message" style="display:block;">${e.message}</p>`;
+    }
+  };
+
+  window.handleCloseMtgAction = async function (actionId) {
+    const note = prompt("الرجاء إدخال ملاحظات الإغلاق (ما تم تنفيذه):");
+    if (note === null) return;
+    if (note.trim() === "") {
+      alert("يجب كتابة ملاحظة للإغلاق.");
+      return;
+    }
+    try {
+      const r = await window.callApi("closeMeetingAction", {
+        actionId: actionId,
+        closingNote: note.trim(),
+      });
+      alert(r.message);
+      window.loadOpenMeetingActions();
+    } catch (e) {
+      alert("خطأ: " + e.message);
+    }
+  };
+
+  // 10. شاشة سجل الاجتماعات (MeetingsLog)
+  window.initMeetingsLogPage = function () {
+    const sel = document.getElementById("mon-mtg-project");
+    if (sel && typeof initialData !== "undefined" && initialData?.projects) {
+      sel.innerHTML =
+        '<option value="ALL_ACCESSIBLE">جميع المشاريع المتاحة</option>';
+      initialData.projects.forEach((p) => sel.add(new Option(p, p)));
+    }
+  };
+
+  window.searchMeetingsLog = async function () {
+    const container = document.getElementById("mon-mtg-table");
+    if (!container) return;
+    container.innerHTML = '<div class="loader-small">جاري البحث...</div>';
+
+    const filters = {
+      project:
+        document.getElementById("mon-mtg-project")?.value || "ALL_ACCESSIBLE",
+      fromDate: document.getElementById("mon-mtg-from")?.value || "",
+      toDate: document.getElementById("mon-mtg-to")?.value || "",
+      onlyWithOpenActions:
+        document.getElementById("mon-mtg-open-only")?.checked || false,
+    };
+
+    try {
+      const r = await window.callApi("searchHseMeetings", { filters });
+      loadedMeetingsList = r.meetings || [];
+
+      if (loadedMeetingsList.length === 0) {
+        container.innerHTML =
+          '<p style="text-align:center; padding:20px;">لا توجد اجتماعات مطابقة للبحث.</p>';
+        return;
+      }
+
+      let html = `
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>كود الاجتماع</th>
+              <th>التاريخ</th>
+              <th>المشروع</th>
+              <th>موضوع الاجتماع</th>
+              <th>عدد الحضور</th>
+              <th>حالة البنود</th>
+              <th>التفاصيل والطباعة</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      loadedMeetingsList.forEach((m, idx) => {
+        const badgeHtml =
+          m.openCount > 0
+            ? `<span class="badge bg-danger">مفتوح: ${m.openCount} | مغلق: ${m.closedCount}</span>`
+            : `<span class="badge bg-success">مكتمل (${m.totalItems} بنود)</span>`;
+
+        html += `
+          <tr>
+            <td style="font-weight:bold;">${m.meetingId}</td>
+            <td style="white-space:nowrap;">${m.date}</td>
+            <td>${m.project}</td>
+            <td style="font-weight:bold; color:var(--primary-color);">${m.topic}</td>
+            <td style="text-align:center;"><span class="badge" style="background:#2c2a29; color:#fff;">${m.participants.length}</span></td>
+            <td style="text-align:center;">${badgeHtml}</td>
+            <td style="text-align:center;">
+              <button type="button" class="btn-small btn-secondary" onclick="window.printOfficialMeetingForm(${idx})">
+                <i class="fas fa-print"></i> عرض وطباعة
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = `<p class="error-message" style="display:block;">${e.message}</p>`;
+    }
+  };
+  // 11. طباعة محضر الاجتماع الرسمي (اللوجو شمال والعنوان يمين)
+  window.printOfficialMeetingForm = function (idx) {
+    const m = loadedMeetingsList[idx];
+    if (!m) return;
+
+    let cleanTime = String(m.time || "").trim();
+    if (cleanTime.includes("T") || cleanTime.includes("1899")) {
+      try {
+        const dObj = new Date(cleanTime);
+        if (!isNaN(dObj.getTime())) {
+          cleanTime = dObj.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+        }
+      } catch (e) {}
+    }
+
+    const participantsList = m.participants || [];
+    const minParticipantRows = Math.max(participantsList.length, 8);
+    let participantsRows = "";
+
+    for (let i = 0; i < minParticipantRows; i++) {
+      const p = participantsList[i];
+      participantsRows += `
+        <tr>
+          <td style="text-align:center; font-weight:700; width:35px;">${i + 1}</td>
+          <td style="text-align:right; font-weight:700; padding-right:8px;">${p ? p.name : ""}</td>
+          <td style="text-align:center; width:140px;">${p ? p.company : ""}</td>
+          <td style="text-align:center; width:160px;">${p ? p.title || "-" : ""}</td>
+          <td style="width:150px;"></td>
+        </tr>
+      `;
+    }
+
+    const itemsList = m.items || [];
+    const minItemRows = Math.max(itemsList.length, 8);
+    let itemsRows = "";
+
+    for (let j = 0; j < minItemRows; j++) {
+      const it = itemsList[j];
+      if (it) {
+        const isInfo = it.status === "Info" || it.itemType === "Info";
+        itemsRows += `
+          <tr>
+            <td style="text-align:center; font-weight:700; width:35px;">${it.itemNo || j + 1}</td>
+            <td style="text-align:right; padding-right:8px; font-weight:600;">${it.description || ""}</td>
+            <td style="text-align:right; padding-right:8px;">${isInfo ? "Info (للعلم والإحاطة)" : it.actionRequired || ""}</td>
+            <td style="text-align:center; width:95px;">${isInfo ? "-" : it.deadline || "-"}</td>
+            <td style="text-align:center; width:140px; font-weight:600;">${isInfo ? "-" : it.assignment || "-"}</td>
+          </tr>
+        `;
+      } else {
+        itemsRows += `
+          <tr>
+            <td style="text-align:center; font-weight:700; height:24px;">${j + 1}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        `;
+      }
+    }
+
+    const printWindow = window.open("", "_blank", "width=1000,height=800");
+
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html lang="ar" dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <title>HSE Meeting Minutes - ${m.project} (${m.meetingId})</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 1cm;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body {
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0 0 35px 0;
+            color: #111;
+            background: #fff;
+            font-size: 11px;
+            line-height: 1.35;
+          }
+          .page-container {
+            width: 100%;
+          }
+          /* الهيدر: العنوان في اليمين، واللوجو في اليسار */
+          .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #2C2A29;
+            border-bottom: 4px solid #C8102E;
+            padding: 10px 16px;
+            margin-bottom: 10px;
+            background: #fdfdfd;
+          }
+          .header-titles-right {
+            text-align: right;
+          }
+          .header-titles-right .doc-title-ar {
+            font-size: 15.5px;
+            font-weight: 800;
+            color: #2C2A29;
+            white-space: nowrap;
+            margin-bottom: 2px;
+          }
+          .header-titles-right .doc-title-en {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #C8102E;
+            white-space: nowrap;
+            letter-spacing: 0.4px;
+            direction: ltr;
+            text-align: right;
+          }
+          .header-logo img {
+            height: 50px;
+            width: auto;
+            display: block;
+          }
+
+          /* جداول النموذج */
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+          }
+          th, td {
+            border: 1px solid #2C2A29;
+            padding: 4px 6px;
+            font-size: 11px;
+            vertical-align: middle;
+          }
+
+          .meta-table td.meta-label {
+            background-color: #f2f2f2;
+            font-weight: 700;
+            width: 22%;
+            color: #2C2A29;
+            text-align: center;
+          }
+          .meta-table td.meta-val {
+            font-weight: 700;
+            width: 28%;
+            text-align: center;
+            color: #000;
+            font-size: 11.5px;
+          }
+
+          .section-banner {
+            background-color: #C8102E;
+            color: #fff;
+            font-weight: 700;
+            font-size: 11.5px;
+            padding: 5px 12px;
+            border: 1px solid #2C2A29;
+            border-bottom: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+
+          .data-table thead th {
+            background-color: #2C2A29;
+            color: #ffffff;
+            font-weight: 700;
+            text-align: center;
+            padding: 5px 4px;
+            font-size: 10.5px;
+          }
+          .data-table tbody td {
+            height: 24px;
+          }
+          .data-table tbody tr:nth-child(even) {
+            background-color: #fafafa;
+          }
+
+          .form-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: #fff;
+            padding-top: 6px;
+            border-top: 2px solid #2C2A29;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #2C2A29;
+            direction: rtl;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page-container">
+          <!-- الهيدر: العنوان العربي والإنجليزي في اليمين، واللوجو في اليسار -->
+          <div class="form-header">
+            <div class="header-titles-right">
+              <div class="doc-title-ar">محضر اجتماع السلامة والصحة المهنية والبيئة</div>
+              <div class="doc-title-en">HSE MEETING MINUTES (${m.meetingId})</div>
+            </div>
+            <div class="header-logo">
+              <img src="../turnkey.png" alt="Logo">
+            </div>
+          </div>
+
+          <table class="meta-table">
+            <tr>
+              <td class="meta-label">اسم المشروع<br><small>Project Name</small></td>
+              <td class="meta-val">${m.project || "-"}</td>
+              <td class="meta-label">مكان الاجتماع<br><small>Meeting Location</small></td>
+              <td class="meta-val">${m.location || "-"}</td>
+            </tr>
+            <tr>
+              <td class="meta-label">التاريخ والوقت<br><small>Date and Time</small></td>
+              <td class="meta-val" dir="ltr">${m.date || "-"} ${cleanTime ? " | " + cleanTime : ""}</td>
+              <td class="meta-label">مدة الاجتماع<br><small>Meeting Period</small></td>
+              <td class="meta-val">${m.period || "-"}</td>
+            </tr>
+            <tr>
+              <td class="meta-label">موضوع الاجتماع<br><small>Meeting Topic</small></td>
+              <td class="meta-val" colspan="3" style="color:#C8102E; font-size:12px;">${m.topic || "-"}</td>
+            </tr>
+          </table>
+
+          <div class="section-banner">
+            <span>أولاً: المشاركون (Participants)</span>
+            <span>Attendance Sheet</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:35px;">#</th>
+                <th>المشاركون (Participants)</th>
+                <th style="width:140px;">الشركة (Company)</th>
+                <th style="width:160px;">المسمى الوظيفي (Title)</th>
+                <th style="width:150px;">التوقيع (Signature)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${participantsRows}
+            </tbody>
+          </table>
+
+          <div class="section-banner">
+            <span>ثانياً: بنود ومخرجات الاجتماع (Meeting Items & Action Plan)</span>
+            <span>Minutes of Meeting</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:35px;">No.</th>
+                <th style="width:36%;">وصف البند (Item Description)</th>
+                <th style="width:32%;">الإجراء المطلوب (Action Required)</th>
+                <th style="width:95px;">تاريخ التنفيذ (Deadline)</th>
+                <th style="width:140px;">المسؤولية (Assignment)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRows}
+            </tbody>
+          </table>
+
+          <div class="form-footer">
+            <span dir="ltr">Page 1 of 1</span>
+            <span>HSE SYSTEM</span>
+            <span>Form No.: ECTSF.08_REV.04</span>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(() => { window.print(); }, 400);
+          };
+        <\/script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlTemplate);
+    printWindow.document.close();
+  };
 })();

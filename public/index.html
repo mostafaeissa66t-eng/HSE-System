@@ -7771,6 +7771,519 @@
                         ></p>
                     </form>
                 </section>
+                <!-- ========================================== -->
+                <!-- قسم اجتماعات السلامة (HSE Meetings Module) -->
+                <!-- ========================================== -->
+
+                <!-- 1. تسجيل اجتماع جديد -->
+                <section
+                    id="NewMeeting"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-handshake"></i> تسجيل اجتماع سلامة جديد
+                        (HSE Meeting)
+                    </h2>
+
+                    <form id="meeting-form" class="app-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>التاريخ:</label>
+                                <input type="date" id="mtg-date" required />
+                            </div>
+                            <div class="form-group">
+                                <label>الوقت:</label>
+                                <input type="time" id="mtg-time" required />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>منسق / مسجل الاجتماع:</label>
+                                <input
+                                    type="text"
+                                    id="mtg-issuer"
+                                    readonly
+                                    style="background: #eee"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="mtg-period" class="required"
+                                    >مدة الاجتماع (Meeting Period):</label
+                                >
+                                <select id="mtg-period" required>
+                                    <option value="30 دقيقة">
+                                        30 دقيقة (0.5 Hr)
+                                    </option>
+                                    <option value="1 ساعة" selected>
+                                        1 ساعة (1 Hr)
+                                    </option>
+                                    <option value="1.5 ساعة">
+                                        1.5 ساعة (1.5 Hrs)
+                                    </option>
+                                    <option value="2 ساعة">
+                                        ساعتان (2 Hrs)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mtg-project" class="required"
+                                    >المشروع (Project Name):</label
+                                >
+                                <select
+                                    id="mtg-project"
+                                    required
+                                    onchange="window.handleMtgProjectChange()"
+                                ></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="mtg-location" class="required"
+                                    >مكان الاجتماع (Meeting Location):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="mtg-location"
+                                    placeholder="مثال: قاعة الاجتماعات الرئيسية بالموقع..."
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mtg-topic" class="required"
+                                >موضوع الاجتماع (Meeting Topic):</label
+                            >
+                            <input
+                                type="text"
+                                id="mtg-topic"
+                                placeholder="اكتب عنوان أو موضوع الاجتماع..."
+                                required
+                            />
+                        </div>
+
+                        <hr />
+
+                        <h4>
+                            <i class="fas fa-users"></i> أولاً: تسجيل المشاركين
+                            والحضور (Participants)
+                        </h4>
+
+                        <div class="form-group">
+                            <label for="mtg-attendee-type">نوع الحاضر:</label>
+                            <select
+                                id="mtg-attendee-type"
+                                onchange="window.toggleMtgAttendeeType()"
+                            >
+                                <option value="موظف">موظف (السويدي)</option>
+                                <option value="مقاول">مقاول</option>
+                            </select>
+                        </div>
+
+                        <!-- اختيار موظف السويدي بنفس ستايل التدريب -->
+                        <div id="mtg-emp-group">
+                            <div class="form-group">
+                                <label>اسم الموظف:</label>
+                                <input
+                                    type="text"
+                                    id="mtg-emp-name-display"
+                                    readonly
+                                    onclick="window.openMtgEmpSelector('ATTENDEE')"
+                                    placeholder="اضغط لاختيار موظف من القائمة..."
+                                    style="
+                                        cursor: pointer;
+                                        background-color: #fff !important;
+                                        border: 2px solid #c8102e;
+                                    "
+                                />
+                                <input type="hidden" id="mtg-emp-id-hidden" />
+                                <input type="hidden" id="mtg-emp-job-hidden" />
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="mtg-show-all-emp" />
+                                <label
+                                    for="mtg-show-all-emp"
+                                    style="font-weight: normal; color: #555"
+                                    >عرض موظفي باقي المشاريع (زيارة)</label
+                                >
+                            </div>
+                        </div>
+
+                        <!-- اختيار مقاول بنفس ستايل التدريب -->
+                        <div id="mtg-cont-group" style="display: none">
+                            <div class="form-group">
+                                <label for="mtg-cont-company"
+                                    >الشركة (المقاول):</label
+                                >
+                                <select
+                                    id="mtg-cont-company"
+                                    onchange="window.loadMtgContractorWorkers()"
+                                ></select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>الرقم القومي:</label>
+                                    <input
+                                        type="text"
+                                        id="mtg-cont-nid"
+                                        placeholder="الرقم القومي"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>الاسم:</label>
+                                    <input
+                                        type="text"
+                                        id="mtg-cont-name"
+                                        readonly
+                                        onclick="window.openMtgWorkerSelector()"
+                                        placeholder="اضغط لاختيار عامل المقاول..."
+                                        style="
+                                            cursor: pointer;
+                                            background-color: #fff !important;
+                                            border: 2px solid #c8102e;
+                                        "
+                                    />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label
+                                    >المسمى الوظيفي لممثل المقاول
+                                    (Title):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="mtg-cont-title"
+                                    value="ممثل المقاول"
+                                    placeholder="مثال: مدير مشروع المقاول / مشرف سلامة المقاول..."
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button
+                                type="button"
+                                id="mtg-add-att-btn"
+                                class="btn btn-secondary"
+                                style="width: 100%"
+                                onclick="window.addMtgParticipant()"
+                            >
+                                <i class="fas fa-plus"></i> إضافة لقائمة الحضور
+                            </button>
+                        </div>
+                        <p
+                            id="mtg-att-msg"
+                            class="error-message"
+                            style="display: none; text-align: center"
+                        ></p>
+
+                        <h4>
+                            قائمة الحضور (<span id="mtg-att-count">0</span>)
+                        </h4>
+                        <div
+                            id="mtg-att-list-container"
+                            style="margin-bottom: 20px"
+                        >
+                            <p style="text-align: center; color: #777">
+                                لم يتم إضافة حضور...
+                            </p>
+                        </div>
+
+                        <hr />
+
+                        <h4>
+                            <i class="fas fa-list-ol"></i> ثانياً: بنود ومخرجات
+                            الاجتماع (Meeting Items & Actions)
+                        </h4>
+
+                        <div class="form-group">
+                            <label class="required"
+                                >وصف البند الذي تمت مناقشته (Item
+                                Description):</label
+                            >
+                            <textarea
+                                id="mtg-item-desc"
+                                rows="2"
+                                placeholder="اكتب البند أو النقطة التي تمت مناقشتها..."
+                            ></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>نوع البند:</label>
+                            <select
+                                id="mtg-item-type"
+                                onchange="window.toggleMtgItemTypeFields()"
+                            >
+                                <option value="Action">
+                                    يتطلب إجراء ومسؤول وتاريخ تنفيذ (Action
+                                    Required)
+                                </option>
+                                <option value="Info">
+                                    معلومة عامة / للتنويه فقط (Info - بدون
+                                    مسؤولية وتاريخ)
+                                </option>
+                            </select>
+                        </div>
+
+                        <div id="mtg-item-action-fields">
+                            <div class="form-group">
+                                <label class="required"
+                                    >الإجراء المطلوب (Action Required):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="mtg-item-action"
+                                    placeholder="اكتب الإجراء المطلوب تنفيذه..."
+                                />
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="required"
+                                        >المسؤول عن التنفيذ (Assignment):</label
+                                    >
+                                    <div class="input-with-button">
+                                        <input
+                                            type="text"
+                                            id="mtg-item-assign"
+                                            placeholder="اكتب الاسم أو اختر من الموظفين..."
+                                        />
+                                        <button
+                                            type="button"
+                                            class="btn-small btn-secondary"
+                                            onclick="window.openMtgEmpSelector('ASSIGNEE')"
+                                            title="اختيار من قائمة الموظفين"
+                                        >
+                                            <i class="fas fa-user-check"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="required"
+                                        >تاريخ التنفيذ (Deadline):</label
+                                    >
+                                    <input type="date" id="mtg-item-deadline" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                style="width: 100%"
+                                onclick="window.addMtgActionItem()"
+                            >
+                                <i class="fas fa-plus"></i> إضافة البند لجدول
+                                الاجتماع
+                            </button>
+                        </div>
+
+                        <h4>
+                            بنود الاجتماع المضافة (<span id="mtg-items-count"
+                                >0</span
+                            >)
+                        </h4>
+                        <div
+                            id="mtg-items-list-container"
+                            style="margin-bottom: 20px"
+                        >
+                            <p style="text-align: center; color: #777">
+                                لم يتم إضافة بنود للاجتماع...
+                            </p>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="mtg-save-btn"
+                            class="btn"
+                            style="width: 100%; margin-top: 10px"
+                        >
+                            <i class="fas fa-save"></i> حفظ الاجتماع
+                        </button>
+                        <p
+                            id="mtg-save-msg"
+                            class="success-message"
+                            style="display: none; white-space: pre-wrap"
+                        ></p>
+                    </form>
+                </section>
+
+                <!-- 2. متابعة وإغلاق بنود الاجتماعات المفتوحة -->
+                <section
+                    id="FollowupMeetings"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-tasks"></i> متابعة بنود الاجتماعات
+                        المفتوحة
+                    </h2>
+                    <div class="app-form">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            style="margin-bottom: 15px"
+                            onclick="window.loadOpenMeetingActions()"
+                        >
+                            <i class="fas fa-sync"></i> تحديث القائمة
+                        </button>
+                        <div
+                            id="mtg-open-actions-list"
+                            class="results-table-container"
+                        >
+                            <p style="text-align: center">جاري التحميل...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. سجل الاجتماعات الشامل -->
+                <section
+                    id="MeetingsLog"
+                    class="page-section"
+                    style="display: none"
+                >
+                    <h2>
+                        <i class="fas fa-clipboard-list"></i> سجل اجتماعات
+                        السلامة (Meetings Log)
+                    </h2>
+                    <div class="app-form">
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>المشروع:</label>
+                                <select id="mon-mtg-project">
+                                    <option value="ALL_ACCESSIBLE">
+                                        جميع المشاريع المتاحة
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>من تاريخ:</label>
+                                    <input type="date" id="mon-mtg-from" />
+                                </div>
+                                <div class="form-group">
+                                    <label>إلى تاريخ:</label>
+                                    <input type="date" id="mon-mtg-to" />
+                                </div>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="mon-mtg-open-only" />
+                                <label
+                                    for="mon-mtg-open-only"
+                                    style="font-weight: normal"
+                                >
+                                    الاجتماعات التي بها بنود مفتوحة فقط
+                                </label>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn"
+                                onclick="window.searchMeetingsLog()"
+                            >
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+
+                        <div id="mon-mtg-table" class="results-table-container">
+                            <p
+                                style="
+                                    text-align: center;
+                                    padding: 20px;
+                                    color: #666;
+                                "
+                            >
+                                حدد معايير البحث واضغط على زر بحث...
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- نافذة بوب أب اختيار موظف للاجتماع (مطابقة لبوب أب التدريب) -->
+                <div
+                    id="mtg-emp-modal"
+                    class="modal"
+                    onclick="if(event.target == this) window.closeMtgEmpSelector()"
+                >
+                    <div class="modal-content worker-selection-modal">
+                        <span
+                            class="close-modal"
+                            onclick="window.closeMtgEmpSelector()"
+                            >&times;</span
+                        >
+                        <h3
+                            id="mtg-emp-modal-title"
+                            style="
+                                text-align: center;
+                                color: var(--primary-color);
+                            "
+                        >
+                            <i class="fas fa-user-check"></i> اختيار الموظف
+                        </h3>
+                        <div class="form-group" style="margin-bottom: 15px">
+                            <input
+                                type="text"
+                                id="mtg-emp-search-box"
+                                placeholder="ابحث بالاسم أو الكود..."
+                                oninput="window.filterMtgEmpList()"
+                                class="search-input-fancy"
+                            />
+                        </div>
+                        <div
+                            id="mtg-emp-list-container"
+                            class="modal-scroll-area"
+                        ></div>
+                    </div>
+                </div>
+
+                <!-- نافذة بوب أب اختيار عامل المقاول للاجتماع (مطابقة لبوب أب التدريب) -->
+                <div
+                    id="mtg-worker-modal"
+                    class="modal"
+                    onclick="if(event.target == this) window.closeMtgWorkerSelector()"
+                >
+                    <div class="modal-content worker-selection-modal">
+                        <span
+                            class="close-modal"
+                            onclick="window.closeMtgWorkerSelector()"
+                            >&times;</span
+                        >
+                        <h3
+                            style="
+                                text-align: center;
+                                color: var(--primary-color);
+                                margin-bottom: 20px;
+                            "
+                        >
+                            <i class="fas fa-users"></i> اختيار ممثل / عامل
+                            المقاول
+                        </h3>
+                        <div class="form-group" style="margin-bottom: 15px">
+                            <input
+                                type="text"
+                                id="mtg-worker-search-box"
+                                placeholder="ابحث بالاسم أو الرقم القومي..."
+                                oninput="window.filterMtgWorkerList()"
+                                class="search-input-fancy"
+                            />
+                        </div>
+                        <div
+                            id="mtg-worker-list-container"
+                            class="modal-scroll-area"
+                        ></div>
+                        <div class="worker-modal-footer">
+                            <button
+                                type="button"
+                                class="btn-new-worker-full"
+                                onclick="window.addNewMtgWorkerManually()"
+                            >
+                                <i class="fas fa-user-plus"></i> إضافة اسم جديد
+                                (غير مسجل)
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <div
                     id="attendees-modal"
                     class="modal"

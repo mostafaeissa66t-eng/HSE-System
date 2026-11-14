@@ -16685,7 +16685,7 @@ document.addEventListener("click", function (e) {
   window.selectMtgEmployee = function (id, name, jobTitle) {
     if (mtgEmpModalMode === "ASSIGNEE") {
       const assignInp = document.getElementById("mtg-item-assign");
-      if (assignInp) assignInp.value = name;
+      if (assignInp) assignInp.value = `${id} - ${name}`; // حفظ الكود والاسم معاً لربطه بحساب الموظف
     } else {
       document.getElementById("mtg-emp-name-display").value = name;
       document.getElementById("mtg-emp-id-hidden").value = id;
@@ -17068,8 +17068,20 @@ document.addEventListener("click", function (e) {
       `;
 
       actions.forEach((a) => {
+        const actionCellHtml = a.canClose
+          ? `<button class="btn-small btn-danger" onclick="window.handleCloseMtgAction('${a.actionId}')">
+               <i class="fas fa-check-circle"></i> إغلاق
+             </button>`
+          : `<span class="badge" style="background:#fff3cd; color:#856404; border:1px solid #ffeeba; font-size:0.78rem; padding:5px 8px; display:inline-block;">
+               🔒 يُغلق بواسطة: ${a.issuer}
+             </span>`;
+
+        const assignedBadge = a.isAssignedToMe
+          ? `<span class="badge bg-danger" style="font-size:0.72rem; margin-right:5px;">مُسند إليك</span>`
+          : "";
+
         html += `
-          <tr>
+          <tr style="${a.isAssignedToMe ? "background-color:#fff8f8;" : ""}">
             <td style="font-weight:bold;">${a.meetingId}<br><small style="color:#666;">${a.meetingTopic}</small></td>
             <td style="white-space:nowrap;">${a.date}</td>
             <td>${a.project}</td>
@@ -17077,13 +17089,9 @@ document.addEventListener("click", function (e) {
               <strong>البند:</strong> ${a.description}<br>
               <small style="color:#0056b3;"><strong>الإجراء:</strong> ${a.actionRequired}</small>
             </td>
-            <td style="font-weight:bold; color:#c8102e;">${a.assignment}</td>
+            <td style="font-weight:bold; color:#c8102e;">${a.assignment} ${assignedBadge}</td>
             <td style="white-space:nowrap;">${a.deadline}</td>
-            <td>
-              <button class="btn-small btn-danger" onclick="window.handleCloseMtgAction('${a.actionId}')">
-                إغلاق
-              </button>
-            </td>
+            <td style="text-align:center;">${actionCellHtml}</td>
           </tr>
         `;
       });

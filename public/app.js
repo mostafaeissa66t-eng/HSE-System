@@ -3872,6 +3872,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
   function renderMonitorTable(data, container) {
+    window._lastMonObsData = data || []; // حفظ البيانات لتصدير الإكسيل
     window.updateToursAndAuditsStats(data);
     if (!data || data.length === 0) {
       container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
@@ -3902,7 +3903,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       } catch (e) {}
 
-      // استخراج كود الجولة الموحد من العمود الجديد أو من السريال المركب (مثل WWD-20261016-01)
+      // استخراج كود الجولة الموحد من العمود الجديد أو من السريال المركب
       let sessionCode = row.sessionId || "-";
       const idStr = String(row.id || "");
       if (
@@ -3914,9 +3915,30 @@ document.addEventListener("DOMContentLoaded", function () {
         sessionCode = idStr.split("-").slice(0, 3).join("-");
       }
 
+      // إظهار زر الإكسيل إذا كان الكود WWD/MST أو كان مصدر الملاحظة جولة أسبوعية/شهرية
+      const isTour =
+        sessionCode.startsWith("WWD-") ||
+        sessionCode.startsWith("MST-") ||
+        row.source === "Weekly Walk Down" ||
+        row.source === "Monthly Site Tour";
+
+      const targetKey = sessionCode !== "-" ? sessionCode : idStr;
+
+     const excelTourBtn = isTour
+        ? `<button type="button" onclick="window.openTourExcelExportModal('${targetKey}', window._lastMonObsData)" title="تحميل تقرير الجولة بالصور (Excel)"
+             style="display:inline-flex; align-items:center; gap:4px; background:#1D6F42 !important; color:#fff !important; border:none !important; border-radius:6px !important; padding:4px 9px !important; font-size:0.78rem !important; font-weight:700; cursor:pointer; width:auto !important; height:auto !important; line-height:1.2; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+             <i class="fas fa-file-excel"></i> Excel
+           </button>`
+        : "";
+
       html += `<tr>
               <td style="white-space:nowrap;"><strong>${row.id}</strong></td>
-              <td style="white-space:nowrap;"><span class="badge" style="background:#e9ecef; color:#0056b3; font-weight:bold;">${sessionCode}</span></td>
+              <td style="white-space:nowrap;">
+                <div style="display:inline-flex; align-items:center; gap:6px;">
+                  <span class="badge" style="background:#e9ecef; color:#0056b3; font-weight:bold;">${sessionCode}</span>
+                  ${excelTourBtn}
+                </div>
+              </td>
               <td style="white-space:nowrap;">${dateDisplay}</td>
               <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
               <td>${row.project}</td>
@@ -14666,18 +14688,15 @@ window.updateToursAndAuditsStats = function (observationsData) {
   if (auditEl) auditEl.textContent = auditSessions.size;
 };
 
-// تحديث دالة رسم جدول البحث لتقوم بتشغيل العدادات تلقائياً في كل عملية بحث!
-window.renderMonitorTable = function (data, container) {
-  // 1. تشغيل حساب كروت الجولات والأوديت فوراً مع كل بحث
-  window.updateToursAndAuditsStats(data);
+function renderMonitorTable(data, container) {
+    window._lastMonObsData = data || []; // حفظ البيانات لاستخدامها في تصدير الإكسيل
+    window.updateToursAndAuditsStats(data);
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
+      return;
+    }
 
-  if (!container) return;
-  if (!data || data.length === 0) {
-    container.innerHTML = '<p style="text-align:center;">لا توجد نتائج.</p>';
-    return;
-  }
-
-  let html = `<table class="results-table">
+    let html = `<table class="results-table">
           <thead>
               <tr>
                   <th>سريال الملاحظة</th>
@@ -14692,29 +14711,39 @@ window.renderMonitorTable = function (data, container) {
           </thead>
           <tbody>`;
 
-  data.forEach((row) => {
-    let dateDisplay = row.date;
-    try {
-      const d = new Date(row.date);
-      if (!isNaN(d.getTime())) {
-        dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    data.forEach((row) => {
+      let dateDisplay = row.date;
+      try {
+        const d = new Date(row.date);
+        if (!isNaN(d.getTime())) {
+          dateDisplay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        }
+      } catch (e) {}
+
+      // استخراج كود الجولة الموحد من العمود الجديد أو من السريال المركب (مثل WWD-20261016-01)
+      let sessionCode = row.sessionId || "-";
+      const idStr = String(row.id || "");
+      if (
+        sessionCode === "-" &&
+        (idStr.startsWith("WWD-") ||
+          idStr.startsWith("MST-") ||
+          idStr.startsWith("AUD-"))
+      ) {
+        sessionCode = idStr.split("-").slice(0, 3).join("-");
       }
-    } catch (e) {}
 
-    let sessionCode = row.sessionId || "-";
-    const idStr = String(row.id || "");
-    if (
-      (sessionCode === "-" || !sessionCode) &&
-      (idStr.startsWith("WWD-") ||
-        idStr.startsWith("MST-") ||
-        idStr.startsWith("AUD-"))
-    ) {
-      sessionCode = idStr.split("-").slice(0, 3).join("-");
-    }
+      // زر تحميل تقرير الجولة بالصور (يظهر فقط مع WWD و MST)
+      const excelTourBtn =
+        sessionCode.startsWith("WWD-") || sessionCode.startsWith("MST-")
+          ? `<button type="button" class="btn-small" style="background:#28a745; color:#fff; margin-right:5px;" onclick="window.openTourExcelExportModal('${sessionCode}', window._lastMonObsData)" title="تحميل تقرير الجولة بالصور (Excel)"><i class="fas fa-file-excel"></i></button>`
+          : "";
 
-    html += `<tr>
+      html += `<tr>
               <td style="white-space:nowrap;"><strong>${row.id}</strong></td>
-              <td style="white-space:nowrap;"><span class="badge" style="background:#e9ecef; color:#0056b3; font-weight:bold;">${sessionCode}</span></td>
+              <td style="white-space:nowrap;">
+                <span class="badge" style="background:#e9ecef; color:#0056b3; font-weight:bold;">${sessionCode}</span>
+                ${excelTourBtn}
+              </td>
               <td style="white-space:nowrap;">${dateDisplay}</td>
               <td style="color:#0056b3; font-weight:500;">${row.issuer || "-"}</td>
               <td>${row.project}</td>
@@ -14722,11 +14751,11 @@ window.renderMonitorTable = function (data, container) {
               <td class="desc-cell">${row.desc}</td>
               <td><span class="badge ${row.status === "Open" ? "bg-danger" : "bg-success"}">${row.status}</span></td>
           </tr>`;
-  });
+    });
 
-  html += `</tbody></table>`;
-  container.innerHTML = html;
-};
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  }
 
 // =================================================================
 // --- حل جذري لمشكلة تعليق تحميل المشاريع في سجل الملاحظات (Race Condition Fix) ---
@@ -17498,5 +17527,380 @@ document.addEventListener("click", function (e) {
     printWindow.document.open();
     printWindow.document.write(htmlTemplate);
     printWindow.document.close();
+  };
+})();
+// =================================================================
+// --- وحدة تسجيل حضور الجولات الميدانية (Weekly Walk Down / Monthly Site Tour) ---
+// =================================================================
+(function () {
+  window._obsTourAttendees = [];
+
+  // 1. إظهار أو إخفاء صندوق حضور الجولة حسب مصدر الملاحظة
+  function updateObsTourAttendeesVisibility() {
+    const sourceEl = document.getElementById("obs-source");
+    const box = document.getElementById("obs-tour-attendees-box");
+    if (!sourceEl || !box) return;
+
+    const val = sourceEl.value;
+    const isTour = val === "Weekly Walk Down" || val === "Monthly Site Tour";
+    box.style.display = isTour ? "block" : "none";
+  }
+
+  document.addEventListener("change", function (e) {
+    if (e.target && e.target.id === "obs-source") {
+      updateObsTourAttendeesVisibility();
+    }
+  });
+
+  // 2. فتح الـ Popup لاختيار المشاركين في الجولة
+  window.openObsTourEmpSelector = async function () {
+    const proj = document.getElementById("obs-project")?.value || "";
+    const showAll = document.getElementById("obs-tour-show-all-emp")?.checked;
+
+    if (!proj && !showAll) {
+      alert("الرجاء اختيار المشروع أولاً أو تفعيل خيار 'عرض موظفي باقي المشاريع'");
+      return;
+    }
+
+    if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+      try {
+        const res = await window.callApi("getInventoryInitData", { userInfo: currentUser });
+        if (res && res.status === "success") {
+          window.ppeEmployees = res.employees || [];
+        }
+      } catch (e) {}
+    }
+
+    if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+      alert("جاري تحميل بيانات الموظفين، يرجى المحاولة بعد ثانية...");
+      return;
+    }
+
+    document.getElementById("obs-tour-emp-modal").style.display = "flex";
+    const searchBox = document.getElementById("obs-tour-emp-search-box");
+    if (searchBox) {
+      searchBox.value = "";
+      searchBox.focus();
+    }
+
+    let list = showAll
+      ? [...window.ppeEmployees]
+      : window.ppeEmployees.filter((e) => e.project === proj);
+
+    if (proj && showAll) {
+      list.sort((a, b) => (a.project === proj ? -1 : b.project === proj ? 1 : 0));
+    }
+
+    renderObsTourEmpsInModal(list);
+  };
+
+  window.closeObsTourEmpSelector = function () {
+    const modal = document.getElementById("obs-tour-emp-modal");
+    if (modal) modal.style.display = "none";
+  };
+
+  function renderObsTourEmpsInModal(list) {
+    const container = document.getElementById("obs-tour-emp-list-container");
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+      container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">لا يوجد موظفون مطابقون للبحث</p>';
+      return;
+    }
+
+    container.innerHTML = list
+      .map((e) => {
+        const safeId = String(e.id || "").replace(/'/g, "\\'");
+        const safeName = String(e.name || "").replace(/'/g, "\\'");
+        const safeJob = String(e.jobTitle || "موظف").replace(/'/g, "\\'");
+        const alreadyAdded = window._obsTourAttendees.some((a) => String(a.id) === String(e.id));
+
+        return `
+          <div class="ppe-cart-item" style="cursor:pointer; margin-bottom:8px; background:${alreadyAdded ? "#e8f5e9" : "#fff"}; border-color:${alreadyAdded ? "#28a745" : "#ddd"};"
+               onclick="window.selectObsTourEmployee('${safeId}', '${safeName}', '${safeJob}')">
+            <div style="text-align:right;">
+              <span style="display:block; font-weight:700;">${e.name} ${alreadyAdded ? "✅" : ""}</span>
+              <small style="color:#666;">ID: ${e.id} | ${e.project || "-"} (${e.jobTitle || "موظف"})</small>
+            </div>
+            <i class="fas fa-chevron-left" style="color:#ccc;"></i>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  window.filterObsTourEmpList = function () {
+    const query = (document.getElementById("obs-tour-emp-search-box")?.value || "").toLowerCase();
+    const proj = document.getElementById("obs-project")?.value || "";
+    const showAll = document.getElementById("obs-tour-show-all-emp")?.checked;
+
+    const baseList = showAll
+      ? window.ppeEmployees || []
+      : (window.ppeEmployees || []).filter((e) => e.project === proj);
+
+    const filtered = baseList.filter(
+      (e) =>
+        String(e.name || "").toLowerCase().includes(query) ||
+        String(e.id || "").includes(query)
+    );
+    renderObsTourEmpsInModal(filtered);
+  };
+
+  window.selectObsTourEmployee = function (id, name, jobTitle) {
+    if (window._obsTourAttendees.some((a) => String(a.id) === String(id))) {
+      alert("هذا الموظف مضاف بالفعل في قائمة حضور الجولة.");
+      return;
+    }
+
+    window._obsTourAttendees.push({ id, name, jobTitle });
+    window.renderObsTourAttendees();
+    window.filterObsTourEmpList(); // لتحديث علامة الصح الخضراء داخل البوب أب
+  };
+
+  window.removeObsTourAttendee = function (idx) {
+    window._obsTourAttendees.splice(idx, 1);
+    window.renderObsTourAttendees();
+  };
+
+  window.renderObsTourAttendees = function () {
+    const countEl = document.getElementById("obs-tour-att-count");
+    const listEl = document.getElementById("obs-tour-attendees-list");
+    if (countEl) countEl.textContent = window._obsTourAttendees.length;
+    if (!listEl) return;
+
+    if (window._obsTourAttendees.length === 0) {
+      listEl.innerHTML =
+        '<p style="text-align: center; color: #777; font-size: 0.9rem;">لم يتم إضافة مشاركين بعد... (سيتم احتسابك تلقائياً كمسجل للجولة)</p>';
+      return;
+    }
+
+    listEl.innerHTML = window._obsTourAttendees
+      .map(
+        (a, idx) => `
+          <div class="ppe-cart-item">
+            <span><strong>${a.name}</strong> <small style="color:#666;">(ID: ${a.id} | ${a.jobTitle || "موظف"})</small></span>
+            <button type="button" class="btn-small btn-danger" onclick="window.removeObsTourAttendee(${idx})">X</button>
+          </div>
+        `
+      )
+      .join("");
+  };
+
+  // 3. اعتراض إرسال saveBatchTourObservations لإرفاق قائمة الحضور وتصفيرها بعد الحفظ
+  const prevCallApiForTour = window.callApi;
+  if (typeof prevCallApiForTour === "function" && !window._obsTourAttHooked) {
+    window._obsTourAttHooked = true;
+    window.callApi = async function (action, payload, isSilent) {
+      if (action === "saveBatchTourObservations" && payload && payload.tourData) {
+        payload.tourData.attendees = window._obsTourAttendees || [];
+      }
+
+      const res = await prevCallApiForTour.call(this, action, payload, isSilent);
+
+      if (action === "saveBatchTourObservations" && res && res.status === "success") {
+        window._obsTourAttendees = [];
+        window.renderObsTourAttendees();
+      }
+      return res;
+    };
+  }
+})();
+// =================================================================
+// --- محرك تصدير تقارير الجولات (Weekly Walk Down / Monthly Site Tour) إلى Excel بالصور ---
+// =================================================================
+(function () {
+  window._tourExportCurrentData = null;
+  window._tourExportPhotos = {}; // { rowIndex: { base64, ext } }
+
+  // 1. فتح نافذة إضافة الصور قبل تحميل الإكسيل
+  window.openTourExcelExportModal = function (sessionId, allRowsData) {
+    const rows = (allRowsData || []).filter(
+      (r) => String(r.sessionId || r.id || "").startsWith(sessionId)
+    );
+    if (rows.length === 0) {
+      alert("لا توجد ملاحظات لهذه الجولة.");
+      return;
+    }
+
+    window._tourExportCurrentData = { sessionId, rows };
+    window._tourExportPhotos = {};
+
+    let oldModal = document.getElementById("tour-excel-export-modal");
+    if (oldModal) oldModal.remove();
+
+    const first = rows[0];
+    const itemsHtml = rows
+      .map(
+        (r, i) => `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; background:#fff;">
+            <div style="flex:1; text-align:right;">
+              <div style="font-weight:bold; color:#c8102e; font-size:0.9rem;">#${i + 1} - ${r.id} (${r.type || "-"})</div>
+              <div style="font-size:0.86rem; color:#333; margin-top:3px;">${r.desc || r.description || "-"}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <img id="tour-photo-prev-${i}" style="display:none; width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid #ccc;" />
+              <label style="background:#2c2a29; color:#fff; padding:7px 12px; border-radius:6px; cursor:pointer; font-size:0.82rem; font-weight:bold; white-space:nowrap;">
+                <i class="fas fa-camera"></i> صورة
+                <input type="file" accept="image/png, image/jpeg" style="display:none;" onchange="window.handleTourPhotoSelect(${i}, this)" />
+              </label>
+            </div>
+          </div>
+        `
+      )
+      .join("");
+
+    const modalHtml = `
+      <div id="tour-excel-export-modal" onclick="if(event.target===this) this.remove()"
+           style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; padding:15px; box-sizing:border-box; direction:rtl;">
+        <div style="background:#f8fafc; width:100%; max-width:650px; border-radius:12px; padding:20px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 10px 30px rgba(0,0,0,0.25);">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #e2e8f0; padding-bottom:10px; margin-bottom:12px;">
+            <h3 style="margin:0; color:#c8102e; font-size:1.1rem;">
+              <i class="fas fa-file-excel" style="color:#28a745;"></i> تجهيز تقرير الجولة (${sessionId})
+            </h3>
+            <span onclick="document.getElementById('tour-excel-export-modal').remove()" style="cursor:pointer; font-size:1.5rem; color:#666; font-weight:bold;">&times;</span>
+          </div>
+
+          <p style="margin:0 0 12px 0; font-size:0.86rem; color:#475569;">
+            المشروع: <strong>${first.project || "-"}</strong> | أضف صور الملاحظات (اختياري) ثم اضغط تحميل، وسيتم إدراجها تلقائياً داخل ملف الإكسيل بدون رفعها للسيرفر.
+          </p>
+
+          <div style="overflow-y:auto; flex:1; padding-left:4px; margin-bottom:14px;">
+            ${itemsHtml}
+          </div>
+
+          <button type="button" id="btn-generate-tour-xlsx" onclick="window.generateTourExcelFile()"
+                  style="width:100%; background:#28a745; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; font-family:inherit;">
+            <i class="fas fa-download"></i> تحميل ملف الإكسيل جاهز للإيميل (.xlsx)
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+  };
+
+  // 2. قراءة الصورة من جهاز المستخدم وتحويلها لـ Base64 في الذاكرة فقط
+  window.handleTourPhotoSelect = function (idx, inputEl) {
+    const file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+    const ext = file.type === "image/png" ? "png" : "jpeg";
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      window._tourExportPhotos[idx] = { base64: e.target.result, ext };
+      const prev = document.getElementById(`tour-photo-prev-${idx}`);
+      if (prev) {
+        prev.src = e.target.result;
+        prev.style.display = "block";
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // 3. تعبئة القالب (HSE_Site_Tour_Report_Template.xlsx) وتنزيله
+  window.generateTourExcelFile = async function () {
+    if (typeof ExcelJS === "undefined") {
+      alert("مكتبة ExcelJS غير محملة في index.html.");
+      return;
+    }
+    const btn = document.getElementById("btn-generate-tour-xlsx");
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تجهيز ملف الإكسيل...';
+    }
+
+    try {
+      const { sessionId, rows } = window._tourExportCurrentData;
+      const first = rows[0];
+
+      // جلب القالب من فولدر public
+      const resp = await fetch("/HSE_Site_Tour_Report_Template.xlsx");
+      if (!resp.ok) throw new Error("تأكد من وضع ملف HSE_Site_Tour_Report_Template.xlsx داخل فولدر public");
+      const arrayBuffer = await resp.arrayBuffer();
+
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+      const ws = workbook.getWorksheet("Site_Tour_Report");
+
+      // أ) تعبئة بيانات الجولة الأساسية (Rows 4-5)
+      ws.getCell("C4").value = first.project || "";
+      ws.getCell("G4").value = first.source || "";
+      ws.getCell("L4").value = sessionId || "";
+      ws.getCell("C5").value = first.date || "";
+      ws.getCell("G5").value = first.time || "";
+      ws.getCell("L5").value = first.issuer || "";
+
+      // ب) تعبئة جدول الحضور (Rows 9-16: الكود، الاسم، المشروع، الوظيفة)
+      const rawAtt = String(first.attendees || first.tourAttendees || "").trim();
+      if (rawAtt) {
+        const attParts = rawAtt.split("|").map((s) => s.trim()).filter(Boolean);
+        const allEmps = window.ppeEmployees || [];
+
+        attParts.slice(0, 8).forEach((entry, idx) => {
+          const rNum = 9 + idx;
+          const [codePart, namePart] = entry.includes("-")
+            ? entry.split("-").map((x) => x.trim())
+            : ["", entry];
+
+          const empMatch = allEmps.find(
+            (e) => String(e.id).trim() === codePart || String(e.name).trim() === namePart
+          );
+
+          ws.getCell(`B${rNum}`).value = codePart || (empMatch ? empMatch.id : "");
+          ws.getCell(`C${rNum}`).value = namePart || (empMatch ? empMatch.name : entry);
+          ws.getCell(`G${rNum}`).value = empMatch ? (empMatch.project || first.project) : first.project;
+          ws.getCell(`J${rNum}`).value = empMatch ? (empMatch.jobTitle || "موظف") : "مشارك في الجولة";
+        });
+      }
+
+      // ج) تعبئة الملاحظات والصور (تبدأ من الصف 22 في القالب الجديد)
+      rows.slice(0, 20).forEach((obs, idx) => {
+        const rNum = 22 + idx;
+        ws.getCell(`B${rNum}`).value = obs.id || "";
+        ws.getCell(`C${rNum}`).value = obs.locationDetail || obs.location || "";
+        ws.getCell(`D${rNum}`).value = obs.type || "";
+        ws.getCell(`E${rNum}`).value = obs.hazard || "";
+        ws.getCell(`F${rNum}`).value = obs.desc || obs.description || "";
+        ws.getCell(`G${rNum}`).value = obs.companyName || obs.resp || "";
+        ws.getCell(`H${rNum}`).value = ""; // مسح نص التوضيح من مربع الصورة
+        ws.getCell(`I${rNum}`).value = obs.actionText || "";
+        ws.getCell(`J${rNum}`).value = obs.targetDate || "";
+        ws.getCell(`K${rNum}`).value = obs.status || "Open";
+
+        // إدراج صورة الملاحظة داخل عمود H (العمود رقم 7 بصفر-فهرسة)
+        // إدراج صورة الملاحظة لتملأ مربع عمود H بالكامل بشكل مضبوط
+        const photoObj = window._tourExportPhotos[idx];
+        if (photoObj) {
+          const imageId = workbook.addImage({
+            base64: photoObj.base64,
+            extension: photoObj.ext,
+          });
+          ws.addImage(imageId, {
+            tl: { col: 7, row: rNum - 1 },
+            br: { col: 8, row: rNum },
+            editAs: "oneCell",
+          });
+        }
+      });
+
+      // د) تنزيل الملف للمستخدم
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `HSE_Tour_${first.project || "Report"}_${sessionId}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      document.getElementById("tour-excel-export-modal")?.remove();
+    } catch (err) {
+      alert("خطأ أثناء تصدير الإكسيل: " + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-download"></i> تحميل ملف الإكسيل جاهز للإيميل (.xlsx)';
+      }
+    }
   };
 })();

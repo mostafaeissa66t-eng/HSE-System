@@ -17811,6 +17811,16 @@ document.addEventListener("click", function (e) {
       const { sessionId, rows } = window._tourExportCurrentData;
       const first = rows[0];
 
+      // التأكد من تحميل قائمة الموظفين أولاً لجلب الوظيفة والمشروع بدقة لجدول الحضور
+      if (!window.ppeEmployees || window.ppeEmployees.length === 0) {
+        try {
+          const empRes = await window.callApi("getInventoryInitData", { userInfo: currentUser }, true);
+          if (empRes && empRes.status === "success") {
+            window.ppeEmployees = empRes.employees || [];
+          }
+        } catch (e) {}
+      }
+
       // جلب القالب من فولدر public
       const resp = await fetch("/HSE_Site_Tour_Report_Template.xlsx");
       if (!resp.ok) throw new Error("تأكد من وضع ملف HSE_Site_Tour_Report_Template.xlsx داخل فولدر public");
@@ -17830,9 +17840,10 @@ document.addEventListener("click", function (e) {
 
       // ب) تعبئة جدول الحضور (Rows 9-16: الكود، الاسم، المشروع، الوظيفة)
       const rawAtt = String(first.attendees || first.tourAttendees || "").trim();
+      const allEmps = window.ppeEmployees || [];
+
       if (rawAtt) {
         const attParts = rawAtt.split("|").map((s) => s.trim()).filter(Boolean);
-        const allEmps = window.ppeEmployees || [];
 
         attParts.slice(0, 8).forEach((entry, idx) => {
           const rNum = 9 + idx;
@@ -17841,7 +17852,9 @@ document.addEventListener("click", function (e) {
             : ["", entry];
 
           const empMatch = allEmps.find(
-            (e) => String(e.id).trim() === codePart || String(e.name).trim() === namePart
+            (e) =>
+              (codePart && String(e.id).trim() === codePart) ||
+              (namePart && String(e.name).trim() === namePart)
           );
 
           ws.getCell(`B${rNum}`).value = codePart || (empMatch ? empMatch.id : "");
@@ -17849,9 +17862,14 @@ document.addEventListener("click", function (e) {
           ws.getCell(`G${rNum}`).value = empMatch ? (empMatch.project || first.project) : first.project;
           ws.getCell(`J${rNum}`).value = empMatch ? (empMatch.jobTitle || "موظف") : "مشارك في الجولة";
         });
+      } else if (first.issuer) {
+        // لو كانت جولة قديمة قبل تفعيل خانة الحضور، نضع مسجل الجولة على الأقل في الصف الأول
+        ws.getCell("C9").value = first.issuer;
+        ws.getCell("G9").value = first.project || "";
+        ws.getCell("J9").value = "HSE Inspector";
       }
 
-      // ج) تعبئة الملاحظات والصور (تبدأ من الصف 22 في القالب الجديد)
+      // ج) تعبئة الملاحظات والصور (تبدأ من الصف 22 في القالب)
       rows.slice(0, 20).forEach((obs, idx) => {
         const rNum = 22 + idx;
         ws.getCell(`B${rNum}`).value = obs.id || "";
@@ -17859,13 +17877,12 @@ document.addEventListener("click", function (e) {
         ws.getCell(`D${rNum}`).value = obs.type || "";
         ws.getCell(`E${rNum}`).value = obs.hazard || "";
         ws.getCell(`F${rNum}`).value = obs.desc || obs.description || "";
-        ws.getCell(`G${rNum}`).value = obs.companyName || obs.resp || "";
+        ws.getCell(`G${rNum}`).value = obs.companyName || obs.company || obs.resp || "";
         ws.getCell(`H${rNum}`).value = ""; // مسح نص التوضيح من مربع الصورة
         ws.getCell(`I${rNum}`).value = obs.actionText || "";
         ws.getCell(`J${rNum}`).value = obs.targetDate || "";
         ws.getCell(`K${rNum}`).value = obs.status || "Open";
 
-        // إدراج صورة الملاحظة داخل عمود H (العمود رقم 7 بصفر-فهرسة)
         // إدراج صورة الملاحظة لتملأ مربع عمود H بالكامل بشكل مضبوط
         const photoObj = window._tourExportPhotos[idx];
         if (photoObj) {
